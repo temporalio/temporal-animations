@@ -1,27 +1,27 @@
 from asyncio import Queue
 from dataclasses import dataclass
-from typing import Any, Dict, Union
+from typing import Any, Dict, Generic, TypeVar, Union
 
-from tempyral.simulation import Entity
-
-
-@dataclass
-class StateChangeEvent:
-    entity: Entity
+E = TypeVar("E")
 
 
 @dataclass
-class MessageEvent:
-    sender: Entity
-    receiver: Entity
+class StateChangeEvent(Generic[E]):
+    entity: E
+
+
+@dataclass
+class MessageEvent(Generic[E]):
+    sender: E
+    receiver: E
     data: Dict[str, Any]
 
 
-class EventBus:
+class EventBus(Generic[E]):
     def __init__(self):
-        self.bus: Queue[Union[StateChangeEvent, MessageEvent]] = Queue()
+        self.bus: Queue[Union[StateChangeEvent[E], MessageEvent[E]]] = Queue()
 
-    async def publish(self, event: Union[StateChangeEvent, MessageEvent]):
+    async def publish(self, event: Union[StateChangeEvent[E], MessageEvent[E]]):
         await self.bus.put(event)
 
 
