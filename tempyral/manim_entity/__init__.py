@@ -56,7 +56,6 @@ class ManimEntity(ABC):
         `pre_hook` and `post_hook` are lists of functions; they typically mutate
         the sender (self) and receiver, respectively.
         """
-        self.scene.add(message.m)
         for f in pre_hook:
             f()
         self.render()
