@@ -127,12 +127,7 @@ class ApplicationRequest(ManimEntity):
         return Text(self.request_type.value, font_size=16)
 
 
-class WorkflowWorker(ManimEntity, simulation.WorkflowWorker):
-    async def poll(self, server: "Server"):
-        while True:
-            await server.dispatch_wft_if_pending_events(self)
-            await asyncio.sleep(0)
-
+class WorkflowWorker(ManimEntity, entity.WorkflowWorker):
     def newm(self) -> Mobject:
         return Text("Workflow Worker", font_size=24)
 

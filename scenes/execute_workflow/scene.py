@@ -5,6 +5,7 @@ from typing import Coroutine, List, Tuple
 from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, Scene, Text
 
 from tempyral.animation import Application, Server, WorkflowWorker
+from tempyral.event_bus import event_bus
 
 TIMEOUT_SECONDS = 10
 
@@ -39,9 +40,9 @@ class ExecuteWorkflow(Scene):
     def make_temporal_entities(
         self,
     ) -> Tuple[Server, List[Application], List[WorkflowWorker]]:
-        server = Server(self)
-        app = Application(self)
-        wworker = WorkflowWorker(self)
+        server = Server(event_bus)
+        app = Application(event_bus)
+        wworker = WorkflowWorker(event_bus)
 
         server.m.move_to(ORIGIN + UP * 2)
         app.m.move_to(ORIGIN + LEFT * 3 + DOWN * 2)
