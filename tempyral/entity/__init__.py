@@ -3,7 +3,7 @@ A pure python simulation of Temporal without any visualization.
 """
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Dict, List, Tuple, TypedDict
+from typing import Callable, Dict, List, Optional, Tuple, TypedDict
 
 DEFAULT_NAMESPACE = "default"
 DEFAULT_WORKFLOW_ID = "wid"
@@ -71,12 +71,16 @@ class Server:
                     ]
                 )
 
-    def dispatch_wft(
+    def maybe_dispatch_wft(
         self, worker: WorkflowWorker
-    ) -> Tuple[WorkflowTask, List[Callable], List[Callable]]:
-        # TODO: Sticky optimisation: send all unseen events to the workflow
-        # worker, and mark them as seen.
-        return WorkflowTask(self.history.events), [], []
+    ) -> Tuple[Optional[WorkflowTask], List[Callable], List[Callable]]:
+        new_events = []
+        for e in self.history.events:
+            if not e.seen_by_sticky_worker:
+                e.seen_by_sticky_worker = True
+                new_events.append(e)
+        wft = WorkflowTask(new_events) if new_events else None
+        return wft, [], []
 
     @property
     def history(self) -> HistoryEvents:

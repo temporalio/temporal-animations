@@ -93,9 +93,11 @@ class HistoryEvents(ManimEntity, entity.HistoryEvents):
         return VGroup(rect, events)
 
 
-# TODO: This isn't quite right; e.g. WorkflowTask.from_entity is going be
-# executing entity.HistoryEvents code paths.
-WorkflowTask = HistoryEvents
+class WorkflowTask(HistoryEvents):
+    def newm(self) -> Mobject:
+        events = super().newm()
+        task = Text("WFT", font_size=16)
+        return VGroup(task, events).arrange()
 
 
 class ApplicationRequest(ManimEntity):
@@ -120,8 +122,10 @@ class Server(ManimEntity, entity.Server):
         history = HistoryEvents.from_entity(self.scene, self.history.events).m
         return VDict({"server": server, "history": history}).arrange(UP)  # type: ignore
 
-    def dispatch_wft(self, worker: WorkflowWorker):
-        wft_entity, pre, post = super().dispatch_wft(worker)
+    def maybe_dispatch_wft(self, worker: WorkflowWorker):
+        wft_entity, pre, post = super().maybe_dispatch_wft(worker)
+        if not wft_entity:
+            return
         wft = WorkflowTask.from_entity(self.scene, wft_entity.events)
         wft.m.next_to(self.m["history"], RIGHT)
         return self.send_message(

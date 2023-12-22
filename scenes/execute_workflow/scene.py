@@ -15,7 +15,7 @@ class ExecuteWorkflow(Scene):
         for i in range(2):
             if i == 1:
                 app.start_workflow(server)
-            server.dispatch_wft(wworker)
+            server.maybe_dispatch_wft(wworker)
 
         self.wait(2)
 
