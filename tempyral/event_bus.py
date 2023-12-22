@@ -1,27 +1,24 @@
 from asyncio import Queue
 from dataclasses import dataclass
-from typing import Generic, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, TypeVar, Union
 
 E = TypeVar("E")
 
 
 @dataclass
-class StateChange(Generic[E]):
+class StateChangeEvent(Generic[E]):
     entity: E
 
 
 @dataclass
-class Message(Generic[E]):
+class MessageEvent(Generic[E]):
     sender: E
     receiver: E
 
 
 class EventBus(Generic[E]):
     def __init__(self):
-        self.bus: Queue[Union[StateChange[E], Message[E]]] = Queue()
+        self.bus: Queue[Union[StateChangeEvent[E], MessageEvent[E]]] = Queue()
 
-    async def publish(self, event: Union[StateChange[E], Message[E]]):
+    async def publish(self, event: Union[StateChangeEvent[E], MessageEvent[E]]):
         await self.bus.put(event)
-
-
-event_bus = EventBus()

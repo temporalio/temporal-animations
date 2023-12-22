@@ -4,9 +4,9 @@ A pure python simulation of Temporal without any visualization.
 import asyncio
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Tuple, TypedDict
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypedDict
 
-from tempyral.event_bus import EventBus
+from tempyral.event_bus import EventBus, MessageEvent, StateChangeEvent
 
 DEFAULT_NAMESPACE = "default"
 DEFAULT_WORKFLOW_ID = "wid"
@@ -27,6 +27,20 @@ class HistoryEventType(Enum):
     WORKFLOW_TASK_SCHEDULED = "WORKFLOW_TASK_SCHEDULED"
     WORKFLOW_TASK_STARTED = "WORKFLOW_TASK_STARTED"
     WORKFLOW_TASK_COMPLETED = "WORKFLOW_TASK_COMPLETED"
+
+
+class PublishingEntity:
+    def __init__(self, event_bus: EventBus, proxy: Any):
+        self.event_bus = event_bus
+        self.proxy = proxy
+
+    async def publish_change_event(self):
+        await self.event_bus.publish(StateChangeEvent(self.proxy))
+
+    async def publish_message_event(
+        self, sender: "PublishingEntity", receiver: "PublishingEntity"
+    ):
+        await self.event_bus.publish(MessageEvent(sender.proxy, receiver.proxy))
 
 
 @dataclass
@@ -53,7 +67,7 @@ class TaskQueue(TypedDict):
     activity_task_queue: List[ActivityTask]
 
 
-class WorkflowWorker:
+class WorkflowWorker(PublishingEntity):
     async def poll(self, server: "Server"):
         while True:
             # Currently we're not actually simulating the long-poll; just the
@@ -65,8 +79,9 @@ class WorkflowWorker:
         pass
 
 
-class Server:
-    def __init__(self) -> None:
+class Server(PublishingEntity):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.shards: List[Shard] = [
             {DEFAULT_NAMESPACE: {DEFAULT_WORKFLOW_ID: HistoryEvents([])}}
         ]
@@ -118,7 +133,7 @@ class Server:
         return history
 
 
-class Application:
+class Application(PublishingEntity):
     def start_workflow(
         self, server: Server
     ) -> Tuple[None, List[Callable], List[Callable]]:
