@@ -2,7 +2,7 @@
 Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod
-from typing import Callable, List, Self
+from typing import Callable, List, Optional, Self
 
 from manim import (
     DOWN,
@@ -10,6 +10,7 @@ from manim import (
     RIGHT,
     UP,
     WHITE,
+    Animation,
     ApplyMethod,
     Mobject,
     Rectangle,
@@ -40,6 +41,30 @@ class ManimEntity(ABC):
             self.scene.play(Transform(self.m, newm))
         else:
             self.m.become(newm)
+
+    def send_message(
+        self,
+        message: "ManimEntity",
+        pre_hook: List[Callable],
+        post_hook: List[Callable],
+        receiver: "ManimEntity",
+        anim: Optional[Animation],
+    ):
+        """
+        Animate sending a message.
+
+        `pre_hook` and `post_hook` are lists of functions; they typically mutate
+        the sender (self) and receiver, respectively.
+        """
+        self.scene.add(message.m)
+        for f in pre_hook:
+            f()
+        self.render()
+        self.scene.play(anim)
+        self.scene.remove(message.m)
+        for f in post_hook:
+            f()
+        receiver.render()
 
 
 class HistoryEvents(ManimEntity, entity.HistoryEvents):
@@ -97,33 +122,27 @@ class Server(ManimEntity, entity.Server):
         wft_entity, pre, post = super().dispatch_wft(worker)
         wft = WorkflowTask.from_entity(self.scene, wft_entity.events)
         wft.m.move_to(self.m.get_edge_center(RIGHT))
-        self.scene.play(ApplyMethod(wft.m.move_to, worker.m))
-        self.scene.remove(wft.m)
+        return self.send_message(
+            wft,
+            pre,
+            post,
+            worker,
+            ApplyMethod(wft.m.move_to, worker.m.get_edge_center(UP)),
+        )
 
 
 class Application(ManimEntity, entity.Application):
     def start_workflow(self, server: Server):
         request_entity, pre, post = super().start_workflow(server)
         request = ApplicationRequest.from_entity(self.scene, request_entity.events)
-        return self.send_request(request, pre, post, server)
-
-    def send_request(
-        self,
-        request: ApplicationRequest,
-        pre_hook: List[Callable],
-        post_hook: List[Callable],
-        server: Server,
-    ):
         request.m.next_to(self.m.get_edge_center(UP), direction=LEFT)
-        self.scene.add(request.m)
-        for f in pre_hook:
-            f()
-        self.render()
-        self.scene.play(ApplyMethod(request.m.move_to, server.m.get_edge_center(LEFT)))
-        self.scene.remove(request.m)
-        for f in post_hook:
-            f()
-        server.render()
+        return self.send_message(
+            request,
+            pre,
+            post,
+            server,
+            ApplyMethod(request.m.move_to, server.m.get_edge_center(LEFT)),
+        )
 
     def newm(self) -> Mobject:
         return Text("Application", font_size=24)
