@@ -124,12 +124,7 @@ class Server(ManimEntity, entity.Server):
     def newm(self) -> Mobject:
         server = Text("Server", font_size=24)
         events = HistoryEvents.eventsm(self.history.events)
-        box = Rectangle(height=3, stroke_opacity=0)
-        box.to_edge(UP, buff=0)
-        box.add(server, events)
-        server.align_to(box, DOWN)
-        events.to_edge(UP)
-        return VDict({"server": server, "history": events})  # type: ignore
+        return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
 
     def maybe_dispatch_wft(self, worker: WorkflowWorker):
         wft_entity, pre, post = super().maybe_dispatch_wft(worker)
