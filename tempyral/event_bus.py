@@ -1,6 +1,6 @@
 from asyncio import Queue
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, Generic, TypeVar, Union
 
 E = TypeVar("E")
 
@@ -14,6 +14,7 @@ class StateChangeEvent(Generic[E]):
 class MessageEvent(Generic[E]):
     sender: E
     receiver: E
+    data: Dict[str, Any]
 
 
 class EventBus(Generic[E]):

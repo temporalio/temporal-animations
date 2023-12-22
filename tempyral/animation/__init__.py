@@ -1,9 +1,8 @@
 """
 Manim representations of Temporal entities.
 """
-import asyncio
 from abc import ABC, abstractmethod
-from typing import Callable, List, Optional, Self
+from typing import Callable, List, Optional
 
 from manim import DL, DOWN, DR
 from manim import GREEN_D as GREEN
@@ -27,11 +26,11 @@ from manim import (
 )
 
 from tempyral import simulation
+from tempyral.event_bus import MessageEvent, StateChangeEvent
 
 
 class ManimEntity(ABC):
-    def __init__(self, scene: Scene, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, scene: Scene) -> None:
         self.scene = scene
         self.m = self.newm()  # Current visual representation
 
@@ -51,31 +50,26 @@ class ManimEntity(ABC):
     def send_message(
         self,
         message: "ManimEntity",
-        pre_hook: List[Callable],
-        post_hook: List[Callable],
         receiver: "ManimEntity",
         anim: Optional[Animation],
     ):
         """
         Animate sending a message.
-
-        `pre_hook` and `post_hook` are lists of functions; they typically mutate
-        the sender (self) and receiver, respectively.
         """
-        for f in pre_hook:
-            f()
         self.render()
         self.scene.play(anim)
         self.scene.remove(message.m)
-        for f in post_hook:
-            f()
         receiver.render()
 
 
-class HistoryEvents(ManimEntity, simulation.HistoryEvents):
-    @classmethod
-    def from_entity(cls, scene: Scene, events: List[simulation.HistoryEvent]) -> Self:
-        return cls(scene, events)
+class HistoryEvents(ManimEntity):
+    def __init__(
+        self,
+        events: List[simulation.HistoryEvent],
+        scene: Scene,
+    ):
+        super().__init__(scene)
+        self.events = events
 
     def newm(self) -> Mobject:
         font_size = 16
@@ -117,39 +111,37 @@ class ApplicationRequest(ManimEntity):
         self,
         request_type: simulation.ApplicationRequestType,
         scene: Scene,
-        *args,
-        **kwargs
     ) -> None:
+        super().__init__(scene)
         self.request_type = request_type
-        super().__init__(scene, *args, **kwargs)
 
     def newm(self) -> Mobject:
         return Text(self.request_type.value, font_size=16)
 
 
-class WorkflowWorker(ManimEntity, entity.WorkflowWorker):
+class WorkflowWorker(ManimEntity):
     def newm(self) -> Mobject:
         return Text("Workflow Worker", font_size=24)
 
 
-class Server(ManimEntity, simulation.Server):
+class Server(ManimEntity):
     def newm(self) -> Mobject:
         server = Text("Server", font_size=24)
         events = HistoryEvents.eventsm(self.history.events)
         return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
 
-    async def dispatch_wft_if_pending_events(self, worker: WorkflowWorker):
-        wft_entity, pre, post = super().dispatch_wft_if_pending_events(worker)
-        if not wft_entity:
-            return
-        wft = WorkflowTask.from_entity(self.scene, wft_entity.events)
-        wft.m.next_to(self.m["history"], RIGHT)
+    async def handle_message_event(self, event: MessageEvent):
+        if (type(event.sender), type(event.receiver)) == (Server, WorkflowWorker):
+            msg = WorkflowTask(event.data["new_events"], self.scene)
+        else:
+            type_names = type(event.sender).__name__, type(event.receiver).__name__
+            raise ValueError(f"Unsupported (sender, receiver) types: {type_names}")
+
+        msg.m.next_to(self.m["history"], RIGHT)
         return self.send_message(
-            wft,
-            pre,
-            post,
-            worker,
-            ApplyMethod(wft.m.move_to, worker.m.get_edge_center(UP)),
+            event.sender,
+            event.receiver,
+            ApplyMethod(msg.m.move_to, event.receiver.m.get_edge_center(UP)),
         )
 
 

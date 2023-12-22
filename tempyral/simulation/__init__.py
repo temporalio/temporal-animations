@@ -30,17 +30,21 @@ class HistoryEventType(Enum):
 
 
 class PublishingEntity:
-    def __init__(self, event_bus: EventBus, proxy: Any):
+    def __init__(self, event_bus: Optional[EventBus], proxy: Any):
         self.event_bus = event_bus
         self.proxy = proxy
 
     async def publish_change_event(self):
-        await self.event_bus.publish(StateChangeEvent(self.proxy))
+        if self.event_bus is not None:
+            await self.event_bus.publish(StateChangeEvent(self.proxy))
 
     async def publish_message_event(
-        self, sender: "PublishingEntity", receiver: "PublishingEntity"
+        self, sender: "PublishingEntity", receiver: "PublishingEntity", **kwargs
     ):
-        await self.event_bus.publish(MessageEvent(sender.proxy, receiver.proxy))
+        if self.event_bus is not None:
+            await self.event_bus.publish(
+                MessageEvent(sender.proxy, receiver.proxy, kwargs)
+            )
 
 
 @dataclass
@@ -72,7 +76,7 @@ class WorkflowWorker(PublishingEntity):
         while True:
             # Currently we're not actually simulating the long-poll; just the
             # dispatch from server to worker.
-            server.dispatch_wft_if_pending_events(self)
+            await server.dispatch_wft_if_pending_events(self)
             await asyncio.sleep(0)
 
     def handle_wft(self, wft: WorkflowTask, server: "Server"):
@@ -80,8 +84,8 @@ class WorkflowWorker(PublishingEntity):
 
 
 class Server(PublishingEntity):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, event_bus: Optional[EventBus], proxy: Any):
+        super().__init__(event_bus, proxy)
         self.shards: List[Shard] = [
             {DEFAULT_NAMESPACE: {DEFAULT_WORKFLOW_ID: HistoryEvents([])}}
         ]
@@ -97,20 +101,18 @@ class Server(PublishingEntity):
                     ]
                 )
 
-    def dispatch_wft_if_pending_events(
-        self, worker: WorkflowWorker
-    ) -> Tuple[Optional[WorkflowTask], List[Callable], List[Callable]]:
+    async def dispatch_wft_if_pending_events(self, worker: WorkflowWorker) -> None:
         new_events = []
         for e in self.history.events:
             if not e.seen_by_sticky_worker:
                 e.seen_by_sticky_worker = True
                 new_events.append(e)
-        self.publish(ChangeState(self))
         if new_events:
+            await self.publish_change_event()
             wft = WorkflowTask(new_events)
-            return wft, [], [lambda: worker.handle_wft(wft, self)]
-        else:
-            return None, [], []
+            await self.publish_message_event(self, worker, new_events=new_events)
+            worker.handle_wft(wft, self)
+            await worker.publish_change_event()
 
     @property
     def history(self) -> HistoryEvents:
@@ -134,7 +136,7 @@ class Server(PublishingEntity):
 
 
 class Application(PublishingEntity):
-    def start_workflow(
+    async def start_workflow(
         self, server: Server
     ) -> Tuple[None, List[Callable], List[Callable]]:
         """
@@ -157,6 +159,8 @@ def drain(source: List, sink: List):
 if __name__ == "__main__":
 
     def simulation():
-        server = Server()
-        app = Application()
-        wworker = WorkflowWorker()
+        server = Server(None, None)
+        app = Application(None, None)
+        wworker = WorkflowWorker(None, None)
+
+    simulation()
