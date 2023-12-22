@@ -2,7 +2,7 @@
 Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod
-from typing import List, Self
+from typing import Callable, List, Self
 
 from manim import (
     DOWN,
@@ -68,6 +68,10 @@ WorkflowTask = HistoryEvents
 
 
 class ApplicationRequest(ManimEntity, entity.ApplicationRequest):
+    @classmethod
+    def from_entity(cls, scene: Scene, events: List[entity.Event]) -> Self:
+        return cls(scene, events)
+
     # TODO: Here we are starting to use the manim objects to store simulation
     # state. We need to (a) represent a request, and the associated state
     # changes, in the simulation world, and (b) extend that with visual
@@ -97,16 +101,26 @@ class Server(ManimEntity, entity.Server):
 
 
 class Application(ManimEntity, entity.Application):
-    def send_request(self, request: ApplicationRequest, server: Server):
-        pre, post = super().send_request(request, server)
+    def start_workflow(self, server: Server):
+        request_entity, pre, post = super().start_workflow(server)
+        request = ApplicationRequest.from_entity(self.scene, request_entity.events)
+        return self.send_request(request, pre, post, server)
+
+    def send_request(
+        self,
+        request: ApplicationRequest,
+        pre_hook: List[Callable],
+        post_hook: List[Callable],
+        server: Server,
+    ):
         request.m.next_to(self.m.get_edge_center(UP), direction=LEFT)
         self.scene.add(request.m)
-        for f in pre:
+        for f in pre_hook:
             f()
         self.render()
         self.scene.play(ApplyMethod(request.m.move_to, server.m.get_edge_center(LEFT)))
         self.scene.remove(request.m)
-        for f in post:
+        for f in post_hook:
             f()
         server.render()
 

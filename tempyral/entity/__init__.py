@@ -73,15 +73,16 @@ class ApplicationRequest:
 
 
 class Application:
-    def send_request(
-        self, request: ApplicationRequest, server: Server
-    ) -> Tuple[List[Callable], List[Callable]]:
+    def start_workflow(
+        self, server: Server
+    ) -> Tuple[ApplicationRequest, List[Callable], List[Callable]]:
         """
         The sending of a request is represented by a list of pre-send functions,
         and a list of post-receive functions. These will typically mutate the
         state of the sender and receiver respectively.
         """
-        return [], [lambda: drain(request.events, server.history.events)]
+        request = ApplicationRequest(["WORKFLOW_EXECUTION_STARTED"])
+        return request, [], [lambda: drain(request.events, server.history.events)]
 
 
 def drain(source: List, sink: List):

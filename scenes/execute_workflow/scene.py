@@ -1,11 +1,6 @@
 from manim import DOWN, LEFT, ORIGIN, RIGHT, UP, Create, Scene
 
-from tempyral.manim_entity import (
-    Application,
-    ApplicationRequest,
-    Server,
-    WorkflowWorker,
-)
+from tempyral.manim_entity import Application, Server, WorkflowWorker
 
 
 class ExecuteWorkflow(Scene):
@@ -25,9 +20,7 @@ class ExecuteWorkflow(Scene):
 
         for i in range(4):
             if i == 2:
-                app.send_request(
-                    ApplicationRequest(self, ["WORKFLOW_EXECUTION_STARTED"]), server
-                )
+                app.start_workflow(server)
             server.dispatch_wft(wworker)
 
         self.wait(2)
