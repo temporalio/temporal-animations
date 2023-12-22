@@ -4,11 +4,11 @@ Manim representations of Temporal entities.
 from abc import ABC, abstractmethod
 from typing import Callable, List, Optional, Self
 
+from manim import DL, DOWN, DR
+from manim import GREEN_D as GREEN
+from manim import LEFT
+from manim import RED_D as RED
 from manim import (
-    DL,
-    DOWN,
-    DR,
-    LEFT,
     RIGHT,
     UL,
     UP,
@@ -93,7 +93,14 @@ class HistoryEvents(ManimEntity, entity.HistoryEvents):
     @staticmethod
     def eventsm(events: List[entity.HistoryEvent], font_size=16) -> Mobject:
         return VGroup(
-            *[Text(e.event_type.value, font_size=font_size) for e in events]
+            *[
+                Text(
+                    e.event_type.value,
+                    font_size=font_size,
+                    color=GREEN if e.seen_by_sticky_worker else RED,
+                )
+                for e in events
+            ]
         ).arrange(DOWN, center=True, aligned_edge=LEFT)
 
 
