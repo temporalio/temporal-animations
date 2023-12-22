@@ -109,6 +109,8 @@ def get_message_cls_for(
         return ApplicationRequest
     elif (sender_cls, receiver_cls) == (Server, WorkflowWorker):
         return WorkflowTask
+    elif (sender_cls, receiver_cls) == (WorkflowWorker, Server):
+        return WorkerRequest
     else:
         raise ValueError(
             f"Unsupported (sender, receiver) types: {(sender_cls.__name__, receiver_cls.__name__)}"
@@ -157,6 +159,15 @@ class WorkflowTask(HistoryEvents):
         events = super().newm()
         task = Text("WFT", font_size=16)
         return VGroup(task, events).arrange()
+
+
+class WorkerRequest(VisualElement):
+    def __init__(self, name: str, scene: Scene):
+        self.name = name
+        super().__init__(scene)
+
+    def newm(self) -> Mobject:
+        return Text(self.name, font_size=24)
 
 
 class ApplicationRequest(VisualElement):

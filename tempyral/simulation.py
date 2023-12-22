@@ -4,7 +4,7 @@ A pure python simulation of Temporal without any visualization.
 import asyncio
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, TypedDict
+from typing import Dict, List, TypedDict, Union
 
 from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
 
@@ -19,6 +19,10 @@ ActivityTask = str
 
 class ApplicationRequestType(Enum):
     StartWorkflow = "StartWorkflow"
+
+
+class WorkerRequestType(Enum):
+    RespondWorkflowTaskCompleted = "RespondWorkflowTaskCompleted"
 
 
 class HistoryEventType(Enum):
@@ -74,8 +78,11 @@ class WorkflowWorker(Entity):
             await server.dispatch_wft_if_pending_events(self)
             await asyncio.sleep(0)
 
-    def handle_wft(self, wft: WorkflowTask, server: "Server"):
-        pass
+    async def handle_wft(self, wft: WorkflowTask, server: "Server"):
+        await self.publish_message_event(
+            self, server, name="RespondWorkflowTaskCompleted"
+        )
+        await server.handle_request(WorkerRequestType.RespondWorkflowTaskCompleted)
 
 
 class Server(Entity):
@@ -85,7 +92,9 @@ class Server(Entity):
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
 
-    async def handle_request(self, request: ApplicationRequestType):
+    async def handle_request(
+        self, request: Union[ApplicationRequestType, WorkerRequestType]
+    ):
         match request:
             case ApplicationRequestType.StartWorkflow:
                 self.history.events.extend(
@@ -95,6 +104,13 @@ class Server(Entity):
                     ]
                 )
                 await self.publish_change_event()
+            case WorkerRequestType.RespondWorkflowTaskCompleted:
+                self.history.events.append(
+                    HistoryEvent(HistoryEventType.WORKFLOW_TASK_COMPLETED)
+                )
+                await self.publish_change_event()
+            case _:
+                raise ValueError(f"Server does not support request of type: {request}")
 
     async def dispatch_wft_if_pending_events(self, worker: WorkflowWorker) -> None:
         new_events = []
@@ -106,7 +122,7 @@ class Server(Entity):
             await self.publish_change_event()
             wft = WorkflowTask(new_events)
             await self.publish_message_event(self, worker, events=new_events)
-            worker.handle_wft(wft, self)
+            await worker.handle_wft(wft, self)
             await worker.publish_change_event()
 
     @property
