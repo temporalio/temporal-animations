@@ -26,7 +26,7 @@ from manim import (
     VGroup,
 )
 
-from tempyral import entity
+from tempyral import simulation
 
 
 class ManimEntity(ABC):
@@ -72,9 +72,9 @@ class ManimEntity(ABC):
         receiver.render()
 
 
-class HistoryEvents(ManimEntity, entity.HistoryEvents):
+class HistoryEvents(ManimEntity, simulation.HistoryEvents):
     @classmethod
-    def from_entity(cls, scene: Scene, events: List[entity.HistoryEvent]) -> Self:
+    def from_entity(cls, scene: Scene, events: List[simulation.HistoryEvent]) -> Self:
         return cls(scene, events)
 
     def newm(self) -> Mobject:
@@ -92,7 +92,7 @@ class HistoryEvents(ManimEntity, entity.HistoryEvents):
         return VGroup(rect, events)
 
     @staticmethod
-    def eventsm(events: List[entity.HistoryEvent], font_size=16) -> Mobject:
+    def eventsm(events: List[simulation.HistoryEvent], font_size=16) -> Mobject:
         return VGroup(
             *[
                 Text(
@@ -114,7 +114,11 @@ class WorkflowTask(HistoryEvents):
 
 class ApplicationRequest(ManimEntity):
     def __init__(
-        self, request_type: entity.ApplicationRequestType, scene: Scene, *args, **kwargs
+        self,
+        request_type: simulation.ApplicationRequestType,
+        scene: Scene,
+        *args,
+        **kwargs
     ) -> None:
         self.request_type = request_type
         super().__init__(scene, *args, **kwargs)
@@ -123,7 +127,7 @@ class ApplicationRequest(ManimEntity):
         return Text(self.request_type.value, font_size=16)
 
 
-class WorkflowWorker(ManimEntity, entity.WorkflowWorker):
+class WorkflowWorker(ManimEntity, simulation.WorkflowWorker):
     async def poll(self, server: "Server"):
         while True:
             await server.dispatch_wft_if_pending_events(self)
@@ -133,7 +137,7 @@ class WorkflowWorker(ManimEntity, entity.WorkflowWorker):
         return Text("Workflow Worker", font_size=24)
 
 
-class Server(ManimEntity, entity.Server):
+class Server(ManimEntity, simulation.Server):
     def newm(self) -> Mobject:
         server = Text("Server", font_size=24)
         events = HistoryEvents.eventsm(self.history.events)
@@ -154,11 +158,11 @@ class Server(ManimEntity, entity.Server):
         )
 
 
-class Application(ManimEntity, entity.Application):
+class Application(ManimEntity, simulation.Application):
     async def start_workflow(self, server: Server):
         _, pre, post = super().start_workflow(server)
         request = ApplicationRequest(
-            entity.ApplicationRequestType.START_WORKFLOW, self.scene
+            simulation.ApplicationRequestType.START_WORKFLOW, self.scene
         )
         request.m.next_to(self.m.get_edge_center(UP), direction=LEFT)
         return self.send_message(

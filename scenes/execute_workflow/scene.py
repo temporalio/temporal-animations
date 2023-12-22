@@ -4,7 +4,7 @@ from typing import Coroutine, List, Tuple
 
 from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, Scene, Text
 
-from tempyral.manim_entity import Application, Server, WorkflowWorker
+from tempyral.animation import Application, Server, WorkflowWorker
 
 TIMEOUT_SECONDS = 10
 
