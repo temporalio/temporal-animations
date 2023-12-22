@@ -10,7 +10,6 @@ NamespaceId = str
 WorkflowId = str
 TaskQueueId = str
 Event = str
-WorkflowTask = List[Event]
 ActivityTask = str
 
 
@@ -32,12 +31,25 @@ class TaskQueue(TypedDict):
     activity_task_queue: List[ActivityTask]
 
 
+class WorkflowWorker:
+    pass
+
+
 class Server:
     def __init__(self) -> None:
         self.shards: List[Shard] = [
             {DEFAULT_NAMESPACE: {DEFAULT_WORKFLOW_ID: HistoryEvents([])}}
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
+
+    def dispatch_wft(
+        self, worker: WorkflowWorker
+    ) -> Tuple[WorkflowTask, List[Callable], List[Callable]]:
+        """
+        Send all unseen events to the workflow worker, and mark them as seen.
+        """
+        wft = WorkflowTask([])
+        return wft, [lambda: drain(self.history.events, wft.events)], []
 
     @property
     def history(self) -> HistoryEvents:
@@ -54,10 +66,6 @@ class Server:
         except ValueError:
             raise ValueError("Multiple workflow executions are not supported")
         return history
-
-
-class WorkflowWorker:
-    pass
 
 
 class ApplicationRequest:

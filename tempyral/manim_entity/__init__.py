@@ -94,7 +94,8 @@ class Server(ManimEntity, entity.Server):
         return VGroup(server, history).arrange()
 
     def dispatch_wft(self, worker: WorkflowWorker):
-        wft = WorkflowTask.from_entity(self.scene, self.history.events)
+        wft_entity, pre, post = super().dispatch_wft(worker)
+        wft = WorkflowTask.from_entity(self.scene, wft_entity.events)
         wft.m.move_to(self.m.get_edge_center(RIGHT))
         self.scene.play(ApplyMethod(wft.m.move_to, worker.m))
         self.scene.remove(wft.m)
