@@ -60,8 +60,8 @@ class ProxyEntity(Generic[E], VisualElement):
     """
 
     def __init__(self, entity: E, scene: Scene) -> None:
-        super().__init__(scene)
         self.e = entity
+        super().__init__(scene)
         assert (
             entity not in proxy_registry
         ), "Simulation entities may have one manim proxy only"
@@ -120,8 +120,8 @@ class HistoryEvents(VisualElement):
         events: List[simulation.HistoryEvent],
         scene: Scene,
     ):
-        super().__init__(scene)
         self.events = events
+        super().__init__(scene)
 
     def newm(self) -> Mobject:
         font_size = 16
@@ -165,8 +165,8 @@ class ApplicationRequest(VisualElement):
         scene: Scene,
     ) -> None:
         # An ApplicationRequest has no counterpart in the simulation.
-        super().__init__(scene)
         self.request_type = request_type
+        super().__init__(scene)
 
     def newm(self) -> Mobject:
         return Text(self.request_type.value, font_size=16)

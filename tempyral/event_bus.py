@@ -22,6 +22,7 @@ class EventBus(Generic[E]):
         self.bus: Queue[Union[StateChangeEvent[E], MessageEvent[E]]] = Queue()
 
     async def publish(self, event: Union[StateChangeEvent[E], MessageEvent[E]]):
+        print(f"publishing: {event}")
         await self.bus.put(event)
 
 

@@ -36,12 +36,14 @@ class Entity:
     async def publish_change_event(self):
         if self.event_bus is not None:
             await self.event_bus.publish(StateChangeEvent(self))
+            await asyncio.sleep(0)
 
     async def publish_message_event(
         self, sender: "Entity", receiver: "Entity", **kwargs
     ):
         if self.event_bus is not None:
             await self.event_bus.publish(MessageEvent(sender, receiver, kwargs))
+            await asyncio.sleep(0)
 
 
 @dataclass
@@ -88,7 +90,7 @@ class Server(Entity):
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
 
-    def handle(self, request: ApplicationRequestType):
+    async def handle_request(self, request: ApplicationRequestType):
         match request:
             case ApplicationRequestType.START_WORKFLOW:
                 self.history.events.extend(
@@ -97,6 +99,7 @@ class Server(Entity):
                         HistoryEvent(HistoryEventType.WORKFLOW_TASK_SCHEDULED),
                     ]
                 )
+                await self.publish_change_event()
 
     async def dispatch_wft_if_pending_events(self, worker: WorkflowWorker) -> None:
         new_events = []
@@ -133,19 +136,10 @@ class Server(Entity):
 
 
 class Application(Entity):
-    async def start_workflow(
-        self, server: Server
-    ) -> Tuple[None, List[Callable], List[Callable]]:
-        """
-        The sending of a request is represented by a list of pre-send functions,
-        and a list of post-receive functions. These will typically mutate the
-        state of the sender and receiver respectively.
-        """
-        return (
-            None,
-            [],
-            [lambda: server.handle(ApplicationRequestType.START_WORKFLOW)],
-        )
+    async def start_workflow(self, server: Server) -> None:
+        request = ApplicationRequestType.START_WORKFLOW
+        await self.publish_message_event(self, server, request_type=request)
+        await server.handle_request(request)
 
 
 def drain(source: List, sink: List):
