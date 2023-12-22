@@ -1,11 +1,11 @@
 import asyncio
 from datetime import datetime
-from typing import Coroutine, List, Tuple
+from typing import List, Tuple
 
 from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, Scene, Text
 
 from tempyral import animation
-from tempyral.event_bus import EventBus
+from tempyral.event_bus import event_bus
 from tempyral.simulation import Application, Server, WorkflowWorker
 
 TIMEOUT_SECONDS = 10
@@ -22,11 +22,12 @@ class ExecuteWorkflow(Scene):
         async with asyncio.TaskGroup() as tg:
             tg.create_task(wworker.poll(server))
             tg.create_task(app.start_workflow(server))
+            tg.create_task(animation.handle_simulation_events(event_bus))
 
     def construct(self):
         self.add_timestamp()
         server, [app], [wworker] = self.make_simulation_entities()
-        self.make_animation_entities(server, [app], [wworker])
+        self.make_animation_proxies(server, [app], [wworker])
 
         async def simulation():
             try:
@@ -41,32 +42,26 @@ class ExecuteWorkflow(Scene):
     def make_simulation_entities(
         self,
     ) -> Tuple[Server, List[Application], List[WorkflowWorker]]:
-        event_bus: EventBus[animation.VisualElement] = EventBus()
+        return Server(event_bus), [Application(event_bus)], [WorkflowWorker(event_bus)]
 
-        server = Server(event_bus, proxy=animation_server)
-        app = Application(event_bus, proxy=animation_app)
-        wworker = WorkflowWorker(event_bus, proxy=animation_wworker)
-
-        return server, [app], [wworker]
-
-    def make_animation_entities(
+    def make_animation_proxies(
         self,
         simulation_server: Server,
         simulation_apps: List[Application],
         simulation_workflow_workers: List[WorkflowWorker],
     ):
         """
-        Create entities in the animation domain, adding them to the scene.
+        Create proxy entities in the animation domain, adding them to the scene.
 
-        The animation entities have references to their simulation counterparts.
+        The proxy entities have references to their simulation counterparts.
         """
-        server = animation.Server(self, simulation_server)
+        server = animation.Server(simulation_server, self)
         [app] = [
-            animation.Application(self, simulation_app)
+            animation.Application(simulation_app, self)
             for simulation_app in simulation_apps
         ]
         [wworker] = [
-            animation.WorkflowWorker(self, simulation_workflow_worker)
+            animation.WorkflowWorker(simulation_workflow_worker, self)
             for simulation_workflow_worker in simulation_workflow_workers
         ]
 

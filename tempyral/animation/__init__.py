@@ -87,7 +87,7 @@ class ProxyEntity(Generic[E], VisualElement):
 proxy_registry: Dict[simulation.Entity, ProxyEntity] = {}
 
 
-async def handle_simulation_events(event_bus: EventBus[simulation.Entity]):
+async def handle_simulation_events(event_bus: EventBus):
     while True:
         match await event_bus.bus.get():
             case StateChangeEvent(entity):
@@ -184,6 +184,6 @@ class Server(ProxyEntity[simulation.Server]):
         return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
 
 
-class Application(VisualElement, simulation.Application):
+class Application(ProxyEntity[simulation.Application]):
     def newm(self) -> Mobject:
         return Text("Application", font_size=24)
