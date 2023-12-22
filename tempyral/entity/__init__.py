@@ -1,9 +1,12 @@
 """
 A pure python simulation of Temporal without any visualization.
 """
+import asyncio
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Dict, List, Optional, Tuple, TypedDict
+
+from tempyral.event_bus import EventBus
 
 DEFAULT_NAMESPACE = "default"
 DEFAULT_WORKFLOW_ID = "wid"
@@ -51,6 +54,13 @@ class TaskQueue(TypedDict):
 
 
 class WorkflowWorker:
+    async def poll(self, server: "Server"):
+        while True:
+            # Currently we're not actually simulating the long-poll; just the
+            # dispatch from server to worker.
+            server.dispatch_wft_if_pending_events(self)
+            await asyncio.sleep(0)
+
     def handle_wft(self, wft: WorkflowTask, server: "Server"):
         pass
 
@@ -80,6 +90,7 @@ class Server:
             if not e.seen_by_sticky_worker:
                 e.seen_by_sticky_worker = True
                 new_events.append(e)
+        self.publish(ChangeState(self))
         if new_events:
             wft = WorkflowTask(new_events)
             return wft, [], [lambda: worker.handle_wft(wft, self)]
@@ -126,3 +137,11 @@ class Application:
 def drain(source: List, sink: List):
     while source:
         sink.append(source.pop())
+
+
+if __name__ == "__main__":
+
+    def simulation():
+        server = Server()
+        app = Application()
+        wworker = WorkflowWorker()
