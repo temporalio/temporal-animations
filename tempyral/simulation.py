@@ -1,9 +1,12 @@
 """
 A pure python simulation of Temporal without any visualization.
 """
+import asyncio
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Tuple, TypedDict
+from typing import Dict, List, TypedDict
+
+from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
 
 DEFAULT_NAMESPACE = "default"
 DEFAULT_WORKFLOW_ID = "wid"
@@ -15,7 +18,7 @@ ActivityTask = str
 
 
 class ApplicationRequestType(Enum):
-    START_WORKFLOW = "StartWorkflow"
+    StartWorkflow = "StartWorkflow"
 
 
 class HistoryEventType(Enum):
@@ -26,13 +29,26 @@ class HistoryEventType(Enum):
     WORKFLOW_TASK_COMPLETED = "WORKFLOW_TASK_COMPLETED"
 
 
+class Entity:
+    async def publish_change_event(self):
+        await event_bus.publish(StateChangeEvent(self))
+        await asyncio.sleep(0)
+
+    async def publish_message_event(
+        self, sender: "Entity", receiver: "Entity", **kwargs
+    ):
+        if event_bus is not None:
+            await event_bus.publish(MessageEvent(sender, receiver, kwargs))
+            await asyncio.sleep(0)
+
+
 @dataclass
 class HistoryEvent:
     event_type: HistoryEventType
     seen_by_sticky_worker: bool = False
 
 
-class HistoryEvents:
+class HistoryEvents(Entity):
     """A slice of history events"""
 
     def __init__(self, events: List[HistoryEvent]) -> None:
@@ -50,44 +66,55 @@ class TaskQueue(TypedDict):
     activity_task_queue: List[ActivityTask]
 
 
-class WorkflowWorker:
+class WorkflowWorker(Entity):
+    async def poll(self, server: "Server"):
+        while True:
+            # Currently we're not actually simulating the long-poll; just the
+            # dispatch from server to worker.
+            await server.dispatch_wft_if_pending_events(self)
+            await asyncio.sleep(0)
+
     def handle_wft(self, wft: WorkflowTask, server: "Server"):
         pass
 
 
-class Server:
-    def __init__(self) -> None:
+class Server(Entity):
+    def __init__(self):
         self.shards: List[Shard] = [
             {DEFAULT_NAMESPACE: {DEFAULT_WORKFLOW_ID: HistoryEvents([])}}
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
 
-    def handle(self, request: ApplicationRequestType):
+    async def handle_request(self, request: ApplicationRequestType):
         match request:
-            case ApplicationRequestType.START_WORKFLOW:
+            case ApplicationRequestType.StartWorkflow:
                 self.history.events.extend(
                     [
                         HistoryEvent(HistoryEventType.WORKFLOW_EXECUTION_STARTED),
                         HistoryEvent(HistoryEventType.WORKFLOW_TASK_SCHEDULED),
                     ]
                 )
+                await self.publish_change_event()
 
-    def maybe_dispatch_wft(
-        self, worker: WorkflowWorker
-    ) -> Tuple[Optional[WorkflowTask], List[Callable], List[Callable]]:
+    async def dispatch_wft_if_pending_events(self, worker: WorkflowWorker) -> None:
         new_events = []
         for e in self.history.events:
             if not e.seen_by_sticky_worker:
                 e.seen_by_sticky_worker = True
                 new_events.append(e)
         if new_events:
+            await self.publish_change_event()
             wft = WorkflowTask(new_events)
-            return wft, [], [lambda: worker.handle_wft(wft, self)]
-        else:
-            return None, [], []
+            await self.publish_message_event(self, worker, events=new_events)
+            worker.handle_wft(wft, self)
+            await worker.publish_change_event()
 
     @property
     def history(self) -> HistoryEvents:
+        """
+        Currently, the simulation only supports a single workflow execution.
+        Return its history.
+        """
         try:
             [shard] = self.shards
         except ValueError:
@@ -103,20 +130,11 @@ class Server:
         return history
 
 
-class Application:
-    def start_workflow(
-        self, server: Server
-    ) -> Tuple[None, List[Callable], List[Callable]]:
-        """
-        The sending of a request is represented by a list of pre-send functions,
-        and a list of post-receive functions. These will typically mutate the
-        state of the sender and receiver respectively.
-        """
-        return (
-            None,
-            [],
-            [lambda: server.handle(ApplicationRequestType.START_WORKFLOW)],
-        )
+class Application(Entity):
+    async def start_workflow(self, server: Server) -> None:
+        request = ApplicationRequestType.StartWorkflow
+        await self.publish_message_event(self, server, request_type=request)
+        await server.handle_request(request)
 
 
 def drain(source: List, sink: List):

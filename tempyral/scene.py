@@ -1,0 +1,88 @@
+import asyncio
+import sys
+from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Coroutine, Iterable, List, Tuple
+
+from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, Scene, Text
+
+from tempyral import animation
+from tempyral.simulation import Application, Server, WorkflowWorker
+
+TIMEOUT_SECONDS = 10
+
+
+class TemporalScene(Scene, ABC):
+    """
+    To create an animation, subclass TemporalScene and implement `simulation()`.
+    """
+
+    @abstractmethod
+    def simulation(
+        self,
+        server: Server,
+        app: Application,
+        workflow_worker: WorkflowWorker,
+    ) -> Iterable[Coroutine]:
+        ...
+
+    def construct(self):
+        self.add_timestamp()
+        server, [app], [wworker] = self.make_simulation_entities()
+        self.make_animation_proxies(server, [app], [wworker])
+
+        async def simulation():
+            try:
+                async with asyncio.timeout(TIMEOUT_SECONDS):
+                    async with asyncio.TaskGroup() as tg:
+                        for coro in self.simulation(server, app, wworker):
+                            tg.create_task(coro)
+                        tg.create_task(animation.handle_simulation_events(self))
+            except ExceptionGroup as eg:
+                print(f"Caught ExceptionGroup:", file=sys.stderr)
+                for exc in eg.exceptions:
+                    print(f"    {exc}", file=sys.stderr)
+                raise
+            except TimeoutError:
+                pass
+
+        asyncio.run(simulation())
+        self.wait(2)
+
+    def make_simulation_entities(
+        self,
+    ) -> Tuple[Server, List[Application], List[WorkflowWorker]]:
+        return Server(), [Application()], [WorkflowWorker()]
+
+    def make_animation_proxies(
+        self,
+        simulation_server: Server,
+        simulation_apps: List[Application],
+        simulation_workflow_workers: List[WorkflowWorker],
+    ):
+        """
+        Create proxy entities in the animation domain, adding them to the scene.
+
+        The proxy entities have references to their simulation counterparts.
+        """
+        server = animation.Server(simulation_server, self)
+        [app] = [
+            animation.Application(simulation_app, self)
+            for simulation_app in simulation_apps
+        ]
+        [wworker] = [
+            animation.WorkflowWorker(simulation_workflow_worker, self)
+            for simulation_workflow_worker in simulation_workflow_workers
+        ]
+
+        server.m.move_to(ORIGIN + UP * 2)
+        app.m.move_to(ORIGIN + LEFT * 3 + DOWN * 2)
+        wworker.m.move_to(ORIGIN + RIGHT * 3 + DOWN * 2)
+
+        self.add(app.m, server.m, wworker.m)
+        return server, [app], [wworker]
+
+    def add_timestamp(self):
+        time = Text(datetime.now().strftime("%H:%M:%S"), font_size=24)
+        time.to_corner(UL, buff=0.1)
+        self.add(time)
