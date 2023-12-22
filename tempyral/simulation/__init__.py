@@ -29,22 +29,19 @@ class HistoryEventType(Enum):
     WORKFLOW_TASK_COMPLETED = "WORKFLOW_TASK_COMPLETED"
 
 
-class PublishingEntity:
-    def __init__(self, event_bus: Optional[EventBus], proxy: Any):
+class Entity:
+    def __init__(self, event_bus: Optional[EventBus]):
         self.event_bus = event_bus
-        self.proxy = proxy
 
     async def publish_change_event(self):
         if self.event_bus is not None:
-            await self.event_bus.publish(StateChangeEvent(self.proxy))
+            await self.event_bus.publish(StateChangeEvent(self))
 
     async def publish_message_event(
-        self, sender: "PublishingEntity", receiver: "PublishingEntity", **kwargs
+        self, sender: "Entity", receiver: "Entity", **kwargs
     ):
         if self.event_bus is not None:
-            await self.event_bus.publish(
-                MessageEvent(sender.proxy, receiver.proxy, kwargs)
-            )
+            await self.event_bus.publish(MessageEvent(sender, receiver, kwargs))
 
 
 @dataclass
@@ -53,7 +50,7 @@ class HistoryEvent:
     seen_by_sticky_worker: bool = False
 
 
-class HistoryEvents:
+class HistoryEvents(Entity):
     """A slice of history events"""
 
     def __init__(self, events: List[HistoryEvent]) -> None:
@@ -71,7 +68,7 @@ class TaskQueue(TypedDict):
     activity_task_queue: List[ActivityTask]
 
 
-class WorkflowWorker(PublishingEntity):
+class WorkflowWorker(Entity):
     async def poll(self, server: "Server"):
         while True:
             # Currently we're not actually simulating the long-poll; just the
@@ -83,9 +80,9 @@ class WorkflowWorker(PublishingEntity):
         pass
 
 
-class Server(PublishingEntity):
-    def __init__(self, event_bus: Optional[EventBus], proxy: Any):
-        super().__init__(event_bus, proxy)
+class Server(Entity):
+    def __init__(self, event_bus: Optional[EventBus]):
+        super().__init__(event_bus)
         self.shards: List[Shard] = [
             {DEFAULT_NAMESPACE: {DEFAULT_WORKFLOW_ID: HistoryEvents([])}}
         ]
@@ -135,7 +132,7 @@ class Server(PublishingEntity):
         return history
 
 
-class Application(PublishingEntity):
+class Application(Entity):
     async def start_workflow(
         self, server: Server
     ) -> Tuple[None, List[Callable], List[Callable]]:
@@ -159,8 +156,8 @@ def drain(source: List, sink: List):
 if __name__ == "__main__":
 
     def simulation():
-        server = Server(None, None)
-        app = Application(None, None)
-        wworker = WorkflowWorker(None, None)
+        server = Server(None)
+        app = Application(None)
+        wworker = WorkflowWorker(None)
 
     simulation()

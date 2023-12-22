@@ -2,7 +2,7 @@
 Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod
-from typing import Callable, List, Optional
+from typing import Dict, Generic, List, Optional, Type, TypeVar
 
 from manim import DL, DOWN, DR
 from manim import GREEN_D as GREEN
@@ -26,13 +26,19 @@ from manim import (
 )
 
 from tempyral import simulation
-from tempyral.event_bus import MessageEvent, StateChangeEvent
+from tempyral.event_bus import EventBus, MessageEvent, StateChangeEvent
+
+E = TypeVar("E", bound=simulation.Entity)
 
 
-class ManimEntity(ABC):
+class VisualElement(ABC):
+    """
+    An element that participates visually in the scene.
+    """
+
     def __init__(self, scene: Scene) -> None:
-        self.scene = scene
         self.m = self.newm()  # Current visual representation
+        self.scene = scene
 
     @abstractmethod
     def newm(self) -> Mobject:
@@ -47,22 +53,68 @@ class ManimEntity(ABC):
         else:
             self.m.become(newm)
 
+
+class ProxyEntity(Generic[E], VisualElement):
+    """
+    A VisualElement that has a counterpart entity of type E in the simulation.
+    """
+
+    def __init__(self, entity: E, scene: Scene) -> None:
+        super().__init__(scene)
+        self.e = entity
+        assert (
+            entity not in proxy_registry
+        ), "Simulation entities may have one manim proxy only"
+        proxy_registry[entity] = self
+
     def send_message(
         self,
-        message: "ManimEntity",
-        receiver: "ManimEntity",
-        anim: Optional[Animation],
+        receiver: "ProxyEntity",
+        message: VisualElement,
     ):
         """
         Animate sending a message.
         """
-        self.render()
-        self.scene.play(anim)
+        message.m.move_to(self.m)
+        # TODO: Choose the start and end points appropriately given the
+        # locations of self and receiver.
+        self.scene.add(message.m)
+        self.scene.play(ApplyMethod(message.m.move_to, receiver.m))
         self.scene.remove(message.m)
-        receiver.render()
 
 
-class HistoryEvents(ManimEntity):
+# A registry allowing us to look up proxies by their simulation counterparts.
+proxy_registry: Dict[simulation.Entity, ProxyEntity] = {}
+
+
+async def handle_simulation_events(event_bus: EventBus[simulation.Entity]):
+    while True:
+        match await event_bus.bus.get():
+            case StateChangeEvent(entity):
+                proxy_registry[entity].render()
+            case MessageEvent(sender_entity, receiver_entity, data):
+                sender, receiver = (
+                    proxy_registry[sender_entity],
+                    proxy_registry[receiver_entity],
+                )
+                msg_cls = get_message_cls_for(sender, receiver)
+                msg = msg_cls(**data)
+                sender.send_message(receiver, msg)
+
+
+def get_message_cls_for(
+    sender: ProxyEntity, receiver: ProxyEntity
+) -> Type[VisualElement]:
+    sender_cls, receiver_cls = type(sender), type(receiver)
+    if (sender_cls, receiver_cls) == (Server, WorkflowWorker):
+        return WorkflowTask
+    else:
+        raise ValueError(
+            f"Unsupported (sender, receiver) types: {(sender_cls.__name__, receiver_cls.__name__)}"
+        )
+
+
+class HistoryEvents(VisualElement):
     def __init__(
         self,
         events: List[simulation.HistoryEvent],
@@ -90,11 +142,11 @@ class HistoryEvents(ManimEntity):
         return VGroup(
             *[
                 Text(
-                    e.event_type.value,
+                    ev.event_type.value,
                     font_size=font_size,
-                    color=GREEN if e.seen_by_sticky_worker else RED,
+                    color=GREEN if ev.seen_by_sticky_worker else RED,
                 )
-                for e in events
+                for ev in events
             ]
         ).arrange(DOWN, center=True, aligned_edge=LEFT)
 
@@ -106,12 +158,13 @@ class WorkflowTask(HistoryEvents):
         return VGroup(task, events).arrange()
 
 
-class ApplicationRequest(ManimEntity):
+class ApplicationRequest(VisualElement):
     def __init__(
         self,
         request_type: simulation.ApplicationRequestType,
         scene: Scene,
     ) -> None:
+        # An ApplicationRequest has no counterpart in the simulation.
         super().__init__(scene)
         self.request_type = request_type
 
@@ -119,46 +172,18 @@ class ApplicationRequest(ManimEntity):
         return Text(self.request_type.value, font_size=16)
 
 
-class WorkflowWorker(ManimEntity):
+class WorkflowWorker(ProxyEntity[simulation.WorkflowWorker]):
     def newm(self) -> Mobject:
         return Text("Workflow Worker", font_size=24)
 
 
-class Server(ManimEntity):
+class Server(ProxyEntity[simulation.Server]):
     def newm(self) -> Mobject:
         server = Text("Server", font_size=24)
-        events = HistoryEvents.eventsm(self.history.events)
+        events = HistoryEvents.eventsm(self.e.history.events)
         return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
 
-    async def handle_message_event(self, event: MessageEvent):
-        if (type(event.sender), type(event.receiver)) == (Server, WorkflowWorker):
-            msg = WorkflowTask(event.data["new_events"], self.scene)
-        else:
-            type_names = type(event.sender).__name__, type(event.receiver).__name__
-            raise ValueError(f"Unsupported (sender, receiver) types: {type_names}")
 
-        msg.m.next_to(self.m["history"], RIGHT)
-        return self.send_message(
-            event.sender,
-            event.receiver,
-            ApplyMethod(msg.m.move_to, event.receiver.m.get_edge_center(UP)),
-        )
-
-
-class Application(ManimEntity, simulation.Application):
-    async def start_workflow(self, server: Server):
-        _, pre, post = super().start_workflow(server)
-        request = ApplicationRequest(
-            simulation.ApplicationRequestType.START_WORKFLOW, self.scene
-        )
-        request.m.next_to(self.m.get_edge_center(UP), direction=LEFT)
-        return self.send_message(
-            request,
-            pre,
-            post,
-            server,
-            ApplyMethod(request.m.move_to, server.m.get_edge_center(LEFT)),
-        )
-
+class Application(VisualElement, simulation.Application):
     def newm(self) -> Mobject:
         return Text("Application", font_size=24)

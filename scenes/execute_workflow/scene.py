@@ -26,6 +26,7 @@ class ExecuteWorkflow(Scene):
     def construct(self):
         self.add_timestamp()
         server, [app], [wworker] = self.make_simulation_entities()
+        self.make_animation_entities(server, [app], [wworker])
 
         async def simulation():
             try:
@@ -40,13 +41,7 @@ class ExecuteWorkflow(Scene):
     def make_simulation_entities(
         self,
     ) -> Tuple[Server, List[Application], List[WorkflowWorker]]:
-        (
-            animation_server,
-            [animation_app],
-            [animation_wworker],
-        ) = self.make_animation_entities()
-
-        event_bus: EventBus[animation.ManimEntity] = EventBus()
+        event_bus: EventBus[animation.VisualElement] = EventBus()
 
         server = Server(event_bus, proxy=animation_server)
         app = Application(event_bus, proxy=animation_app)
@@ -56,13 +51,24 @@ class ExecuteWorkflow(Scene):
 
     def make_animation_entities(
         self,
-    ) -> Tuple[
-        animation.Server, List[animation.Application], List[animation.WorkflowWorker]
-    ]:
-        # Entities in the animation domain
-        server = animation.Server(self)
-        app = animation.Application(self)
-        wworker = animation.WorkflowWorker(self)
+        simulation_server: Server,
+        simulation_apps: List[Application],
+        simulation_workflow_workers: List[WorkflowWorker],
+    ):
+        """
+        Create entities in the animation domain, adding them to the scene.
+
+        The animation entities have references to their simulation counterparts.
+        """
+        server = animation.Server(self, simulation_server)
+        [app] = [
+            animation.Application(self, simulation_app)
+            for simulation_app in simulation_apps
+        ]
+        [wworker] = [
+            animation.WorkflowWorker(self, simulation_workflow_worker)
+            for simulation_workflow_worker in simulation_workflow_workers
+        ]
 
         server.m.move_to(ORIGIN + UP * 2)
         app.m.move_to(ORIGIN + LEFT * 3 + DOWN * 2)
