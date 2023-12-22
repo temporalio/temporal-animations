@@ -1,6 +1,8 @@
 """
 A pure python simulation of Temporal without any visualization.
 """
+from dataclasses import dataclass
+from enum import Enum
 from typing import Callable, Dict, List, Tuple, TypedDict
 
 DEFAULT_NAMESPACE = "default"
@@ -9,14 +11,31 @@ DEFAULT_WORKFLOW_ID = "wid"
 NamespaceId = str
 WorkflowId = str
 TaskQueueId = str
-Event = str
 ActivityTask = str
+
+
+class ApplicationRequestType(Enum):
+    START_WORKFLOW = "StartWorkflow"
+
+
+class HistoryEventType(Enum):
+    WORKFLOW_EXECUTION_STARTED = "WORKFLOW_EXECUTION_STARTED"
+    WORKFLOW_EXECUTION_COMPLETED = "WORKFLOW_EXECUTION_COMPLETED"
+    WORKFLOW_TASK_SCHEDULED = "WORKFLOW_TASK_SCHEDULED"
+    WORKFLOW_TASK_STARTED = "WORKFLOW_TASK_STARTED"
+    WORKFLOW_TASK_COMPLETED = "WORKFLOW_TASK_COMPLETED"
+
+
+@dataclass
+class HistoryEvent:
+    event_type: HistoryEventType
+    seen_by_sticky_worker: bool = False
 
 
 class HistoryEvents:
     """A slice of history events"""
 
-    def __init__(self, events: List[Event]) -> None:
+    def __init__(self, events: List[HistoryEvent]) -> None:
         self.events = events
 
 
@@ -42,14 +61,22 @@ class Server:
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
 
+    def handle(self, request: ApplicationRequestType):
+        match request:
+            case ApplicationRequestType.START_WORKFLOW:
+                self.history.events.extend(
+                    [
+                        HistoryEvent(HistoryEventType.WORKFLOW_EXECUTION_STARTED),
+                        HistoryEvent(HistoryEventType.WORKFLOW_TASK_SCHEDULED),
+                    ]
+                )
+
     def dispatch_wft(
         self, worker: WorkflowWorker
     ) -> Tuple[WorkflowTask, List[Callable], List[Callable]]:
-        """
-        Send all unseen events to the workflow worker, and mark them as seen.
-        """
-        wft = WorkflowTask([])
-        return wft, [lambda: drain(self.history.events, wft.events)], []
+        # TODO: Sticky optimisation: send all unseen events to the workflow
+        # worker, and mark them as seen.
+        return WorkflowTask(self.history.events), [], []
 
     @property
     def history(self) -> HistoryEvents:
@@ -68,29 +95,20 @@ class Server:
         return history
 
 
-class ApplicationRequest:
-    # For now, an ApplicationRequest is a list of events that the application
-    # wants to be appended to server-side history. For example
-    # WORKFLOW_EXECUTION_STARTED, WORKFLOW_EXECUTION_SIGNALED.
-    # TODO: generalize to support requests such as update that don't append history events.
-
-    def __init__(self, events: List[Event]):
-        self.events = events
-        self.pre_send_hook = []
-        self.post_receive_hook = []
-
-
 class Application:
     def start_workflow(
         self, server: Server
-    ) -> Tuple[ApplicationRequest, List[Callable], List[Callable]]:
+    ) -> Tuple[None, List[Callable], List[Callable]]:
         """
         The sending of a request is represented by a list of pre-send functions,
         and a list of post-receive functions. These will typically mutate the
         state of the sender and receiver respectively.
         """
-        request = ApplicationRequest(["WORKFLOW_EXECUTION_STARTED"])
-        return request, [], [lambda: drain(request.events, server.history.events)]
+        return (
+            None,
+            [],
+            [lambda: server.handle(ApplicationRequestType.START_WORKFLOW)],
+        )
 
 
 def drain(source: List, sink: List):

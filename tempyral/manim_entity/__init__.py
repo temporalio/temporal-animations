@@ -5,10 +5,14 @@ from abc import ABC, abstractmethod
 from typing import Callable, List, Optional, Self
 
 from manim import (
+    DL,
     DOWN,
+    DR,
     LEFT,
     RIGHT,
+    UL,
     UP,
+    UR,
     WHITE,
     Animation,
     ApplyMethod,
@@ -17,6 +21,7 @@ from manim import (
     Scene,
     Text,
     Transform,
+    VDict,
     VGroup,
 )
 
@@ -68,15 +73,17 @@ class ManimEntity(ABC):
 
 class HistoryEvents(ManimEntity, entity.HistoryEvents):
     @classmethod
-    def from_entity(cls, scene: Scene, events: List[entity.Event]) -> Self:
+    def from_entity(cls, scene: Scene, events: List[entity.HistoryEvent]) -> Self:
         return cls(scene, events)
 
     def newm(self) -> Mobject:
-        events = VGroup(*[Text(e, font_size=16) for e in self.events]).arrange(
-            DOWN, center=True, aligned_edge=LEFT
-        )
+        font_size = 16
+        width = Text("_" * 30, font_size=font_size).width
+        events = VGroup(
+            *[Text(e.event_type.value, font_size=font_size) for e in self.events]
+        ).arrange(DOWN, center=True, aligned_edge=LEFT)
         rect = Rectangle(
-            width=events.width + 0.5,
+            width=max(width, events.width) + 0.5,
             height=events.height + 0.5,
             color=WHITE,
         )
@@ -91,19 +98,15 @@ class HistoryEvents(ManimEntity, entity.HistoryEvents):
 WorkflowTask = HistoryEvents
 
 
-class ApplicationRequest(ManimEntity, entity.ApplicationRequest):
-    @classmethod
-    def from_entity(cls, scene: Scene, events: List[entity.Event]) -> Self:
-        return cls(scene, events)
+class ApplicationRequest(ManimEntity):
+    def __init__(
+        self, request_type: entity.ApplicationRequestType, scene: Scene, *args, **kwargs
+    ) -> None:
+        self.request_type = request_type
+        super().__init__(scene, *args, **kwargs)
 
-    # TODO: Here we are starting to use the manim objects to store simulation
-    # state. We need to (a) represent a request, and the associated state
-    # changes, in the simulation world, and (b) extend that with visual
-    # representation in the manim world.
     def newm(self) -> Mobject:
-        request = Text("Request", font_size=12)
-        events = HistoryEvents.from_entity(self.scene, self.events).m
-        return VGroup(request, events).arrange()
+        return Text(self.request_type.value, font_size=16)
 
 
 class WorkflowWorker(ManimEntity, entity.WorkflowWorker):
@@ -115,12 +118,12 @@ class Server(ManimEntity, entity.Server):
     def newm(self) -> Mobject:
         server = Text("Server", font_size=24)
         history = HistoryEvents.from_entity(self.scene, self.history.events).m
-        return VGroup(server, history).arrange()
+        return VDict({"server": server, "history": history}).arrange(UP)  # type: ignore
 
     def dispatch_wft(self, worker: WorkflowWorker):
         wft_entity, pre, post = super().dispatch_wft(worker)
         wft = WorkflowTask.from_entity(self.scene, wft_entity.events)
-        wft.m.move_to(self.m.get_edge_center(RIGHT))
+        wft.m.next_to(self.m["history"], RIGHT)
         return self.send_message(
             wft,
             pre,
@@ -132,8 +135,10 @@ class Server(ManimEntity, entity.Server):
 
 class Application(ManimEntity, entity.Application):
     def start_workflow(self, server: Server):
-        request_entity, pre, post = super().start_workflow(server)
-        request = ApplicationRequest.from_entity(self.scene, request_entity.events)
+        _, pre, post = super().start_workflow(server)
+        request = ApplicationRequest(
+            entity.ApplicationRequestType.START_WORKFLOW, self.scene
+        )
         request.m.next_to(self.m.get_edge_center(UP), direction=LEFT)
         return self.send_message(
             request,
