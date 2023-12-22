@@ -79,9 +79,7 @@ class HistoryEvents(ManimEntity, entity.HistoryEvents):
     def newm(self) -> Mobject:
         font_size = 16
         width = Text("_" * 30, font_size=font_size).width
-        events = VGroup(
-            *[Text(e.event_type.value, font_size=font_size) for e in self.events]
-        ).arrange(DOWN, center=True, aligned_edge=LEFT)
+        events = self.eventsm(self.events, font_size)
         rect = Rectangle(
             width=max(width, events.width) + 0.5,
             height=events.height + 0.5,
@@ -91,6 +89,12 @@ class HistoryEvents(ManimEntity, entity.HistoryEvents):
             rect.surround(events)
 
         return VGroup(rect, events)
+
+    @staticmethod
+    def eventsm(events: List[entity.HistoryEvent], font_size=16) -> Mobject:
+        return VGroup(
+            *[Text(e.event_type.value, font_size=font_size) for e in events]
+        ).arrange(DOWN, center=True, aligned_edge=LEFT)
 
 
 class WorkflowTask(HistoryEvents):
@@ -119,8 +123,8 @@ class WorkflowWorker(ManimEntity, entity.WorkflowWorker):
 class Server(ManimEntity, entity.Server):
     def newm(self) -> Mobject:
         server = Text("Server", font_size=24)
-        history = HistoryEvents.from_entity(self.scene, self.history.events).m
-        return VDict({"server": server, "history": history}).arrange(UP)  # type: ignore
+        events = HistoryEvents.eventsm(self.history.events)
+        return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
 
     def maybe_dispatch_wft(self, worker: WorkflowWorker):
         wft_entity, pre, post = super().maybe_dispatch_wft(worker)
