@@ -1,26 +1,44 @@
+import asyncio
 from datetime import datetime
-from typing import Tuple
+from typing import Coroutine, List, Tuple
 
 from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, Scene, Text
 
 from tempyral.manim_entity import Application, Server, WorkflowWorker
 
+TIMEOUT_SECONDS = 10
+
 
 class ExecuteWorkflow(Scene):
+    async def simulation(
+        self,
+        server: Server,
+        apps: List[Application],
+        workflow_workers: List[WorkflowWorker],
+    ):
+        [app], [wworker] = apps, workflow_workers
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(wworker.poll(server))
+            tg.create_task(app.start_workflow(server))
+
     def construct(self):
         self.add_timestamp()
-        server, app, wworker = self.make_temporal_entities()
+        server, [app], [wworker] = self.make_temporal_entities()
         self.add(app.m, server.m, wworker.m)
 
-        for i in range(2):
-            if i == 1:
-                app.start_workflow(server)
-                self.wait()
-            server.maybe_dispatch_wft(wworker)
+        async def simulation():
+            try:
+                async with asyncio.timeout(TIMEOUT_SECONDS):
+                    await self.simulation(server, [app], [wworker])
+            except TimeoutError:
+                pass
 
+        asyncio.run(simulation())
         self.wait(2)
 
-    def make_temporal_entities(self) -> Tuple[Server, Application, WorkflowWorker]:
+    def make_temporal_entities(
+        self,
+    ) -> Tuple[Server, List[Application], List[WorkflowWorker]]:
         server = Server(self)
         app = Application(self)
         wworker = WorkflowWorker(self)
@@ -29,7 +47,7 @@ class ExecuteWorkflow(Scene):
         app.m.move_to(ORIGIN + LEFT * 3 + DOWN * 2)
         wworker.m.move_to(ORIGIN + RIGHT * 3 + DOWN * 2)
 
-        return server, app, wworker
+        return server, [app], [wworker]
 
     def add_timestamp(self):
         time = Text(datetime.now().strftime("%H:%M:%S"), font_size=24)

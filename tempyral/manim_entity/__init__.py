@@ -1,6 +1,7 @@
 """
 Manim representations of Temporal entities.
 """
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Callable, List, Optional, Self
 
@@ -123,6 +124,11 @@ class ApplicationRequest(ManimEntity):
 
 
 class WorkflowWorker(ManimEntity, entity.WorkflowWorker):
+    async def poll(self, server: "Server"):
+        while True:
+            await server.maybe_dispatch_wft(self)
+            await asyncio.sleep(0)
+
     def newm(self) -> Mobject:
         return Text("Workflow Worker", font_size=24)
 
@@ -133,7 +139,7 @@ class Server(ManimEntity, entity.Server):
         events = HistoryEvents.eventsm(self.history.events)
         return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
 
-    def maybe_dispatch_wft(self, worker: WorkflowWorker):
+    async def maybe_dispatch_wft(self, worker: WorkflowWorker):
         wft_entity, pre, post = super().maybe_dispatch_wft(worker)
         if not wft_entity:
             return
@@ -149,7 +155,7 @@ class Server(ManimEntity, entity.Server):
 
 
 class Application(ManimEntity, entity.Application):
-    def start_workflow(self, server: Server):
+    async def start_workflow(self, server: Server):
         _, pre, post = super().start_workflow(server)
         request = ApplicationRequest(
             entity.ApplicationRequestType.START_WORKFLOW, self.scene
