@@ -51,7 +51,8 @@ class TaskQueue(TypedDict):
 
 
 class WorkflowWorker:
-    pass
+    def handle_wft(self, wft: WorkflowTask, server: "Server"):
+        pass
 
 
 class Server:
@@ -79,8 +80,11 @@ class Server:
             if not e.seen_by_sticky_worker:
                 e.seen_by_sticky_worker = True
                 new_events.append(e)
-        wft = WorkflowTask(new_events) if new_events else None
-        return wft, [], []
+        if new_events:
+            wft = WorkflowTask(new_events)
+            return wft, [], [lambda: worker.handle_wft(wft, self)]
+        else:
+            return None, [], []
 
     @property
     def history(self) -> HistoryEvents:
