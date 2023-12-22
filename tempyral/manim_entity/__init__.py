@@ -33,11 +33,13 @@ class ManimEntity(ABC):
         """Compute new visual representation given entity state."""
         ...
 
-    def render(self, animate=False):
+    def render(self, animate=True):
+        newm = self.newm()
+        newm.move_to(self.m.get_center())
         if animate:
-            self.scene.play(Transform(self.m, self.newm()))
+            self.scene.play(Transform(self.m, newm))
         else:
-            self.m.become(self.newm())
+            self.m.become(newm)
 
 
 class HistoryEvents(ManimEntity, entity.HistoryEvents):
@@ -71,25 +73,21 @@ class ApplicationRequest(ManimEntity, entity.ApplicationRequest):
     # changes, in the simulation world, and (b) extend that with visual
     # representation in the manim world.
     def newm(self) -> Mobject:
-        request = Text("Request")
+        request = Text("Request", font_size=12)
         events = HistoryEvents.from_entity(self.scene, self.events).m
         return VGroup(request, events).arrange()
 
 
 class WorkflowWorker(ManimEntity, entity.WorkflowWorker):
     def newm(self) -> Mobject:
-        return Text("Workflow\nWorker", font_size=24)
+        return Text("Workflow Worker", font_size=24)
 
 
 class Server(ManimEntity, entity.Server):
     def newm(self) -> Mobject:
-        server = Text("Server")
+        server = Text("Server", font_size=24)
         history = HistoryEvents.from_entity(self.scene, self.history.events).m
         return VGroup(server, history).arrange()
-
-    def handle_application_request(self, request: ApplicationRequest):
-        drain(request.events, self.history.events)
-        self.render()
 
     def dispatch_wft(self, worker: WorkflowWorker):
         wft = WorkflowTask.from_entity(self.scene, self.history.events)
@@ -100,15 +98,17 @@ class Server(ManimEntity, entity.Server):
 
 class Application(ManimEntity, entity.Application):
     def send_request(self, request: ApplicationRequest, server: Server):
-        request.m.move_to(self.m.get_edge_center(UP))
+        pre, post = super().send_request(request, server)
+        request.m.next_to(self.m.get_edge_center(UP), direction=LEFT)
+        self.scene.add(request.m)
+        for f in pre:
+            f()
+        self.render()
         self.scene.play(ApplyMethod(request.m.move_to, server.m.get_edge_center(LEFT)))
-        server.handle_application_request(request)
         self.scene.remove(request.m)
+        for f in post:
+            f()
+        server.render()
 
     def newm(self) -> Mobject:
-        return Text("Application")
-
-
-def drain(source: List, sink: List):
-    while source:
-        sink.append(source.pop())
+        return Text("Application", font_size=24)
