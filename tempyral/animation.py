@@ -87,7 +87,7 @@ class ProxyEntity(Generic[E], VisualElement):
 proxy_registry: Dict[simulation.Entity, ProxyEntity] = {}
 
 
-async def handle_simulation_events(event_bus: EventBus):
+async def handle_simulation_events(event_bus: EventBus, scene: Scene):
     while True:
         match await event_bus.bus.get():
             case StateChangeEvent(entity):
@@ -98,7 +98,7 @@ async def handle_simulation_events(event_bus: EventBus):
                     proxy_registry[receiver_entity],
                 )
                 msg_cls = get_message_cls_for(sender, receiver)
-                msg = msg_cls(**data)
+                msg = msg_cls(scene=scene, **data)
                 sender.send_message(receiver, msg)
 
 
@@ -106,7 +106,9 @@ def get_message_cls_for(
     sender: ProxyEntity, receiver: ProxyEntity
 ) -> Type[VisualElement]:
     sender_cls, receiver_cls = type(sender), type(receiver)
-    if (sender_cls, receiver_cls) == (Server, WorkflowWorker):
+    if (sender_cls, receiver_cls) == (Application, Server):
+        return ApplicationRequest
+    elif (sender_cls, receiver_cls) == (Server, WorkflowWorker):
         return WorkflowTask
     else:
         raise ValueError(

@@ -110,7 +110,7 @@ class Server(Entity):
         if new_events:
             await self.publish_change_event()
             wft = WorkflowTask(new_events)
-            await self.publish_message_event(self, worker, new_events=new_events)
+            await self.publish_message_event(self, worker, events=new_events)
             worker.handle_wft(wft, self)
             await worker.publish_change_event()
 

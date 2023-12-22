@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from datetime import datetime
 from typing import List, Tuple
 
@@ -22,7 +23,7 @@ class ExecuteWorkflow(Scene):
         async with asyncio.TaskGroup() as tg:
             tg.create_task(wworker.poll(server))
             tg.create_task(app.start_workflow(server))
-            tg.create_task(animation.handle_simulation_events(event_bus))
+            tg.create_task(animation.handle_simulation_events(event_bus, self))
 
     def construct(self):
         self.add_timestamp()
@@ -33,6 +34,11 @@ class ExecuteWorkflow(Scene):
             try:
                 async with asyncio.timeout(TIMEOUT_SECONDS):
                     await self.simulation(server, [app], [wworker])
+            except ExceptionGroup as eg:
+                print(f"Caught ExceptionGroup:", file=sys.stderr)
+                for exc in eg.exceptions:
+                    print(f"    {exc}", file=sys.stderr)
+                raise
             except TimeoutError:
                 pass
 
