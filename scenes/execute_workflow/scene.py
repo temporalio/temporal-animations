@@ -1,10 +1,16 @@
-from manim import DOWN, LEFT, ORIGIN, RIGHT, UP, Create, Scene
+from datetime import datetime
+
+from manim import DOWN, LEFT, ORIGIN, RIGHT, UP, Create, Scene, Text
 
 from tempyral.manim_entity import Application, Server, WorkflowWorker
 
 
 class ExecuteWorkflow(Scene):
     def construct(self):
+        time = Text(datetime.now().strftime("%H:%M:%S"), font_size=24)
+        time.move_to(ORIGIN + UP * 3.6)
+        self.add(time)
+
         server = Server(self)
         app = Application(self)
         wworker = WorkflowWorker(self)
