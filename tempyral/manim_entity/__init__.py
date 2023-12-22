@@ -126,7 +126,7 @@ class ApplicationRequest(ManimEntity):
 class WorkflowWorker(ManimEntity, entity.WorkflowWorker):
     async def poll(self, server: "Server"):
         while True:
-            await server.maybe_dispatch_wft(self)
+            await server.dispatch_wft_if_pending_events(self)
             await asyncio.sleep(0)
 
     def newm(self) -> Mobject:
@@ -139,8 +139,8 @@ class Server(ManimEntity, entity.Server):
         events = HistoryEvents.eventsm(self.history.events)
         return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
 
-    async def maybe_dispatch_wft(self, worker: WorkflowWorker):
-        wft_entity, pre, post = super().maybe_dispatch_wft(worker)
+    async def dispatch_wft_if_pending_events(self, worker: WorkflowWorker):
+        wft_entity, pre, post = super().dispatch_wft_if_pending_events(worker)
         if not wft_entity:
             return
         wft = WorkflowTask.from_entity(self.scene, wft_entity.events)

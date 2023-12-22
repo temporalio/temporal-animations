@@ -72,7 +72,7 @@ class Server:
                     ]
                 )
 
-    def maybe_dispatch_wft(
+    def dispatch_wft_if_pending_events(
         self, worker: WorkflowWorker
     ) -> Tuple[Optional[WorkflowTask], List[Callable], List[Callable]]:
         new_events = []
@@ -88,6 +88,10 @@ class Server:
 
     @property
     def history(self) -> HistoryEvents:
+        """
+        Currently, the simulation only supports a single workflow execution.
+        Return its history.
+        """
         try:
             [shard] = self.shards
         except ValueError:
