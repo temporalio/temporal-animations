@@ -37,29 +37,34 @@ class VisualElement(ABC):
     An element that participates visually in the scene.
     """
 
-    def __init__(self, scene: Scene) -> None:
-        self.m = self.newm()  # Current visual representation
+    def __init__(self, scene: Scene, **kwargs) -> None:
         self.scene = scene
+        self.m = self.newm(**kwargs)  # Current visual representation
 
     @abstractmethod
-    def newm(self) -> Mobject:
+    def newm(self, **kwargs) -> Mobject:
         """Compute new visual representation given entity state."""
         ...
 
 
-class ProxyEntity(Generic[E], VisualElement):
+class ProxyEntity(Generic[E], ABC):
     """
     A VisualElement that has a counterpart entity of type E in the simulation.
     """
 
     def __init__(self, entity: E, scene: Scene) -> None:
-        self.e = entity
-        super().__init__(scene)
+        self.m = self.newm(entity)  # Current visual representation
+        self.scene = scene
         proxy_registry.set(entity, self)
 
-    def render(self, animate=True):
-        log(f"{self.e}\n", "A: render")
-        newm = self.newm()
+    @abstractmethod
+    def newm(self, entity: E) -> Mobject:
+        """Compute new visual representation given entity state."""
+        ...
+
+    def render(self, entity: E, animate=True):
+        log(f"{entity}\n", "A: render")
+        newm = self.newm(entity)
         newm.move_to(self.m.get_center())
         if animate:
             self.scene.play(Transform(self.m, newm))
@@ -102,11 +107,7 @@ class ProxyRegistry(Generic[E]):
         self._registry[entity] = proxy
 
     def get(self, entity: E) -> ProxyEntity[E]:
-        proxy = self._registry[entity]
-        # The entity is received from the event bus and contains the version of
-        # entity state that we should be seeing at this point.
-        proxy.e = entity
-        return proxy
+        return self._registry[entity]
 
 
 proxy_registry = ProxyRegistry()
@@ -135,7 +136,7 @@ async def _handle_simulation_event(
         case StateChangeEvent(entity, data):
             log(f"{entity} {data}", "A: handle change event")
             proxy_entity = proxy_registry.get(entity)
-            proxy_entity.render()
+            proxy_entity.render(entity)
             if data:
                 proxy_entity.handle_change_data(data)
         case MessageEvent(sender_entity, receiver_entity, data):
@@ -167,27 +168,19 @@ def get_message_cls_for(
 
 
 class HistoryEvents(VisualElement):
-    def __init__(
-        self,
-        events: List[simulation.HistoryEvent],
-        scene: Scene,
-    ):
-        self.events = events
-        super().__init__(scene)
-
-    def newm(self) -> Mobject:
+    def newm(self, events: List[simulation.HistoryEvent]) -> Mobject:
         font_size = 16
         width = Text("_" * 30, font_size=font_size).width
-        events = self.eventsm(self.events, font_size)
+        eventsm = self.eventsm(events, font_size)
         rect = Rectangle(
-            width=max(width, events.width) + 0.5,
-            height=events.height + 0.5,
+            width=max(width, eventsm.width) + 0.5,
+            height=eventsm.height + 0.5,
             color=WHITE,
         )
-        if self.events:
-            rect.surround(events)
+        if events:
+            rect.surround(eventsm)
 
-        return VGroup(rect, events)
+        return VGroup(rect, eventsm)
 
     @staticmethod
     def eventsm(events: List[simulation.HistoryEvent], font_size=16) -> Mobject:
@@ -204,43 +197,31 @@ class HistoryEvents(VisualElement):
 
 
 class WorkflowTask(HistoryEvents):
-    def newm(self) -> Mobject:
-        events = super().newm()
+    def newm(self, events: List[simulation.HistoryEvent]) -> Mobject:
+        eventsm = super().newm(events)
         task = Text("WFT", font_size=16)
-        return VGroup(task, events).arrange()
+        return VGroup(task, eventsm).arrange()
 
 
 class WorkerRequest(VisualElement):
-    def __init__(self, name: str, scene: Scene):
-        self.name = name
-        super().__init__(scene)
-
-    def newm(self) -> Mobject:
-        return Text(self.name, font_size=24)
+    def newm(self, name: str) -> Mobject:
+        return Text(name, font_size=24)
 
 
 class ApplicationRequest(VisualElement):
-    def __init__(
-        self,
-        request_type: simulation.ApplicationRequestType,
-        scene: Scene,
-    ) -> None:
-        self.request_type = request_type
-        super().__init__(scene)
-
-    def newm(self) -> Mobject:
-        return Text(self.request_type.name, font_size=24)
+    def newm(self, request_type: simulation.ApplicationRequestType) -> Mobject:
+        return Text(request_type.name, font_size=24)
 
 
 class WorkflowWorker(ProxyEntity[simulation.WorkflowWorker]):
-    def newm(self) -> Mobject:
+    def newm(self, entity: simulation.WorkflowWorker) -> Mobject:
         return Text("Workflow Worker", font_size=24)
 
 
 class Server(ProxyEntity[simulation.Server]):
-    def newm(self) -> Mobject:
+    def newm(self, entity: simulation.Server) -> Mobject:
         server = Text("Server", font_size=24)
-        events = HistoryEvents.eventsm(self.e.history.events)
+        events = HistoryEvents.eventsm(entity.history.events)
         return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
 
     def handle_change_data(self, data: Dict[str, Any]):
@@ -250,5 +231,5 @@ class Server(ProxyEntity[simulation.Server]):
 
 
 class Application(ProxyEntity[simulation.Application]):
-    def newm(self) -> Mobject:
+    def newm(self, entity: simulation.Application) -> Mobject:
         return Text("Application", font_size=24)

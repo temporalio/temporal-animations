@@ -69,8 +69,6 @@ class TemporalScene(Scene, ABC):
     ):
         """
         Create proxy entities in the animation domain, adding them to the scene.
-
-        The proxy entities have references to their simulation counterparts.
         """
         server = animation.Server(simulation_server, self)
         [app] = [
