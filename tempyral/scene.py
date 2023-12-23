@@ -9,7 +9,7 @@ from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, Scene, Text
 
 from tempyral import animation
 from tempyral.simulation import Application
-from tempyral.simulation import NoOpWorkflowWorkflowWorker as WorkflowWorker
+from tempyral.simulation import NoOpWorkflowWorker as WorkflowWorker
 from tempyral.simulation import Server
 
 TIMEOUT_SECONDS = 10

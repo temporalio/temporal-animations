@@ -22,7 +22,7 @@ class WorkflowWorker(Entity, ABC):
         ...
 
 
-class NoOpWorkflowWorkflowWorker(WorkflowWorker):
+class NoOpWorkflowWorker(WorkflowWorker):
     """
     A Workflow Worker with a single workflow that does nothing (completes immediately).
     """
