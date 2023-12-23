@@ -44,6 +44,7 @@ class TemporalScene(Scene, ABC):
                     print(f"    {exc}", file=sys.stderr)
                 raise
             except TimeoutError:
+                await animation.drain_simulation_events(self)
                 pass
 
         asyncio.run(simulation())

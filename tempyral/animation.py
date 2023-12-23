@@ -2,7 +2,8 @@
 Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Generic, List, Type, TypeVar
+from asyncio import QueueEmpty
+from typing import Dict, Generic, List, Type, TypeVar, Union
 
 from manim import DL, DOWN, DR
 from manim import GREEN_D as GREEN
@@ -25,7 +26,7 @@ from manim import (
 )
 
 from tempyral import simulation
-from tempyral.event_bus import EventBus, MessageEvent, StateChangeEvent, event_bus
+from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
 
 E = TypeVar("E", bound=simulation.Entity)
 
@@ -88,18 +89,34 @@ proxy_registry: Dict[simulation.Entity, ProxyEntity] = {}
 
 async def handle_simulation_events(scene: Scene):
     while True:
-        match await event_bus.bus.get():
-            case StateChangeEvent(entity):
-                proxy_registry[entity].render()
-            case MessageEvent(sender_entity, receiver_entity, data):
-                sender, receiver = (
-                    proxy_registry[sender_entity],
-                    proxy_registry[receiver_entity],
-                )
-                msg_cls = get_message_cls_for(sender, receiver)
-                msg = msg_cls(scene=scene, **data)
-                sender.send_message(receiver, msg)
-        scene.wait()
+        event = await event_bus.bus.get()
+        await _handle_simulation_event(event, scene)
+
+
+async def drain_simulation_events(scene: Scene):
+    try:
+        while event := event_bus.bus.get_nowait():
+            await _handle_simulation_event(event, scene)
+    except QueueEmpty:
+        pass
+
+
+async def _handle_simulation_event(
+    event: Union[StateChangeEvent[simulation.Entity], MessageEvent[simulation.Entity]],
+    scene: Scene,
+):
+    match event:
+        case StateChangeEvent(entity):
+            proxy_registry[entity].render()
+        case MessageEvent(sender_entity, receiver_entity, data):
+            sender, receiver = (
+                proxy_registry[sender_entity],
+                proxy_registry[receiver_entity],
+            )
+            msg_cls = get_message_cls_for(sender, receiver)
+            msg = msg_cls(scene=scene, **data)
+            sender.send_message(receiver, msg)
+    scene.wait()
 
 
 def get_message_cls_for(
