@@ -116,17 +116,19 @@ class Server(Entity):
                 raise ValueError(f"Server does not support request of type: {request}")
 
     async def dispatch_wft_if_new_events(self, worker: WorkflowWorker) -> None:
-        new_events = []
+        if all(e.seen_by_sticky_worker for e in self.history.events):
+            return
+
+        self.history.events.append(HistoryEvent(HistoryEventType.WORKFLOW_TASK_STARTED))
+        await self.publish_change_event()
+        wft = WorkflowTask(
+            [e for e in self.history.events if not e.seen_by_sticky_worker]
+        )
         for e in self.history.events:
-            if not e.seen_by_sticky_worker:
-                e.seen_by_sticky_worker = True
-                new_events.append(e)
-        if new_events:
-            await self.publish_change_event()
-            wft = WorkflowTask(new_events)
-            await self.publish_message_event(self, worker, events=new_events)
-            await worker.handle_wft(wft, self)
-            await worker.publish_change_event()
+            e.seen_by_sticky_worker |= True
+        await self.publish_change_event()
+        await self.publish_message_event(self, worker, events=wft.events)
+        await worker.handle_wft(wft, self)
 
     @property
     def history(self) -> HistoryEvents:
