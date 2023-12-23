@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Coroutine, Iterable, List, Tuple
 
-from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, Scene, Text
+from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, UR, Scene, Text
 
 from tempyral import animation
 from tempyral.simulation import Application
@@ -83,6 +83,10 @@ class TemporalScene(Scene, ABC):
         server.m.move_to(ORIGIN + UP * 2)
         app.m.move_to(ORIGIN + LEFT * 3 + DOWN * 2)
         wworker.m.move_to(ORIGIN + RIGHT * 3 + DOWN * 2)
+
+        server.dock_edge = DOWN
+        app.dock_edge = UR
+        wworker.dock_edge = UL
 
         self.add(app.m, server.m, wworker.m)
         return server, [app], [wworker]

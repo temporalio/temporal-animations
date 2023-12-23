@@ -26,6 +26,7 @@ from manim import (
     VDict,
     VGroup,
 )
+from manim.typing import Point3D
 
 from tempyral import log, simulation
 from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
@@ -53,10 +54,14 @@ class ProxyEntity(Generic[E], ABC):
     A VisualElement that has a counterpart entity of type E in the simulation.
     """
 
-    def __init__(self, entity: E, scene: Scene) -> None:
+    def __init__(self, entity: E, scene: Scene, receive_edge=UP) -> None:
         self.m = self.newm(entity)  # Current visual representation
         self.scene = scene
+        self.dock_edge = receive_edge
         proxy_registry.set(entity, self)
+
+    def dock_point(self) -> Point3D:
+        return self.m.get_edge_center(self.dock_edge)
 
     @abstractmethod
     def newm(self, entity: E) -> Mobject:
@@ -82,11 +87,13 @@ class ProxyEntity(Generic[E], ABC):
         Animate sending a message.
         """
         log(f"{self} -> {receiver})\n", "A: send_message")
-        message.m.move_to(self.m)
+        message.m.next_to(self.dock_point())
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.
         self.scene.add(message.m)
-        self.scene.play(ApplyMethod(message.m.move_to, receiver.m, run_time=2.0))
+        self.scene.play(
+            ApplyMethod(message.m.move_to, receiver.dock_point(), run_time=2.0)
+        )
         self.scene.remove(message.m)
 
     def handle_change_data(self, data: Dict[str, Any]):
