@@ -34,8 +34,8 @@ class HistoryEventType(Enum):
 
 
 class Entity:
-    async def publish_change_event(self):
-        await event_bus.publish(StateChangeEvent(self))
+    async def publish_change_event(self, **kwargs):
+        await event_bus.publish(StateChangeEvent(self, kwargs))
         await asyncio.sleep(0)
 
     async def publish_message_event(
@@ -111,7 +111,7 @@ class Server(Entity):
                         seen_by_sticky_worker=True,
                     )
                 )
-                await self.publish_change_event()
+                await self.publish_change_event(new_history_events=1)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 

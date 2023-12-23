@@ -3,7 +3,7 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod
 from asyncio import QueueEmpty
-from typing import Dict, Generic, List, Type, TypeVar, Union
+from typing import Any, Dict, Generic, List, Type, TypeVar, Union
 
 from manim import DL, DOWN, DR
 from manim import GREEN_D as GREEN
@@ -16,6 +16,7 @@ from manim import (
     UR,
     WHITE,
     ApplyMethod,
+    Indicate,
     Mobject,
     Rectangle,
     Scene,
@@ -52,6 +53,9 @@ class VisualElement(ABC):
             self.scene.play(Transform(self.m, newm))
         else:
             self.m.become(newm)
+
+    def handle_change_data(self, data: Dict[str, Any]):
+        pass
 
 
 class ProxyEntity(Generic[E], VisualElement):
@@ -106,8 +110,11 @@ async def _handle_simulation_event(
     scene: Scene,
 ):
     match event:
-        case StateChangeEvent(entity):
-            proxy_registry[entity].render()
+        case StateChangeEvent(entity, data):
+            proxy_entity = proxy_registry[entity]
+            proxy_entity.render()
+            if data:
+                proxy_entity.handle_change_data(data)
         case MessageEvent(sender_entity, receiver_entity, data):
             sender, receiver = (
                 proxy_registry[sender_entity],
@@ -211,6 +218,11 @@ class Server(ProxyEntity[simulation.Server]):
         server = Text("Server", font_size=24)
         events = HistoryEvents.eventsm(self.e.history.events)
         return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
+
+    def handle_change_data(self, data: Dict[str, Any]):
+        if n := data.get("new_history_events"):
+            for new_event in self.m["history"][-n:]:
+                self.scene.play(Indicate(new_event))
 
 
 class Application(ProxyEntity[simulation.Application]):
