@@ -79,7 +79,7 @@ class ProxyEntity(Generic[E], VisualElement):
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.
         self.scene.add(message.m)
-        self.scene.play(ApplyMethod(message.m.move_to, receiver.m))
+        self.scene.play(ApplyMethod(message.m.move_to, receiver.m, run_time=2.0))
         self.scene.remove(message.m)
 
 
@@ -116,7 +116,7 @@ async def _handle_simulation_event(
             msg_cls = get_message_cls_for(sender, receiver)
             msg = msg_cls(scene=scene, **data)
             sender.send_message(receiver, msg)
-    scene.wait()
+    scene.wait(0.5)
 
 
 def get_message_cls_for(
@@ -198,7 +198,7 @@ class ApplicationRequest(VisualElement):
         super().__init__(scene)
 
     def newm(self) -> Mobject:
-        return Text(self.request_type.value, font_size=16)
+        return Text(self.request_type.value, font_size=24)
 
 
 class WorkflowWorker(ProxyEntity[simulation.WorkflowWorker]):
