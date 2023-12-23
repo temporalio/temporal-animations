@@ -1,5 +1,6 @@
 import asyncio
 import sys
+import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Coroutine, Iterable, List, Tuple
@@ -42,9 +43,12 @@ class TemporalScene(Scene, ABC):
                         tg.create_task(animation.handle_simulation_events(self))
             except ExceptionGroup as eg:
                 print(f"Caught ExceptionGroup:", file=sys.stderr)
-                for exc in eg.exceptions:
-                    print(f"    {exc}", file=sys.stderr)
-                raise
+                for e in eg.exceptions:
+                    print(f"    {e}", file=sys.stderr)
+                    traceback.print_exception(
+                        type(e), e, e.__traceback__, file=sys.stderr
+                    )
+                sys.exit(1)
             except TimeoutError:
                 await animation.drain_simulation_events(self)
                 pass

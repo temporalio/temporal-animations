@@ -168,14 +168,14 @@ class HistoryEvents(VisualElement):
     @staticmethod
     def eventsm(events: List[simulation.HistoryEvent], font_size=16) -> Mobject:
         return VGroup(
-            *[
+            *(
                 Text(
-                    ev.event_type.value,
+                    e.event_type.name,
                     font_size=font_size,
-                    color=GREEN if ev.seen_by_sticky_worker else RED,
+                    color=GREEN if e.seen_by_sticky_worker else RED,
                 )
-                for ev in events
-            ]
+                for e in events
+            )
         ).arrange(DOWN, center=True, aligned_edge=LEFT)
 
 
