@@ -75,7 +75,7 @@ class WorkflowWorker(Entity):
         while True:
             # Currently we're not actually simulating the long-poll; just the
             # dispatch from server to worker.
-            await server.dispatch_wft_if_pending_events(self)
+            await server.dispatch_wft_if_new_events(self)
             await asyncio.sleep(0)
 
     async def handle_wft(self, wft: WorkflowTask, server: "Server"):
@@ -115,7 +115,7 @@ class Server(Entity):
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
-    async def dispatch_wft_if_pending_events(self, worker: WorkflowWorker) -> None:
+    async def dispatch_wft_if_new_events(self, worker: WorkflowWorker) -> None:
         new_events = []
         for e in self.history.events:
             if not e.seen_by_sticky_worker:

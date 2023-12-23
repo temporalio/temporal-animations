@@ -71,8 +71,8 @@ class TemporalScene(Scene, ABC):
             for simulation_app in simulation_apps
         ]
         [wworker] = [
-            animation.WorkflowWorker(simulation_workflow_worker, self)
-            for simulation_workflow_worker in simulation_workflow_workers
+            animation.WorkflowWorker(sim_wworker, self)
+            for sim_wworker in simulation_workflow_workers
         ]
 
         server.m.move_to(ORIGIN + UP * 2)
