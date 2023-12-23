@@ -1,5 +1,5 @@
 from tempyral.scene import TemporalScene
-from tempyral.simulation import Application, Server, WorkflowWorker
+from tempyral.simulation import Application, NoOpWorkflowWorkflowWorker, Server
 
 
 class ExecuteWorkflow(TemporalScene):
@@ -7,7 +7,7 @@ class ExecuteWorkflow(TemporalScene):
         self,
         server: Server,
         app: Application,
-        workflow_worker: WorkflowWorker,
+        workflow_worker: NoOpWorkflowWorkflowWorker,
     ):
         yield app.start_workflow(server)
         yield workflow_worker.poll(server)
