@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, TypedDict, Union
 
+from tempyral import log
 from tempyral.simulation.api import (
     ApplicationRequestType,
     Command,
@@ -23,6 +24,9 @@ DEFAULT_WORKFLOW_ID = "wid"
 class HistoryEvent:
     event_type: HistoryEventType
     seen_by_sticky_worker: bool = False
+
+    def __repr__(self) -> str:
+        return f"{self.event_type.name}{'*' if self.seen_by_sticky_worker else ''}"
 
 
 class HistoryEvents(Entity):
@@ -51,20 +55,24 @@ class Server(Entity):
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
         super().__init__()
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(id={self.id},{id(self)}: events={self.history.events})"
+
     async def handle_request(
         self, request: Union[ApplicationRequestType, WorkerRequestType]
     ):
         match request:
             case ApplicationRequestType.StartWorkflowExecution:
-                print(f"Handling StartWorkflowExecution()")
+                log("", "S: handling StartWorkflowExecution")
                 await self.write_history_events(
                     HistoryEventType.WORKFLOW_EXECUTION_STARTED,
                     HistoryEventType.WORKFLOW_TASK_SCHEDULED,
                     seen_by_sticky_worker=False,
                 )
             case RespondWorkflowTaskCompleted([Command.COMPLETE_WORKFLOW_EXECUTION]):
-                print(
-                    f"Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])"
+                log(
+                    "",
+                    "S: Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])",
                 )
                 await self.write_history_events(
                     HistoryEventType.WORKFLOW_TASK_COMPLETED,

@@ -26,7 +26,7 @@ from manim import (
     VGroup,
 )
 
-from tempyral import simulation
+from tempyral import log, simulation
 from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
 
 E = TypeVar("E", bound=simulation.Entity)
@@ -46,18 +46,6 @@ class VisualElement(ABC):
         """Compute new visual representation given entity state."""
         ...
 
-    def render(self, animate=True):
-        newm = self.newm()
-        newm.move_to(self.m.get_center())
-        if animate:
-            self.scene.play(Transform(self.m, newm))
-        else:
-            self.m.become(newm)
-        self.scene.wait(0.2)
-
-    def handle_change_data(self, data: Dict[str, Any]):
-        pass
-
 
 class ProxyEntity(Generic[E], VisualElement):
     """
@@ -72,6 +60,16 @@ class ProxyEntity(Generic[E], VisualElement):
         ), "Simulation entities may have one manim proxy only"
         proxy_registry[entity] = self
 
+    def render(self, animate=True):
+        log(f"{self.e}\n", "A: render")
+        newm = self.newm()
+        newm.move_to(self.m.get_center())
+        if animate:
+            self.scene.play(Transform(self.m, newm))
+        else:
+            self.m.become(newm)
+        self.scene.wait(0.2)
+
     def send_message(
         self,
         receiver: "ProxyEntity",
@@ -80,12 +78,16 @@ class ProxyEntity(Generic[E], VisualElement):
         """
         Animate sending a message.
         """
+        log(f"{self} -> {receiver})\n", "A: send_message")
         message.m.move_to(self.m)
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.
         self.scene.add(message.m)
         self.scene.play(ApplyMethod(message.m.move_to, receiver.m, run_time=2.0))
         self.scene.remove(message.m)
+
+    def handle_change_data(self, data: Dict[str, Any]):
+        pass
 
 
 # A registry allowing us to look up proxies by their simulation counterparts.
@@ -101,6 +103,7 @@ async def handle_simulation_events(scene: Scene):
 async def drain_simulation_events(scene: Scene):
     try:
         while event := event_bus.bus.get_nowait():
+            log(f"{event}", "A: drain: handle event")
             await _handle_simulation_event(event, scene)
     except QueueEmpty:
         pass
@@ -112,11 +115,13 @@ async def _handle_simulation_event(
 ):
     match event:
         case StateChangeEvent(entity, data):
+            log(f"{entity} {data}", "A: handle change event")
             proxy_entity = proxy_registry[entity]
             proxy_entity.render()
             if data:
                 proxy_entity.handle_change_data(data)
         case MessageEvent(sender_entity, receiver_entity, data):
+            log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
             sender, receiver = (
                 proxy_registry[sender_entity],
                 proxy_registry[receiver_entity],
