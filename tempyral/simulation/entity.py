@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Self
+from typing import Any, Dict, Hashable, Self
 
 from tempyral import log
 from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
@@ -27,14 +27,14 @@ class Entity:
     def clone(self) -> Self:
         return deepcopy(self)
 
-    async def publish_change_event(self, **kwargs):
+    async def publish_change_event(self, **kwargs: Hashable):
         cloned = self.clone()
         log(f"{cloned}, {kwargs}", "S: publish change")
         await event_bus.publish(StateChangeEvent(cloned, kwargs))
         await asyncio.sleep(0)
 
     async def publish_message_event(
-        self, sender: "Entity", receiver: "Entity", **kwargs
+        self, sender: "Entity", receiver: "Entity", **kwargs: Hashable
     ):
         sender, receiver = sender.clone(), receiver.clone()
         log(f"{sender} -> {receiver}, {kwargs}", "S: publish message")

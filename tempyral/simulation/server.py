@@ -107,7 +107,7 @@ class Server(Entity):
         for e in self.history.events:
             e.seen_by_sticky_worker |= True
         await self.publish_change_event()
-        await self.publish_message_event(self, worker, events=wft.events)
+        await self.publish_message_event(self, worker, events=tuple(wft.events))
         await worker.handle_wft(wft, self)
 
     @property
