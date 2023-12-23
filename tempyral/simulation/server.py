@@ -76,15 +76,14 @@ class Server(Entity):
     async def write_history_events(
         self, *events: HistoryEventType, seen_by_sticky_worker: bool
     ):
-        new_events = [
+        self.history.events.extend(
             HistoryEvent(
                 e,
                 seen_by_sticky_worker=seen_by_sticky_worker,
             )
             for e in events
-        ]
-        self.history.events.extend(new_events)
-        await self.publish_change_event(new_history_events=new_events)
+        )
+        await self.publish_change_event(new_history_events=len(events))
 
     async def dispatch_wft_if_new_events(self, worker: WorkflowWorker) -> None:
         if all(e.seen_by_sticky_worker for e in self.history.events):

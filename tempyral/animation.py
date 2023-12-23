@@ -3,7 +3,7 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod
 from asyncio import QueueEmpty
-from typing import Any, Dict, Generic, List, Type, TypeVar, Union, cast
+from typing import Any, Dict, Generic, List, Type, TypeVar, Union
 
 from manim import DL, DOWN, DR
 from manim import GREEN_D as GREEN
@@ -221,12 +221,9 @@ class Server(ProxyEntity[simulation.Server]):
         return VDict({"server": server, "history": events}).arrange(UP)  # type: ignore
 
     def handle_change_data(self, data: Dict[str, Any]):
-        for new_e in cast(
-            List[simulation.HistoryEvent], data.get("new_history_events", [])
-        ):
-            for e in self.m["history"]:
-                if getattr(e, "text", None) == new_e.event_type.name:
-                    self.scene.play(Indicate(e))
+        if n := data.get("new_history_events"):
+            for new_event in self.m["history"][-n:]:
+                self.scene.play(Indicate(new_event))
 
 
 class Application(ProxyEntity[simulation.Application]):
