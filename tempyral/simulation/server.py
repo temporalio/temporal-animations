@@ -49,6 +49,7 @@ class Server(Entity):
             {DEFAULT_NAMESPACE: {DEFAULT_WORKFLOW_ID: HistoryEvents([])}}
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
+        super().__init__()
 
     async def handle_request(
         self, request: Union[ApplicationRequestType, WorkerRequestType]
