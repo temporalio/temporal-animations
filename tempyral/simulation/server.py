@@ -3,7 +3,9 @@ from typing import Dict, List, TypedDict, Union
 
 from tempyral.simulation.api import (
     ApplicationRequestType,
+    Command,
     HistoryEventType,
+    RespondWorkflowTaskCompleted,
     WorkerRequestType,
 )
 from tempyral.simulation.entity import Entity
@@ -52,31 +54,44 @@ class Server(Entity):
         self, request: Union[ApplicationRequestType, WorkerRequestType]
     ):
         match request:
-            case ApplicationRequestType.StartWorkflow:
-                self.history.events.extend(
-                    [
-                        HistoryEvent(HistoryEventType.WORKFLOW_EXECUTION_STARTED),
-                        HistoryEvent(HistoryEventType.WORKFLOW_TASK_SCHEDULED),
-                    ]
+            case ApplicationRequestType.StartWorkflowExecution:
+                print(f"Handling StartWorkflowExecution()")
+                await self.write_history_events(
+                    HistoryEventType.WORKFLOW_EXECUTION_STARTED,
+                    HistoryEventType.WORKFLOW_TASK_SCHEDULED,
+                    seen_by_sticky_worker=False,
                 )
-                await self.publish_change_event()
-            case WorkerRequestType.RespondWorkflowTaskCompleted:
-                self.history.events.append(
-                    HistoryEvent(
-                        HistoryEventType.WORKFLOW_TASK_COMPLETED,
-                        seen_by_sticky_worker=True,
-                    )
+            case RespondWorkflowTaskCompleted([Command.COMPLETE_WORKFLOW_EXECUTION]):
+                print(
+                    f"Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])"
                 )
-                await self.publish_change_event(new_history_events=1)
+                await self.write_history_events(
+                    HistoryEventType.WORKFLOW_TASK_COMPLETED,
+                    HistoryEventType.WORKFLOW_EXECUTION_COMPLETED,
+                    seen_by_sticky_worker=True,
+                )
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
+
+    async def write_history_events(
+        self, *events: HistoryEventType, seen_by_sticky_worker: bool
+    ):
+        self.history.events.extend(
+            HistoryEvent(
+                e,
+                seen_by_sticky_worker=seen_by_sticky_worker,
+            )
+            for e in events
+        )
+        await self.publish_change_event(new_history_events=len(events))
 
     async def dispatch_wft_if_new_events(self, worker: WorkflowWorker) -> None:
         if all(e.seen_by_sticky_worker for e in self.history.events):
             return
 
-        self.history.events.append(HistoryEvent(HistoryEventType.WORKFLOW_TASK_STARTED))
-        await self.publish_change_event()
+        await self.write_history_events(
+            HistoryEventType.WORKFLOW_TASK_STARTED, seen_by_sticky_worker=False
+        )
         wft = WorkflowTask(
             [e for e in self.history.events if not e.seen_by_sticky_worker]
         )

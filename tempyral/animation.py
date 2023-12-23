@@ -53,6 +53,7 @@ class VisualElement(ABC):
             self.scene.play(Transform(self.m, newm))
         else:
             self.m.become(newm)
+        self.scene.wait(0.2)
 
     def handle_change_data(self, data: Dict[str, Any]):
         pass
@@ -205,7 +206,7 @@ class ApplicationRequest(VisualElement):
         super().__init__(scene)
 
     def newm(self) -> Mobject:
-        return Text(self.request_type.value, font_size=24)
+        return Text(self.request_type.name, font_size=24)
 
 
 class WorkflowWorker(ProxyEntity[simulation.WorkflowWorker]):
