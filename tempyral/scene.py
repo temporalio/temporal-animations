@@ -53,6 +53,7 @@ class TemporalScene(Scene, ABC):
                 await animation.drain_simulation_events(self)
                 pass
 
+        self.wait()
         asyncio.run(simulation())
         self.wait(2)
 
