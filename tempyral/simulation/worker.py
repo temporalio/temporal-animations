@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 
 
 class WorkflowWorker(Entity, ABC):
+    go = ""
+
     async def poll(self, server: "Server"):
         while True:
             # Currently we're not actually simulating the long-poll; just the
@@ -26,6 +28,12 @@ class NoOpWorkflowWorker(WorkflowWorker):
     """
     A Workflow Worker with a single workflow that does nothing (completes immediately).
     """
+
+    go = """
+func Workflow(ctx workflow.Context) error {
+    return nil
+}
+"""
 
     async def handle_wft(self, wft: "WorkflowTask", server: "Server"):
         await self.publish_message_event(

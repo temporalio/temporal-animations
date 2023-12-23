@@ -16,6 +16,7 @@ from manim import (
     UR,
     WHITE,
     ApplyMethod,
+    Code,
     Indicate,
     Mobject,
     Rectangle,
@@ -215,7 +216,9 @@ class ApplicationRequest(VisualElement):
 
 class WorkflowWorker(ProxyEntity[simulation.WorkflowWorker]):
     def newm(self, entity: simulation.WorkflowWorker) -> Mobject:
-        return Text("Workflow Worker", font_size=24)
+        text = Text("Workflow Worker", font_size=24)
+        code = Code(code=entity.go, language="go", font_size=12)
+        return VGroup(text, code).arrange(DOWN)
 
 
 class Server(ProxyEntity[simulation.Server]):
