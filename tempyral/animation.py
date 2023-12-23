@@ -99,6 +99,7 @@ async def handle_simulation_events(scene: Scene):
                 msg_cls = get_message_cls_for(sender, receiver)
                 msg = msg_cls(scene=scene, **data)
                 sender.send_message(receiver, msg)
+        scene.wait()
 
 
 def get_message_cls_for(

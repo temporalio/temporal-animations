@@ -9,7 +9,7 @@ from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, Scene, Text
 from tempyral import animation
 from tempyral.simulation import Application, Server, WorkflowWorker
 
-TIMEOUT_SECONDS = 10
+TIMEOUT_SECONDS = 5
 
 
 class TemporalScene(Scene, ABC):
