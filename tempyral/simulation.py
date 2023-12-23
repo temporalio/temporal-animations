@@ -106,7 +106,10 @@ class Server(Entity):
                 await self.publish_change_event()
             case WorkerRequestType.RespondWorkflowTaskCompleted:
                 self.history.events.append(
-                    HistoryEvent(HistoryEventType.WORKFLOW_TASK_COMPLETED)
+                    HistoryEvent(
+                        HistoryEventType.WORKFLOW_TASK_COMPLETED,
+                        seen_by_sticky_worker=True,
+                    )
                 )
                 await self.publish_change_event()
             case _:
