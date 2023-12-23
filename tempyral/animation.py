@@ -3,7 +3,7 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod
 from asyncio import QueueEmpty
-from typing import Any, Dict, Generic, List, Type, TypeVar, Union
+from typing import Any, Dict, Generic, List, Type, TypedDict, TypeVar, Union
 
 from manim import DL, DOWN, DR
 from manim import GREEN_D as GREEN
@@ -55,10 +55,7 @@ class ProxyEntity(Generic[E], VisualElement):
     def __init__(self, entity: E, scene: Scene) -> None:
         self.e = entity
         super().__init__(scene)
-        assert (
-            entity not in proxy_registry
-        ), "Simulation entities may have one manim proxy only"
-        proxy_registry[entity] = self
+        proxy_registry.set(entity, self)
 
     def render(self, animate=True):
         log(f"{self.e}\n", "A: render")
@@ -90,8 +87,29 @@ class ProxyEntity(Generic[E], VisualElement):
         pass
 
 
-# A registry allowing us to look up proxies by their simulation counterparts.
-proxy_registry: Dict[simulation.Entity, ProxyEntity] = {}
+class ProxyRegistry(Generic[E]):
+    """
+    A registry allowing us to look up proxies by their simulation counterparts.
+    """
+
+    def __init__(self):
+        self._registry: Dict[simulation.Entity, ProxyEntity] = {}
+
+    def set(self, entity: E, proxy: ProxyEntity[E]) -> None:
+        assert (
+            entity not in self._registry
+        ), "Simulation entities may have one manim proxy only"
+        self._registry[entity] = proxy
+
+    def get(self, entity: E) -> ProxyEntity[E]:
+        proxy = self._registry[entity]
+        # The entity is received from the event bus and contains the version of
+        # entity state that we should be seeing at this point.
+        proxy.e = entity
+        return proxy
+
+
+proxy_registry = ProxyRegistry()
 
 
 async def handle_simulation_events(scene: Scene):
@@ -116,15 +134,15 @@ async def _handle_simulation_event(
     match event:
         case StateChangeEvent(entity, data):
             log(f"{entity} {data}", "A: handle change event")
-            proxy_entity = proxy_registry[entity]
+            proxy_entity = proxy_registry.get(entity)
             proxy_entity.render()
             if data:
                 proxy_entity.handle_change_data(data)
         case MessageEvent(sender_entity, receiver_entity, data):
             log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
             sender, receiver = (
-                proxy_registry[sender_entity],
-                proxy_registry[receiver_entity],
+                proxy_registry.get(sender_entity),
+                proxy_registry.get(receiver_entity),
             )
             msg_cls = get_message_cls_for(sender, receiver)
             msg = msg_cls(scene=scene, **data)
