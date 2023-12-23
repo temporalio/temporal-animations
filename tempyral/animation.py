@@ -29,7 +29,12 @@ from manim import (
 from manim.typing import Point3D
 
 from tempyral import log, simulation
-from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
+from tempyral.event_bus import (
+    MessageEvent,
+    StateChangeEvent,
+    TerminateSimulation,
+    event_bus,
+)
 
 E = TypeVar("E", bound=simulation.Entity)
 
@@ -128,40 +133,25 @@ proxy_registry = ProxyRegistry()
 
 async def handle_simulation_events(scene: Scene):
     while True:
-        event = await event_bus.bus.get()
-        await _handle_simulation_event(event, scene)
-
-
-async def drain_simulation_events(scene: Scene):
-    try:
-        while event := event_bus.bus.get_nowait():
-            log(f"{event}", "A: drain: handle event")
-            await _handle_simulation_event(event, scene)
-    except QueueEmpty:
-        pass
-
-
-async def _handle_simulation_event(
-    event: Union[StateChangeEvent[simulation.Entity], MessageEvent[simulation.Entity]],
-    scene: Scene,
-):
-    match event:
-        case StateChangeEvent(entity, data):
-            log(f"{entity} {data}", "A: handle change event")
-            proxy_entity = proxy_registry.get(entity)
-            proxy_entity.render(entity)
-            if data:
-                proxy_entity.handle_change_data(data)
-        case MessageEvent(sender_entity, receiver_entity, data):
-            log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
-            sender, receiver = (
-                proxy_registry.get(sender_entity),
-                proxy_registry.get(receiver_entity),
-            )
-            msg_cls = get_message_cls_for(sender, receiver)
-            msg = msg_cls(scene=scene, **data)
-            sender.send_message(receiver, msg)
-    scene.wait(0.5)
+        match await event_bus.bus.get():
+            case StateChangeEvent(entity, data):
+                log(f"{entity} {data}", "A: handle change event")
+                proxy_entity = proxy_registry.get(entity)
+                proxy_entity.render(entity)
+                if data:
+                    proxy_entity.handle_change_data(data)
+            case MessageEvent(sender_entity, receiver_entity, data):
+                log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
+                sender, receiver = (
+                    proxy_registry.get(sender_entity),
+                    proxy_registry.get(receiver_entity),
+                )
+                msg_cls = get_message_cls_for(sender, receiver)
+                msg = msg_cls(scene=scene, **data)
+                sender.send_message(receiver, msg)
+            case TerminateSimulation():
+                break
+        scene.wait(0.5)
 
 
 def get_message_cls_for(

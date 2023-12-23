@@ -12,8 +12,6 @@ from tempyral.simulation import Application
 from tempyral.simulation import NoOpWorkflowWorker as WorkflowWorker
 from tempyral.simulation import Server
 
-TIMEOUT_SECONDS = 10
-
 
 class TemporalScene(Scene, ABC):
     """
@@ -36,11 +34,23 @@ class TemporalScene(Scene, ABC):
 
         async def simulation():
             try:
-                async with asyncio.timeout(TIMEOUT_SECONDS):
-                    async with asyncio.TaskGroup() as tg:
-                        for coro in self.simulation(server, app, wworker):
-                            tg.create_task(coro)
-                        tg.create_task(animation.handle_simulation_events(self))
+                async with asyncio.TaskGroup() as tg:
+                    simulation_tasks = [
+                        tg.create_task(coro)
+                        for coro in self.simulation(server, app, wworker)
+                    ]
+                    animation_task = tg.create_task(
+                        animation.handle_simulation_events(self)
+                    )
+
+                    # The animation task terminates when the workflow is
+                    # complete. When this happens, cancel the simulation tasks
+                    # (e.g. worker polling).
+                    def cancel(_):
+                        for t in simulation_tasks:
+                            t.cancel()
+
+                    animation_task.add_done_callback(cancel)
             except ExceptionGroup as eg:
                 print(f"Caught ExceptionGroup:", file=sys.stderr)
                 for e in eg.exceptions:
@@ -49,9 +59,6 @@ class TemporalScene(Scene, ABC):
                         type(e), e, e.__traceback__, file=sys.stderr
                     )
                 sys.exit(1)
-            except TimeoutError:
-                await animation.drain_simulation_events(self)
-                pass
 
         self.wait()
         asyncio.run(simulation())

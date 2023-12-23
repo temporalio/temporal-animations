@@ -4,7 +4,12 @@ from copy import deepcopy
 from typing import Any, Dict, Hashable, Self
 
 from tempyral import log
-from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
+from tempyral.event_bus import (
+    MessageEvent,
+    StateChangeEvent,
+    TerminateSimulation,
+    event_bus,
+)
 
 
 class Entity:
@@ -40,3 +45,6 @@ class Entity:
         log(f"{sender} -> {receiver}, {kwargs}", "S: publish message")
         await event_bus.publish(MessageEvent(sender, receiver, kwargs))
         await asyncio.sleep(0)
+
+    async def terminate_simulation(self):
+        await event_bus.publish(TerminateSimulation())

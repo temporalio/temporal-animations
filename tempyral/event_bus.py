@@ -18,11 +18,19 @@ class MessageEvent(Generic[E]):
     data: Dict[str, Any]
 
 
+class TerminateSimulation:
+    pass
+
+
 class EventBus(Generic[E]):
     def __init__(self):
-        self.bus: Queue[Union[StateChangeEvent[E], MessageEvent[E]]] = Queue()
+        self.bus: Queue[
+            Union[StateChangeEvent[E], MessageEvent[E], TerminateSimulation]
+        ] = Queue()
 
-    async def publish(self, event: Union[StateChangeEvent[E], MessageEvent[E]]):
+    async def publish(
+        self, event: Union[StateChangeEvent[E], MessageEvent[E], TerminateSimulation]
+    ):
         await self.bus.put(event)
 
 

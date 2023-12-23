@@ -79,6 +79,7 @@ class Server(Entity):
                     HistoryEventType.WORKFLOW_EXECUTION_COMPLETED,
                     seen_by_sticky_worker=True,
                 )
+                await self.terminate_simulation()
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
