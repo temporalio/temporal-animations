@@ -25,7 +25,7 @@ class HistoryEvents(VisualElement):
                 )
                 for e in events
             )
-        ).arrange(DOWN, center=True, aligned_edge=LEFT)
+        ).arrange(DOWN, aligned_edge=LEFT)
 
 
 class History(ProxyEntity[simulation.History]):
