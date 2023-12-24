@@ -34,6 +34,9 @@ class VisualElement(ABC):
         """Compute new visual representation given kwargs data."""
         ...
 
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}"
+
 
 class ProxyEntity(Generic[E], ABC):
     """
@@ -45,6 +48,9 @@ class ProxyEntity(Generic[E], ABC):
         self.scene = scene
         self.dock_edge = receive_edge
         proxy_registry.set(entity, self)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}"
 
     def dock_point(self) -> Point3D:
         return self.m.get_edge_center(self.dock_edge)
@@ -75,7 +81,7 @@ class ProxyEntity(Generic[E], ABC):
         """
         Animate sending a message.
         """
-        log(f"{self} -> {receiver})\n", "A: send_message")
+        log(f"{self} -> {receiver}\n", "A: send_message")
         message.m.next_to(self.dock_point())
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.

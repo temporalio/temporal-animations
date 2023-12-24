@@ -6,7 +6,7 @@ from manim import LEFT
 from manim import RED_D as RED
 from manim import UL, Mobject, Text, VGroup
 
-from tempyral import simulation
+from tempyral import log, simulation
 from tempyral.animation.entity import FONT_SIZE_MEDIUM, ProxyEntity, VisualElement
 
 
@@ -15,6 +15,7 @@ class HistoryEvents(VisualElement):
     def newm(
         events: List[simulation.HistoryEvent], font_size=FONT_SIZE_MEDIUM
     ) -> Mobject:
+        log(f"{events}", "A: HistoryEvents.newm")
         return VGroup(
             *(
                 Text(
