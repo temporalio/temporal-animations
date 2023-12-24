@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, TypedDict, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, TypedDict, Union
 
 from tempyral import log
 from tempyral.simulation.api import (
@@ -10,7 +10,6 @@ from tempyral.simulation.api import (
     WorkerRequestType,
 )
 from tempyral.simulation.entity import Entity
-from tempyral.simulation.worker import WorkflowWorker
 
 NamespaceId = str
 WorkflowId = str
@@ -95,7 +94,7 @@ class Server(Entity):
         )
         await self.publish_change_event(new_history_events=len(events))
 
-    async def dispatch_wft_if_new_events(self, worker: WorkflowWorker) -> None:
+    async def dispatch_workflow_task(self) -> Optional[WorkflowTask]:
         if all(e.seen_by_sticky_worker for e in self.history.events):
             return
 
@@ -108,8 +107,7 @@ class Server(Entity):
         for e in self.history.events:
             e.seen_by_sticky_worker |= True
         await self.publish_change_event()
-        await self.publish_message_event(self, worker, events=tuple(wft.events))
-        await worker.handle_wft(wft, self)
+        return wft
 
     @property
     def history(self) -> HistoryEvents:

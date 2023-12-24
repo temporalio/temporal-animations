@@ -40,7 +40,7 @@ class TemporalScene(Scene, ABC):
                         for coro in self.simulation(server, app, wworker)
                     ]
                     animation_task = tg.create_task(
-                        animation.handle_simulation_events(self)
+                        animation.process_simulation_events(self)
                     )
 
                     # The animation task terminates when the workflow is
