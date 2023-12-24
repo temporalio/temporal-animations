@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Coroutine, Iterable, List, Tuple
 
-from manim import DOWN, LEFT, ORIGIN, RIGHT, UL, UP, UR, Dot, Scene, Text
+from manim import DL, DOWN, LEFT, ORIGIN, RIGHT, UL, UP, UR, Dot, Scene, Text
 
 from tempyral import animation
 from tempyral.simulation import Application
@@ -102,5 +102,5 @@ class TemporalScene(Scene, ABC):
 
     def add_timestamp(self):
         time = Text(datetime.now().strftime("%H:%M:%S"), font_size=24)
-        time.to_corner(UL, buff=0.1)
+        time.to_corner(DL, buff=0.1)
         self.add(time)
