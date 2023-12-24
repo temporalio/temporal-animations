@@ -28,17 +28,17 @@ class HistoryEvent:
         return f"{self.event_type.name}{'*' if self.seen_by_sticky_worker else ''}"
 
 
-class HistoryEvents(Entity):
+class History(Entity):
     """A slice of history events"""
 
     def __init__(self, events: List[HistoryEvent]) -> None:
         self.events = events
 
 
-WorkflowTask = HistoryEvents
+WorkflowTask = History
 ActivityTask = str
 
-Shard = Dict[NamespaceId, Dict[WorkflowId, HistoryEvents]]
+Shard = Dict[NamespaceId, Dict[WorkflowId, History]]
 
 
 class TaskQueue(TypedDict):
@@ -49,7 +49,7 @@ class TaskQueue(TypedDict):
 class Server(Entity):
     def __init__(self):
         self.shards: List[Shard] = [
-            {DEFAULT_NAMESPACE: {DEFAULT_WORKFLOW_ID: HistoryEvents([])}}
+            {DEFAULT_NAMESPACE: {DEFAULT_WORKFLOW_ID: History([])}}
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
         super().__init__()
@@ -110,7 +110,7 @@ class Server(Entity):
         return wft
 
     @property
-    def history(self) -> HistoryEvents:
+    def history(self) -> History:
         """
         Currently, the simulation only supports a single workflow execution.
         Return its history.
