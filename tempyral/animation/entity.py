@@ -1,7 +1,7 @@
 """
 Manim representations of Temporal entities.
 """
-from abc import ABC, abstractmethod
+from abc import ABC, abstractstaticmethod
 from typing import Any, Dict, Generic, TypeVar
 
 from manim import UP, ApplyMethod, Mobject, Scene, Transform
@@ -19,16 +19,19 @@ FONT_SIZE_SMALL = 12
 
 class VisualElement(ABC):
     """
-    An element that participates visually in the scene.
+    An entity participating in the scene.
+
+    This is a manim Mobject that knows how to recompute itself given some data:
+    self.newm(**kwargs).
     """
 
     def __init__(self, scene: Scene, **kwargs) -> None:
         self.scene = scene
         self.m = self.newm(**kwargs)  # Current visual representation
 
-    @abstractmethod
-    def newm(self, **kwargs) -> Mobject:
-        """Compute new visual representation given entity state."""
+    @abstractstaticmethod
+    def newm(**kwargs) -> Mobject:
+        """Compute new visual representation given kwargs data."""
         ...
 
 
@@ -46,15 +49,18 @@ class ProxyEntity(Generic[E], ABC):
     def dock_point(self) -> Point3D:
         return self.m.get_edge_center(self.dock_edge)
 
-    @abstractmethod
-    def newm(self, entity: E) -> Mobject:
+    @staticmethod  # should be abstractstaticmethod but there seems to be a Pyright bug
+    def newm(entity: E) -> Mobject:
         """Compute new visual representation given entity state."""
         ...
 
+    def move_into_position(self, newm: Mobject) -> Mobject:
+        # TODO: hack
+        return newm.move_to(self.m.get_center())
+
     def render(self, entity: E, animate=True):
         log(f"{entity}\n", "A: render")
-        newm = self.newm(entity)
-        newm.move_to(self.m.get_center())
+        newm = self.move_into_position(self.newm(entity))
         if animate:
             self.scene.play(Transform(self.m, newm))
         else:

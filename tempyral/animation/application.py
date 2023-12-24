@@ -10,10 +10,12 @@ from tempyral.animation.entity import (
 
 
 class ApplicationRequest(VisualElement):
-    def newm(self, request_type: simulation.ApplicationRequestType) -> Mobject:
+    @staticmethod
+    def newm(request_type: simulation.ApplicationRequestType) -> Mobject:
         return Text(request_type.name, font_size=FONT_SIZE_MEDIUM, font=MONOSPACE_FONT)
 
 
 class Application(ProxyEntity[simulation.Application]):
-    def newm(self, entity: simulation.Application) -> Mobject:
+    @staticmethod
+    def newm(_: simulation.Application) -> Mobject:
         return Text("Application", font_size=24)

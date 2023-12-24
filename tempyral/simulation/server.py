@@ -33,6 +33,10 @@ class History(Entity):
 
     def __init__(self, events: List[HistoryEvent]) -> None:
         self.events = events
+        super().__init__()
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(id={self.id},{id(self)}: events={self.events})"
 
 
 WorkflowTask = History
