@@ -73,7 +73,6 @@ class ProxyEntity(Generic[E], VisualElement):
             self.scene.play(Transform(self.m, newm))
         else:
             self.m.become(newm)
-        self.scene.wait(0.2)
 
     def send_message(
         self,
@@ -89,7 +88,7 @@ class ProxyEntity(Generic[E], VisualElement):
         # locations of self and receiver.
         self.scene.add(message.m)
         self.scene.play(
-            ApplyMethod(message.m.move_to, receiver.dock_point(), run_time=2.0)
+            ApplyMethod(message.m.move_to, receiver.dock_point(), run_time=1.5)
         )
         self.scene.remove(message.m)
 

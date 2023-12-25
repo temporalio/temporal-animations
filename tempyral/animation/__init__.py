@@ -39,7 +39,6 @@ async def process_simulation_events(scene: Scene):
                 sender.send_message(receiver, msg)
             case TerminateSimulation():
                 break
-        scene.wait(0.5)
 
 
 def _get_message_cls_for(
