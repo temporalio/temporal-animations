@@ -88,13 +88,10 @@ class TemporalScene(Scene, ABC):
             for sim_wworker in simulation_workflow_workers
         ]
 
-        server.m.move_to(ORIGIN + UP * 2)
-        app.m.move_to(ORIGIN + LEFT * 3 + DOWN * 2)
-        wworker.m.move_to(ORIGIN + RIGHT * 3 + DOWN * 2)
+        server.set_dock_direction(LEFT).m.align_on_border(UR)
+        app.set_dock_direction(RIGHT).m.align_on_border(UL)
+        wworker.set_dock_direction(RIGHT).m.align_on_border(LEFT)
 
-        server.dock_direction = DOWN
-        app.dock_direction = UL
-        wworker.dock_direction = UR
         self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
 
         self.add(app.m, server.m, wworker.m)

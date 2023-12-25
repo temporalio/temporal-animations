@@ -2,10 +2,10 @@
 Manim representations of Temporal entities.
 """
 from abc import ABC, abstractstaticmethod
-from typing import Any, Dict, Generic, TypeVar
+from typing import Any, Dict, Generic, Self, TypeVar
 
 from manim import UP, ApplyMethod, Mobject, Scene, Transform
-from manim.typing import Point3D
+from manim.typing import Point3D, Vector3
 
 from tempyral import log, simulation
 
@@ -50,6 +50,10 @@ class ProxyEntity(Generic[E], VisualElement):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}"
+
+    def set_dock_direction(self, direction: Vector3) -> Self:
+        self.dock_direction = direction
+        return self
 
     def dock_point(self) -> Point3D:
         return self.m.get_edge_center(self.dock_direction)
