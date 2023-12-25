@@ -8,7 +8,6 @@ E = TypeVar("E")
 @dataclass
 class StateChangeEvent(Generic[E]):
     entity: E
-    data: Dict[str, Any]
 
 
 @dataclass

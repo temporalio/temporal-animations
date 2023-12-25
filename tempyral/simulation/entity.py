@@ -32,18 +32,16 @@ class Entity:
     def clone(self) -> Self:
         return deepcopy(self)
 
-    async def publish_change_event(self, **kwargs: Hashable):
-        cloned = self.clone()
-        log(f"{cloned}, {kwargs}", "S: publish change")
-        await event_bus.publish(StateChangeEvent(cloned, kwargs))
+    async def publish_change_event(self):
+        log(f"{self}", "S: publish change")
+        await event_bus.publish(StateChangeEvent(self.clone()))
         await asyncio.sleep(0)
 
     async def publish_message_event(
         self, sender: "Entity", receiver: "Entity", **kwargs: Hashable
     ):
-        sender, receiver = sender.clone(), receiver.clone()
         log(f"{sender} -> {receiver}, {kwargs}", "S: publish message")
-        await event_bus.publish(MessageEvent(sender, receiver, kwargs))
+        await event_bus.publish(MessageEvent(sender.clone(), receiver.clone(), kwargs))
         await asyncio.sleep(0)
 
     async def terminate_simulation(self):

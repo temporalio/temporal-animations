@@ -110,7 +110,7 @@ class Server(Entity):
             )
             for e in events
         )
-        await self.publish_change_event(new_history_events=len(events))
+        await self.publish_change_event()
 
     async def dispatch_workflow_task(self) -> Optional[WorkflowTask]:
         if all(e.seen_by_sticky_worker for e in self.history.events):

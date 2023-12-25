@@ -2,9 +2,19 @@
 Manim representations of Temporal entities.
 """
 from abc import ABC, abstractstaticmethod
-from typing import Any, Dict, Generic, Self, TypeVar
+from typing import Any, Dict, Generic, List, Self, Type, TypeVar
 
-from manim import UP, ApplyMethod, Mobject, Scene, Transform
+from manim import (
+    DOWN,
+    ORIGIN,
+    RIGHT,
+    UP,
+    ApplyMethod,
+    Indicate,
+    Mobject,
+    Scene,
+    Transform,
+)
 from manim.typing import Point3D, Vector3
 
 from tempyral import log, simulation
@@ -38,14 +48,23 @@ class VisualElement(ABC):
         return f"{type(self).__name__}"
 
 
+class Root(VisualElement):
+    def newm(self) -> Mobject:
+        return Mobject()
+
+
+root = Root()
+
+
 class ProxyEntity(Generic[E], VisualElement):
     """
     A VisualElement that has a counterpart entity of type E in the simulation.
     """
 
-    def __init__(self, entity: E, dock_direction=UP) -> None:
+    def __init__(self, entity: E, parent: VisualElement = root) -> None:
+        self.parent = parent
         self.m = self.newm(entity)  # Current visual representation
-        self.dock_direction = dock_direction
+        self.dock_direction = ORIGIN
         proxy_entity_registry.set(entity, self)
 
     def __repr__(self) -> str:
@@ -63,16 +82,12 @@ class ProxyEntity(Generic[E], VisualElement):
         """Compute new visual representation given entity state."""
         ...
 
-    def move_into_position(self, newm: Mobject) -> Mobject:
-        # TODO: hack
-        return newm.move_to(self.m.get_center())
-
     def render(self, entity: E, animate=True):
         """
         Mutate `self.m` so that it represents `entity` and paint the result to screen.
         """
         log(f"{entity}\n", "A: render")
-        newm = self.move_into_position(self.newm(entity))
+        newm = self.newm(entity).move_to(self.m)
         if animate:
             self.scene.play(Transform(self.m, newm))
         else:
@@ -96,8 +111,57 @@ class ProxyEntity(Generic[E], VisualElement):
         )
         self.scene.remove(message.m)
 
-    def handle_change_data(self, data: Dict[str, Any]):
-        pass
+
+F = TypeVar("F", bound=simulation.Entity)
+Q = TypeVar("Q", bound=ProxyEntity)
+
+
+class ProxyEntityWithChildren(
+    ProxyEntity,
+    Generic[E, F, Q],
+):
+    """
+    This class models the situation where a proxy entity has an append-only list
+    of child proxy entities. Examples include:
+    - Server has a list of Histories
+    - A History has a list of HistoryEvents
+    - A WorkflowWorker has a list of WorkflowDefinitions
+    """
+
+    child_cls: Type[Q]
+
+    def __init__(self, entity: Any, parent: VisualElement = root) -> None:
+        super().__init__(entity, parent=parent)
+        self.children: List[Q] = []
+        for e in self.get_child_entities(entity):
+            self.append_child(e)
+
+    @abstractstaticmethod
+    def get_child_entities(entity: E) -> List[F]:  # type: ignore (bug in Pyright?)
+        ...
+
+    def render(self, entity: E):
+        n = len(self.children)
+        child_entities = self.get_child_entities(entity)
+        for new in child_entities[n:]:
+            self.append_child(new)
+
+        prev = self
+        for child, child_entity in zip(self.children, child_entities):
+            log(
+                f"align child {child.m} below {prev.m}: {prev.m.get_center()}",
+                "A: render",
+            )
+            child.m.next_to(prev.m, DOWN).align_to(prev.m, RIGHT)
+            child.render(child_entity)
+            prev = child
+
+        for new in self.children[n:]:
+            self.scene.play(Indicate(new.m))
+        super().render(entity)
+
+    def append_child(self, child_entity: F):
+        self.children.append(self.child_cls(child_entity, parent=self))
 
 
 class ProxyEntityRegistry(Generic[E]):

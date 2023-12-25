@@ -1,16 +1,23 @@
 from typing import TYPE_CHECKING, List
 
-from manim import DOWN
+from manim import DL, DOWN, DR
 from manim import GREEN_D as GREEN
 from manim import LEFT
 from manim import RED_D as RED
-from manim import RIGHT, UL, Mobject, Text, VGroup
+from manim import RIGHT, UL, Line, Mobject, Point, Text, VGroup
 
 from tempyral import log, simulation
-from tempyral.animation.entity import FONT_SIZE_MEDIUM, ProxyEntity, VisualElement
+from tempyral.animation.entity import (
+    FONT_SIZE_MEDIUM,
+    ProxyEntity,
+    ProxyEntityWithChildren,
+    VisualElement,
+)
 
 if TYPE_CHECKING:
     from tempyral.animation.server import Server
+
+InvisibleMobject = Point
 
 
 class HistoryEvent(ProxyEntity[simulation.HistoryEvent]):
@@ -33,34 +40,15 @@ class HistoryEvents(VisualElement):
         return VGroup(*map(HistoryEvent.newm, events)).arrange(DOWN)
 
 
-class History(ProxyEntity[simulation.History]):
-    def __init__(self, entity: simulation.History, server: "Server"):
-        super().__init__(entity, LEFT)
-        self.events: List[HistoryEvent] = []
-        self.server = server
-        for e in entity.events:
-            self.append(e)
+class History(
+    ProxyEntityWithChildren[simulation.History, simulation.HistoryEvent, HistoryEvent]
+):
+    child_cls = HistoryEvent
 
-    def newm(self, entity: simulation.History) -> Mobject:
-        return Text(entity.workflow_id)
+    @staticmethod
+    def newm(_: simulation.History) -> Mobject:
+        return InvisibleMobject()
 
-    def render(self, entity: simulation.History):
-        events = entity.events
-        assert len(events) >= len(self.events)
-        for e in events[len(self.events) :]:
-            self.append(e)
-        for e, e_entity in zip(self.events, events):
-            e.render(e_entity)
-        super().render(entity)
-
-    def append(self, entity: simulation.HistoryEvent):
-        event = HistoryEvent(entity=entity)
-        self.move_event_into_position(event.m)
-        self.events.append(event)
-
-    def move_event_into_position(self, newm: Mobject) -> Mobject:
-        if not self.events:
-            return newm.next_to(self.server.m, DOWN).align_to(self.server.m, RIGHT)
-        else:
-            last = self.events[-1].m
-            return newm.next_to(last, DOWN).align_to(last, RIGHT)
+    @staticmethod
+    def get_child_entities(entity: simulation.History) -> List[simulation.HistoryEvent]:
+        return entity.events

@@ -23,12 +23,10 @@ def set_scene(scene: Scene):
 async def process_simulation_events(scene: Scene):
     while True:
         match await event_bus.bus.get():
-            case StateChangeEvent(entity, data):
-                log(f"{entity} {data}", "A: handle change event")
+            case StateChangeEvent(entity):
+                log(f"{entity}", "A: handle change event")
                 proxy_entity = proxy_entity_registry.get(entity)
                 proxy_entity.render(entity)
-                if data:
-                    proxy_entity.handle_change_data(data)
             case MessageEvent(sender_entity, receiver_entity, data):
                 log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
                 sender, receiver = (
