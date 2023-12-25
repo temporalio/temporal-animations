@@ -31,8 +31,7 @@ class HistoryEvents(VisualElement):
 
 
 class History:
-    def __init__(self, entities: List[simulation.HistoryEvent], scene: Scene):
-        self.scene = scene
+    def __init__(self, entities: List[simulation.HistoryEvent]):
         self.events: List[HistoryEvent] = []
         for e in entities:
             self.append(e)
@@ -45,7 +44,7 @@ class History:
             e.render(entity)
 
     def append(self, entity: simulation.HistoryEvent):
-        event = HistoryEvent(entity=entity, scene=self.scene)
+        event = HistoryEvent(entity=entity)
         self.move_event_into_position(event.m)
         self.events.append(event)
 

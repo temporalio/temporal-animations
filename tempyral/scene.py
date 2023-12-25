@@ -78,13 +78,13 @@ class TemporalScene(Scene, ABC):
         """
         Create proxy entities in the animation domain, adding them to the scene.
         """
-        server = animation.Server(simulation_server, self)
+        animation.set_scene(self)
+        server = animation.Server(simulation_server)
         [app] = [
-            animation.Application(simulation_app, self)
-            for simulation_app in simulation_apps
+            animation.Application(simulation_app) for simulation_app in simulation_apps
         ]
         [wworker] = [
-            animation.WorkflowWorker(sim_wworker, self)
+            animation.WorkflowWorker(sim_wworker)
             for sim_wworker in simulation_workflow_workers
         ]
 

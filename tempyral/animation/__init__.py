@@ -15,6 +15,10 @@ from tempyral.event_bus import (
 )
 
 
+def set_scene(scene: Scene):
+    VisualElement.scene = scene
+
+
 async def process_simulation_events(scene: Scene):
     while True:
         match await event_bus.bus.get():
@@ -31,7 +35,7 @@ async def process_simulation_events(scene: Scene):
                     proxy_registry.get(receiver_entity),
                 )
                 msg_cls = _get_message_cls_for(sender, receiver)
-                msg = msg_cls(scene=scene, **data)
+                msg = msg_cls(**data)
                 sender.send_message(receiver, msg)
             case TerminateSimulation():
                 break

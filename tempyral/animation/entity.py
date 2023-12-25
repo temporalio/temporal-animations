@@ -21,12 +21,12 @@ class VisualElement(ABC):
     """
     An entity participating in the scene.
 
-    This is a manim Mobject that knows how to recompute itself given some data:
-    self.newm(**kwargs).
+    This is a manim Mobject (self.m) that knows how to re-render itself.
     """
 
-    def __init__(self, scene: Scene, **kwargs) -> None:
-        self.scene = scene
+    scene = Scene()
+
+    def __init__(self, **kwargs) -> None:
         self.m = self.newm(**kwargs)  # Current visual representation
 
     @abstractstaticmethod
@@ -38,14 +38,13 @@ class VisualElement(ABC):
         return f"{type(self).__name__}"
 
 
-class ProxyEntity(Generic[E], ABC):
+class ProxyEntity(Generic[E], VisualElement):
     """
     A VisualElement that has a counterpart entity of type E in the simulation.
     """
 
-    def __init__(self, entity: E, scene: Scene, receive_edge=UP) -> None:
+    def __init__(self, entity: E, receive_edge=UP) -> None:
         self.m = self.newm(entity)  # Current visual representation
-        self.scene = scene
         self.dock_edge = receive_edge
         proxy_registry.set(entity, self)
 
@@ -65,6 +64,9 @@ class ProxyEntity(Generic[E], ABC):
         return newm.move_to(self.m.get_center())
 
     def render(self, entity: E, animate=True):
+        """
+        Mutate `self.m` so that it represents `entity` and paint the result to screen.
+        """
         log(f"{entity}\n", "A: render")
         newm = self.move_into_position(self.newm(entity))
         if animate:
