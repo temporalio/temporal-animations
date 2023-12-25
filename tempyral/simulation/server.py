@@ -29,6 +29,18 @@ class HistoryEvent(Entity):
 
 
 class History(Entity):
+    """A workflow execution history"""
+
+    def __init__(self, workflow_id: WorkflowId, events: List[HistoryEvent]) -> None:
+        self.workflow_id = workflow_id
+        self.events = events
+        super().__init__()
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(workflow_id={self.workflow_id},id={self.id},{id(self)}: events={self.events})"
+
+
+class WorkflowTask(Entity):
     """A slice of history events"""
 
     def __init__(self, events: List[HistoryEvent]) -> None:
@@ -39,9 +51,8 @@ class History(Entity):
         return f"{type(self).__name__}(id={self.id},{id(self)}: events={self.events})"
 
 
-Namespace = Dict[WorkflowId, History]
+Namespace = List[History]
 Shard = Dict[NamespaceId, Namespace]
-WorkflowTask = History
 ActivityTask = str
 
 
@@ -53,7 +64,7 @@ class TaskQueue(TypedDict):
 class Server(Entity):
     def __init__(self):
         self.shards: List[Shard] = [
-            {DEFAULT_NAMESPACE: {DEFAULT_WORKFLOW_ID: History([])}}
+            {DEFAULT_NAMESPACE: [History(DEFAULT_WORKFLOW_ID, [])]}
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
         super().__init__()
@@ -119,13 +130,13 @@ class Server(Entity):
         Return the history of the sole workflow execution.
         """
         try:
-            [history] = self.namespace.values()
+            [history] = self.namespace
         except ValueError:
             raise ValueError("Multiple workflow executions are not supported")
         return history
 
     @property
-    def namespace(self) -> Dict[WorkflowId, History]:
+    def namespace(self) -> List[History]:
         """
         Return the sole namespace.
 

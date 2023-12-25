@@ -35,17 +35,23 @@ class HistoryEvents(VisualElement):
 
 class History(ProxyEntity[simulation.History]):
     def __init__(self, entity: simulation.History, server: "Server"):
+        super().__init__(entity, LEFT)
         self.events: List[HistoryEvent] = []
         self.server = server
         for e in entity.events:
             self.append(e)
 
-    def render(self, events: List[simulation.HistoryEvent]):
+    def newm(self, entity: simulation.History) -> Mobject:
+        return Text(entity.workflow_id)
+
+    def render(self, entity: simulation.History):
+        events = entity.events
         assert len(events) >= len(self.events)
         for e in events[len(self.events) :]:
             self.append(e)
-        for e, entity in zip(self.events, events):
-            e.render(entity)
+        for e, e_entity in zip(self.events, events):
+            e.render(e_entity)
+        super().render(entity)
 
     def append(self, entity: simulation.HistoryEvent):
         event = HistoryEvent(entity=entity)
