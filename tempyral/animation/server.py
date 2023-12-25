@@ -10,7 +10,7 @@ from tempyral.animation.history import History
 class Server(ProxyEntity[simulation.Server]):
     def __init__(self, entity: simulation.Server) -> None:
         super().__init__(entity)
-        self.history = History(entity.history.events, self)
+        self.history = History(entity.history, self)
 
     def render(self, entity: simulation.Server, animate=True):
         super().render(entity, animate)

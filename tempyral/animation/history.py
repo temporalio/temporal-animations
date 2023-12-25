@@ -33,11 +33,11 @@ class HistoryEvents(VisualElement):
         return VGroup(*map(HistoryEvent.newm, events)).arrange(DOWN)
 
 
-class History:
-    def __init__(self, entities: List[simulation.HistoryEvent], server: "Server"):
+class History(ProxyEntity[simulation.History]):
+    def __init__(self, entity: simulation.History, server: "Server"):
         self.events: List[HistoryEvent] = []
         self.server = server
-        for e in entities:
+        for e in entity.events:
             self.append(e)
 
     def render(self, events: List[simulation.HistoryEvent]):
