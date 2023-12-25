@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, TypedDict, Union
 
 from tempyral import log
@@ -19,10 +18,11 @@ DEFAULT_NAMESPACE = "default"
 DEFAULT_WORKFLOW_ID = "wid"
 
 
-@dataclass
-class HistoryEvent:
-    event_type: HistoryEventType
-    seen_by_sticky_worker: bool = False
+class HistoryEvent(Entity):
+    def __init__(self, event_type: HistoryEventType, seen_by_sticky_worker=False):
+        super().__init__()
+        self.event_type = event_type
+        self.seen_by_sticky_worker = seen_by_sticky_worker
 
     def __repr__(self) -> str:
         return f"{self.event_type.name}{'*' if self.seen_by_sticky_worker else ''}"
