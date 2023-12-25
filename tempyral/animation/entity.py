@@ -43,16 +43,16 @@ class ProxyEntity(Generic[E], VisualElement):
     A VisualElement that has a counterpart entity of type E in the simulation.
     """
 
-    def __init__(self, entity: E, receive_edge=UP) -> None:
+    def __init__(self, entity: E, dock_direction=UP) -> None:
         self.m = self.newm(entity)  # Current visual representation
-        self.dock_edge = receive_edge
+        self.dock_direction = dock_direction
         proxy_registry.set(entity, self)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}"
 
     def dock_point(self) -> Point3D:
-        return self.m.get_edge_center(self.dock_edge)
+        return self.m.get_edge_center(self.dock_direction)
 
     @staticmethod  # should be abstractstaticmethod but there seems to be a Pyright bug
     def newm(entity: E) -> Mobject:

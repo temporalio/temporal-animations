@@ -92,9 +92,9 @@ class TemporalScene(Scene, ABC):
         app.m.move_to(ORIGIN + LEFT * 3 + DOWN * 2)
         wworker.m.move_to(ORIGIN + RIGHT * 3 + DOWN * 2)
 
-        server.dock_edge = DOWN
-        app.dock_edge = UL
-        wworker.dock_edge = UR
+        server.dock_direction = DOWN
+        app.dock_direction = UL
+        wworker.dock_direction = UR
         self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
 
         self.add(app.m, server.m, wworker.m)
