@@ -39,10 +39,10 @@ class History(Entity):
         return f"{type(self).__name__}(id={self.id},{id(self)}: events={self.events})"
 
 
+Namespace = Dict[WorkflowId, History]
+Shard = Dict[NamespaceId, Namespace]
 WorkflowTask = History
 ActivityTask = str
-
-Shard = Dict[NamespaceId, Dict[WorkflowId, History]]
 
 
 class TaskQueue(TypedDict):
@@ -116,8 +116,20 @@ class Server(Entity):
     @property
     def history(self) -> History:
         """
-        Currently, the simulation only supports a single workflow execution.
-        Return its history.
+        Return the history of the sole workflow execution.
+        """
+        try:
+            [history] = self.namespace.values()
+        except ValueError:
+            raise ValueError("Multiple workflow executions are not supported")
+        return history
+
+    @property
+    def namespace(self) -> Dict[WorkflowId, History]:
+        """
+        Return the sole namespace.
+
+        The simulation currently supports one namespace only.
         """
         try:
             [shard] = self.shards
@@ -127,8 +139,4 @@ class Server(Entity):
             [namespace] = shard.values()
         except ValueError:
             raise ValueError("Multiple namespaces are not supported")
-        try:
-            [history] = namespace.values()
-        except ValueError:
-            raise ValueError("Multiple workflow executions are not supported")
-        return history
+        return namespace
