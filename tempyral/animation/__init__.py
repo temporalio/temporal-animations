@@ -4,7 +4,7 @@ from manim import Scene
 
 from tempyral import log
 from tempyral.animation.application import Application, ApplicationRequest
-from tempyral.animation.entity import ProxyEntity, VisualElement, proxy_registry
+from tempyral.animation.entity import ProxyEntity, VisualElement, proxy_entity_registry
 from tempyral.animation.server import Server
 from tempyral.animation.worker import WorkerRequest, WorkflowTask, WorkflowWorker
 from tempyral.event_bus import (
@@ -24,15 +24,15 @@ async def process_simulation_events(scene: Scene):
         match await event_bus.bus.get():
             case StateChangeEvent(entity, data):
                 log(f"{entity} {data}", "A: handle change event")
-                proxy_entity = proxy_registry.get(entity)
+                proxy_entity = proxy_entity_registry.get(entity)
                 proxy_entity.render(entity)
                 if data:
                     proxy_entity.handle_change_data(data)
             case MessageEvent(sender_entity, receiver_entity, data):
                 log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
                 sender, receiver = (
-                    proxy_registry.get(sender_entity),
-                    proxy_registry.get(receiver_entity),
+                    proxy_entity_registry.get(sender_entity),
+                    proxy_entity_registry.get(receiver_entity),
                 )
                 msg_cls = _get_message_cls_for(sender, receiver)
                 msg = msg_cls(**data)

@@ -46,7 +46,7 @@ class ProxyEntity(Generic[E], VisualElement):
     def __init__(self, entity: E, dock_direction=UP) -> None:
         self.m = self.newm(entity)  # Current visual representation
         self.dock_direction = dock_direction
-        proxy_registry.set(entity, self)
+        proxy_entity_registry.set(entity, self)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}"
@@ -100,7 +100,7 @@ class ProxyEntity(Generic[E], VisualElement):
         pass
 
 
-class ProxyRegistry(Generic[E]):
+class ProxyEntityRegistry(Generic[E]):
     """
     A registry allowing us to look up proxies by their simulation counterparts.
     """
@@ -118,4 +118,4 @@ class ProxyRegistry(Generic[E]):
         return self._registry[entity]
 
 
-proxy_registry = ProxyRegistry()
+proxy_entity_registry = ProxyEntityRegistry()
