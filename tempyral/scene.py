@@ -92,8 +92,6 @@ class TemporalScene(Scene, ABC):
         app.set_dock_direction(RIGHT).m.align_on_border(UL)
         wworker.set_dock_direction(RIGHT).m.align_on_border(LEFT)
 
-        self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
-
         self.add(app.m, server.m, wworker.m)
         return server, [app], [wworker]
 
@@ -101,3 +99,11 @@ class TemporalScene(Scene, ABC):
         time = Text(datetime.now().strftime("%H:%M:%S"), font_size=24)
         time.to_corner(DL, buff=0.1)
         self.add(time)
+
+    def add_dock_points(
+        self,
+        server: animation.Server,
+        app: animation.Application,
+        wworker: animation.WorkflowWorker,
+    ):
+        self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))

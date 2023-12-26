@@ -9,6 +9,7 @@ from manim import RIGHT, UL, Line, Mobject, Point, Text, VGroup
 from tempyral import log, simulation
 from tempyral.animation.entity import (
     FONT_SIZE_MEDIUM,
+    FONT_SIZE_SMALL,
     ProxyEntity,
     ProxyEntityWithChildren,
     VisualElement,
@@ -22,21 +23,17 @@ InvisibleMobject = Point
 
 class HistoryEvent(ProxyEntity[simulation.HistoryEvent]):
     @staticmethod
-    def newm(event: simulation.HistoryEvent, font_size=FONT_SIZE_MEDIUM) -> Mobject:
-        log(event, "A: HistoryEvent.newm")
+    def newm(event: simulation.HistoryEvent) -> Mobject:
         return Text(
             event.event_type.name,
-            font_size=font_size,
+            font_size=FONT_SIZE_MEDIUM,
             color=GREEN if event.seen_by_sticky_worker else RED,
         )
 
 
 class HistoryEvents(VisualElement):
     @staticmethod
-    def newm(
-        events: List[simulation.HistoryEvent], font_size=FONT_SIZE_MEDIUM
-    ) -> Mobject:
-        log(events, "A: HistoryEvents.newm")
+    def newm(events: List[simulation.HistoryEvent]) -> Mobject:
         return VGroup(*map(HistoryEvent.newm, events)).arrange(DOWN)
 
 

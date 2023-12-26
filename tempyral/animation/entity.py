@@ -8,6 +8,7 @@ from manim import (
     DOWN,
     ORIGIN,
     RIGHT,
+    SMALL_BUFF,
     UP,
     ApplyMethod,
     Indicate,
@@ -86,7 +87,6 @@ class ProxyEntity(Generic[E], VisualElement):
         """
         Mutate `self.m` so that it represents `entity` and paint the result to screen.
         """
-        log(f"{entity}\n", "A: render")
         newm = self.newm(entity).move_to(self.m)
         if animate:
             self.scene.play(Transform(self.m, newm))
@@ -101,7 +101,7 @@ class ProxyEntity(Generic[E], VisualElement):
         """
         Animate sending a message.
         """
-        log(f"{self} -> {receiver}\n", "A: send_message")
+        log(f"{self} -> {receiver}: {message}\n", "A: send_message")
         message.m.next_to(self.dock_point())
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.
@@ -152,7 +152,7 @@ class ProxyEntityWithChildren(
                 f"align child {child.m} below {prev.m}: {prev.m.get_center()}",
                 "A: render",
             )
-            child.m.next_to(prev.m, DOWN).align_to(prev.m, RIGHT)
+            child.m.next_to(prev.m, DOWN, buff=SMALL_BUFF).align_to(prev.m, RIGHT)
             child.render(child_entity)
             prev = child
 
