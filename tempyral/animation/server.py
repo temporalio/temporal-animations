@@ -9,6 +9,7 @@ from tempyral.animation.history import History
 
 class Server(ProxyEntityWithChildren[simulation.Server, simulation.History, History]):
     child_cls = History
+    child_align_direction = RIGHT
 
     @staticmethod
     def newm(_: simulation.Server) -> Mobject:
