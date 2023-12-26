@@ -16,6 +16,7 @@ from tempyral.event_bus import (
 
 
 def set_scene(scene: Scene):
+    log("\n" * 50, "")
     VisualElement.scene = scene
 
 

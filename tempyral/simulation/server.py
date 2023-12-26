@@ -1,3 +1,4 @@
+import os
 from typing import TYPE_CHECKING, Dict, List, Optional, TypedDict, Union
 
 from tempyral import log
@@ -83,6 +84,8 @@ class Server(Entity):
                     HistoryEventType.WORKFLOW_TASK_SCHEDULED,
                     seen_by_sticky_worker=False,
                 )
+                if os.path.exists("/tmp/flag"):
+                    await self.terminate_simulation()
             case RespondWorkflowTaskCompleted([Command.COMPLETE_WORKFLOW_EXECUTION]):
                 log(
                     "",
