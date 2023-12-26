@@ -1,7 +1,7 @@
 """
 Manim representations of Temporal entities.
 """
-from abc import ABC, abstractstaticmethod
+from abc import ABC, abstractmethod, abstractstaticmethod
 from typing import Any, Dict, Generic, List, Self, Type, TypeVar
 
 from manim import (
@@ -78,8 +78,8 @@ class ProxyEntity(Generic[E], VisualElement):
     def dock_point(self) -> Point3D:
         return self.m.get_edge_center(self.dock_direction)
 
-    @staticmethod  # should be abstractstaticmethod but there seems to be a Pyright bug
-    def newm(entity: E) -> Mobject:
+    @abstractstaticmethod
+    def newm(entity: E) -> Mobject:  # type: ignore (bug in Pyright?)
         """Compute new visual representation given entity state."""
         ...
 
@@ -129,6 +129,7 @@ class ProxyEntityWithChildren(
     """
 
     child_cls: Type[Q]
+    child_align_direction: Vector3
 
     def __init__(self, entity: Any, parent: VisualElement = root) -> None:
         super().__init__(entity, parent=parent)
@@ -152,7 +153,9 @@ class ProxyEntityWithChildren(
                 f"align child {child.m} below {prev.m}: {prev.m.get_center()}",
                 "A: render",
             )
-            child.m.next_to(prev.m, DOWN, buff=SMALL_BUFF).align_to(prev.m, RIGHT)
+            child.m.next_to(prev.m, DOWN, buff=SMALL_BUFF).align_to(
+                prev.m, self.child_align_direction
+            )
             child.render(child_entity)
             prev = child
 

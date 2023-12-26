@@ -1,13 +1,15 @@
 from typing import List
 
-from manim import DOWN, WHITE, Code, Mobject, Rectangle, Text, VGroup
+from manim import DOWN, LEFT, WHITE, Code, Mobject, Rectangle, Text, VGroup
 
 from tempyral import simulation
 from tempyral.animation.entity import (
+    FONT_SIZE_LARGE,
     FONT_SIZE_MEDIUM,
     FONT_SIZE_SMALL,
     MONOSPACE_FONT,
     ProxyEntity,
+    ProxyEntityWithChildren,
     VisualElement,
 )
 from tempyral.animation.history import HistoryEvents
@@ -43,8 +45,30 @@ class WorkerRequest(VisualElement):
         return Text(name, font_size=FONT_SIZE_MEDIUM, font=MONOSPACE_FONT)
 
 
-class WorkflowWorker(ProxyEntity[simulation.WorkflowWorker]):
-    def newm(self, entity: simulation.WorkflowWorker) -> Mobject:
-        text = Text("Workflow Worker", font_size=24)
-        code = Code(code=entity.go, language="go", font_size=FONT_SIZE_SMALL)
+class Workflow(ProxyEntity[simulation.Workflow]):
+    def newm(self, entity: simulation.Workflow) -> Mobject:
+        text = Text(entity.workflow_id, font_size=FONT_SIZE_MEDIUM)
+        code = Code(
+            code=entity.go,
+            insert_line_no=False,
+            language="go",
+            font_size=FONT_SIZE_SMALL,
+        )
         return VGroup(text, code).arrange(DOWN)
+
+
+class WorkflowWorker(
+    ProxyEntityWithChildren[simulation.WorkflowWorker, simulation.Workflow, Workflow]
+):
+    child_cls = Workflow
+    child_align_direction = LEFT
+
+    @staticmethod
+    def newm(_: simulation.WorkflowWorker) -> Mobject:
+        return Text("Workflow Worker", font_size=FONT_SIZE_LARGE)
+
+    @staticmethod
+    def get_child_entities(
+        entity: simulation.WorkflowWorker,
+    ) -> List[simulation.Workflow]:
+        return list(entity.workflows.values())

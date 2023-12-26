@@ -15,9 +15,6 @@ from tempyral.animation.entity import (
     VisualElement,
 )
 
-if TYPE_CHECKING:
-    from tempyral.animation.server import Server
-
 InvisibleMobject = Point
 
 
@@ -41,6 +38,7 @@ class History(
     ProxyEntityWithChildren[simulation.History, simulation.HistoryEvent, HistoryEvent]
 ):
     child_cls = HistoryEvent
+    child_align_direction = RIGHT
 
     @staticmethod
     def newm(_: simulation.History) -> Mobject:

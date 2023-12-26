@@ -15,8 +15,8 @@ NamespaceId = str
 WorkflowId = str
 TaskQueueId = str
 
-DEFAULT_NAMESPACE = "default"
-DEFAULT_WORKFLOW_ID = "wid"
+DEFAULT_NAMESPACE: NamespaceId = "default"
+NOOP_WORKFLOW_ID: WorkflowId = "noop-workflow"
 
 
 class HistoryEvent(Entity):
@@ -44,7 +44,8 @@ class History(Entity):
 class WorkflowTask(Entity):
     """A slice of history events"""
 
-    def __init__(self, events: List[HistoryEvent]) -> None:
+    def __init__(self, worklow_id: WorkflowId, events: List[HistoryEvent]) -> None:
+        self.workflow_id = worklow_id
         self.events = events
         super().__init__()
 
@@ -64,11 +65,11 @@ class TaskQueue(TypedDict):
 
 class Server(Entity):
     def __init__(self):
+        super().__init__()
         self.shards: List[Shard] = [
-            {DEFAULT_NAMESPACE: [History(DEFAULT_WORKFLOW_ID, [])]}
+            {DEFAULT_NAMESPACE: [History(NOOP_WORKFLOW_ID, [])]}
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
-        super().__init__()
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id},{id(self)}: events={self.history.events})"
@@ -120,7 +121,8 @@ class Server(Entity):
             HistoryEventType.WFT_STARTED, seen_by_sticky_worker=False
         )
         wft = WorkflowTask(
-            [e for e in self.history.events if not e.seen_by_sticky_worker]
+            NOOP_WORKFLOW_ID,
+            [e for e in self.history.events if not e.seen_by_sticky_worker],
         )
         for e in self.history.events:
             e.seen_by_sticky_worker |= True

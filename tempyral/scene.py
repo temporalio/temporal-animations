@@ -8,9 +8,7 @@ from typing import Coroutine, Iterable, List, Tuple
 from manim import DL, DOWN, LEFT, ORIGIN, RIGHT, UL, UP, UR, Dot, Scene, Text
 
 from tempyral import animation
-from tempyral.simulation import Application
-from tempyral.simulation import NoOpWorkflowWorker as WorkflowWorker
-from tempyral.simulation import Server
+from tempyral.simulation import Application, Server, WorkflowWorker
 
 
 class TemporalScene(Scene, ABC):
@@ -60,7 +58,6 @@ class TemporalScene(Scene, ABC):
                     )
                 sys.exit(1)
 
-        self.wait()
         asyncio.run(simulation())
         self.wait(2)
 
@@ -88,11 +85,18 @@ class TemporalScene(Scene, ABC):
             for sim_wworker in simulation_workflow_workers
         ]
 
-        server.set_dock_direction(LEFT).m.align_on_border(UR)
+        server.set_dock_direction(LEFT).m.align_on_border(UR).shift(2 * DOWN)
         app.set_dock_direction(RIGHT).m.align_on_border(UL)
-        wworker.set_dock_direction(RIGHT).m.align_on_border(LEFT)
+        wworker.set_dock_direction(RIGHT).m.next_to(app.m, DOWN).align_to(server.m, UP)
 
         self.add(app.m, server.m, wworker.m)
+
+        for a, s in zip(
+            [server, *[app], *[wworker]],
+            [simulation_server, *simulation_apps, *simulation_workflow_workers],
+        ):
+            a.render(s)  # type:ignore
+
         return server, [app], [wworker]
 
     def add_timestamp(self):

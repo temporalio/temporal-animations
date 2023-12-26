@@ -5,4 +5,4 @@ from .api import ApplicationRequestType
 from .application import Application
 from .entity import Entity
 from .server import History, HistoryEvent, Server
-from .worker import NoOpWorkflowWorker, WorkflowWorker
+from .worker import Workflow, WorkflowWorker
