@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List
+from typing import Any, List
 
 
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/event_type.proto#L35
@@ -33,7 +33,7 @@ class WorkerRequestType:
 
 
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/command_type.proto#L35
-class Command(Enum):
+class CommandType(Enum):
     SCHEDULE_ACTIVITY_TASK = 1
     REQUEST_CANCEL_ACTIVITY_TASK = 2
     START_TIMER = 3
@@ -52,5 +52,16 @@ class Command(Enum):
 
 
 @dataclass
+class Command:
+    command_type: CommandType
+    token: int
+
+
+@dataclass
 class RespondWorkflowTaskCompleted(WorkerRequestType):
     commands: List[Command]
+
+
+@dataclass
+class RespondActivityTaskCompleted(WorkerRequestType):
+    result: Any

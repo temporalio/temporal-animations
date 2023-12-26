@@ -3,12 +3,12 @@ import sys
 import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Coroutine, Iterable, List, Tuple
+from typing import Coroutine, Iterable, List, Tuple, Type
 
 from manim import DL, DOWN, LEFT, ORIGIN, RIGHT, UL, UP, UR, Dot, Scene, Text
 
 from tempyral import animation
-from tempyral.simulation import Application, Server, WorkflowWorker
+from tempyral.simulation import ActivityWorker, Application, Server, WorkflowWorker
 
 
 class TemporalScene(Scene, ABC):
@@ -16,26 +16,29 @@ class TemporalScene(Scene, ABC):
     To create an animation, subclass TemporalScene and implement `simulation()`.
     """
 
+    workflow_worker_cls: Type[WorkflowWorker]
+
     @abstractmethod
     def simulation(
         self,
         server: Server,
         app: Application,
         workflow_worker: WorkflowWorker,
+        activity_worker: ActivityWorker,
     ) -> Iterable[Coroutine]:
         ...
 
     def construct(self):
         self.add_timestamp()
-        server, [app], [wworker] = self.make_simulation_entities()
-        self.make_animation_proxies(server, [app], [wworker])
+        server, [app], [wworker], [aworker] = self.make_simulation_entities()
+        self.make_animation_proxies(server, [app], [wworker], [aworker])
 
         async def simulation():
             try:
                 async with asyncio.TaskGroup() as tg:
                     simulation_tasks = [
                         tg.create_task(coro)
-                        for coro in self.simulation(server, app, wworker)
+                        for coro in self.simulation(server, app, wworker, aworker)
                     ]
                     animation_task = tg.create_task(
                         animation.process_simulation_events(self)
@@ -63,14 +66,20 @@ class TemporalScene(Scene, ABC):
 
     def make_simulation_entities(
         self,
-    ) -> Tuple[Server, List[Application], List[WorkflowWorker]]:
-        return Server(), [Application()], [WorkflowWorker()]
+    ) -> Tuple[Server, List[Application], List[WorkflowWorker], List[ActivityWorker]]:
+        return (
+            Server(),
+            [Application()],
+            [self.workflow_worker_cls()],
+            [ActivityWorker()],
+        )
 
     def make_animation_proxies(
         self,
         simulation_server: Server,
         simulation_apps: List[Application],
         simulation_workflow_workers: List[WorkflowWorker],
+        simulation_activity_workers: List[ActivityWorker],
     ):
         """
         Create proxy entities in the animation domain, adding them to the scene.
@@ -84,12 +93,19 @@ class TemporalScene(Scene, ABC):
             animation.WorkflowWorker(sim_wworker)
             for sim_wworker in simulation_workflow_workers
         ]
+        [aworker] = [
+            animation.ActivityWorker(sim_aworker)
+            for sim_aworker in simulation_activity_workers
+        ]
 
-        server.set_dock_direction(LEFT).m.align_on_border(UR).shift(2 * DOWN)
+        server.set_dock_direction(LEFT).m.align_on_border(UR).shift(3 * DOWN)
         app.set_dock_direction(RIGHT).m.align_on_border(UL)
-        wworker.set_dock_direction(RIGHT).m.next_to(app.m, DOWN).align_to(server.m, UP)
+        aworker.set_dock_direction(RIGHT).m.next_to(app.m, DOWN).shift(1 * DOWN)
+        wworker.set_dock_direction(RIGHT).m.next_to(aworker.m, DOWN).align_to(
+            server.m, UP
+        )
 
-        self.add(app.m, server.m, wworker.m)
+        self.add(app.m, server.m, wworker.m, aworker.m)
 
         for a, s in zip(
             [server, *[app], *[wworker]],

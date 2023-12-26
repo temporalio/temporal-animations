@@ -1,11 +1,13 @@
 import os
-from typing import TYPE_CHECKING, Dict, List, Optional, TypedDict, Union
+from typing import Any, Dict, Hashable, List, Optional, TypedDict, Union
 
 from tempyral import log
 from tempyral.simulation.api import (
     ApplicationRequestType,
     Command,
+    CommandType,
     HistoryEventType,
+    RespondActivityTaskCompleted,
     RespondWorkflowTaskCompleted,
     WorkerRequestType,
 )
@@ -17,16 +19,23 @@ TaskQueueId = str
 
 DEFAULT_NAMESPACE: NamespaceId = "default"
 NOOP_WORKFLOW_ID: WorkflowId = "noop-workflow"
+CALL_ACTIVITY_WORKFLOW_ID: WorkflowId = "call-activity-workflow"
 
 
 class HistoryEvent(Entity):
-    def __init__(self, event_type: HistoryEventType, seen_by_sticky_worker=False):
+    def __init__(
+        self,
+        event_type: HistoryEventType,
+        seen_by_sticky_worker=False,
+        **kwargs: Hashable,
+    ):
         super().__init__()
         self.event_type = event_type
         self.seen_by_sticky_worker = seen_by_sticky_worker
+        self.data = kwargs
 
     def __repr__(self) -> str:
-        return f"{self.event_type.name}{'*' if self.seen_by_sticky_worker else ''}"
+        return f"{self.event_type.name}{'*' if self.seen_by_sticky_worker else ''}({self.data if self.data else ''})"
 
 
 class History(Entity):
@@ -79,30 +88,60 @@ class Server(Entity):
     ):
         match request:
             case ApplicationRequestType.StartWorkflowExecution:
-                log("", "S: handling StartWorkflowExecution")
-                await self.write_history_events(
-                    HistoryEventType.WF_STARTED,
-                    HistoryEventType.WFT_SCHEDULED,
-                    seen_by_sticky_worker=False,
-                )
-                if os.path.exists("/tmp/flag"):
-                    await self.terminate_simulation()
-            case RespondWorkflowTaskCompleted([Command.COMPLETE_WORKFLOW_EXECUTION]):
-                log(
-                    "",
-                    "S: Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])",
-                )
-                await self.write_history_events(
-                    HistoryEventType.WFT_COMPLETED,
-                    HistoryEventType.WF_COMPLETED,
-                    seen_by_sticky_worker=True,
-                )
-                await self.terminate_simulation()
+                await self.start_workflow_execution()
+            case RespondWorkflowTaskCompleted(commands):
+                await self.handle_commands(commands)
+            case RespondActivityTaskCompleted(result):
+                await self.handle_activity_task_completed(result)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
+        if os.path.exists("/tmp/flag"):
+            await self.terminate_simulation()
+
+    async def start_workflow_execution(self):
+        await self.write_history_events(
+            HistoryEventType.WF_STARTED,
+            HistoryEventType.WFT_SCHEDULED,
+            seen_by_sticky_worker=False,
+        )
+
+    # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
+    # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler.go#L166
+    async def handle_commands(self, commands: List[Command]):
+        for command in commands:
+            match command.command_type:
+                case CommandType.SCHEDULE_ACTIVITY_TASK:
+                    await self.write_history_events(
+                        HistoryEventType.ACTIVITY_TASK_SCHEDULED,
+                        seen_by_sticky_worker=False,
+                    )
+                case CommandType.COMPLETE_WORKFLOW_EXECUTION:
+                    log(
+                        "",
+                        "S: Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])",
+                    )
+                    await self.write_history_events(
+                        HistoryEventType.WFT_COMPLETED,
+                        HistoryEventType.WF_COMPLETED,
+                        seen_by_sticky_worker=True,
+                    )
+                    await self.terminate_simulation()
+                case _:
+                    raise ValueError(
+                        f"Server does not support command of type: {command.command_type}"
+                    )
+
+    async def handle_activity_task_completed(self, result: Any):
+        await self.write_history_events(
+            HistoryEventType.ACTIVITY_TASK_COMPLETED,
+            HistoryEventType.WFT_SCHEDULED,
+            seen_by_sticky_worker=False,
+            result=result,
+        )
+
     async def write_history_events(
-        self, *events: HistoryEventType, seen_by_sticky_worker: bool
+        self, *events: HistoryEventType, seen_by_sticky_worker: bool, **kwargs: Hashable
     ):
         self.history.events.extend(
             HistoryEvent(
@@ -113,7 +152,9 @@ class Server(Entity):
         )
         await self.publish_change_event()
 
-    async def dispatch_workflow_task(self) -> Optional[WorkflowTask]:
+    async def dispatch_workflow_task(
+        self, workflow_id: WorkflowId
+    ) -> Optional[WorkflowTask]:
         if all(e.seen_by_sticky_worker for e in self.history.events):
             return
 
@@ -121,13 +162,33 @@ class Server(Entity):
             HistoryEventType.WFT_STARTED, seen_by_sticky_worker=False
         )
         wft = WorkflowTask(
-            NOOP_WORKFLOW_ID,
+            workflow_id,
             [e for e in self.history.events if not e.seen_by_sticky_worker],
         )
         for e in self.history.events:
             e.seen_by_sticky_worker |= True
         await self.publish_change_event()
         return wft
+
+    async def dispatch_activity_task(self) -> Optional[ActivityTask]:
+        # TODO: "sticky" should not apply to Activity Workers.
+        undispatched = [
+            e
+            for e in self.history.events
+            if e.event_type == HistoryEventType.ACTIVITY_TASK_SCHEDULED
+            and not e.seen_by_sticky_worker
+        ]
+        if not undispatched:
+            return
+        assert len(undispatched) == 1, "Multiple undispatched activities not supported"
+
+        await self.write_history_events(
+            HistoryEventType.ACTIVITY_TASK_STARTED, seen_by_sticky_worker=False
+        )
+        for e in undispatched:
+            e.seen_by_sticky_worker |= True
+        await self.publish_change_event()
+        return "fake-activity-task"
 
     @property
     def history(self) -> History:

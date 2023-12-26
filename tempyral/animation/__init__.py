@@ -6,7 +6,14 @@ from tempyral import log
 from tempyral.animation.application import Application, ApplicationRequest
 from tempyral.animation.entity import ProxyEntity, VisualElement, proxy_entity_registry
 from tempyral.animation.server import Server
-from tempyral.animation.worker import WorkerRequest, WorkflowTask, WorkflowWorker
+from tempyral.animation.worker import (
+    ActivityTask,
+    ActivityTaskCompleted,
+    ActivityWorker,
+    WorkerRequest,
+    WorkflowTask,
+    WorkflowWorker,
+)
 from tempyral.event_bus import (
     MessageEvent,
     StateChangeEvent,
@@ -46,10 +53,14 @@ def _get_message_cls_for(
     sender_cls, receiver_cls = type(sender), type(receiver)
     if (sender_cls, receiver_cls) == (Application, Server):
         return ApplicationRequest
-    elif (sender_cls, receiver_cls) == (Server, WorkflowWorker):
-        return WorkflowTask
     elif (sender_cls, receiver_cls) == (WorkflowWorker, Server):
         return WorkerRequest
+    elif (sender_cls, receiver_cls) == (ActivityWorker, Server):
+        return ActivityTaskCompleted
+    elif (sender_cls, receiver_cls) == (Server, WorkflowWorker):
+        return WorkflowTask
+    elif (sender_cls, receiver_cls) == (Server, ActivityWorker):
+        return ActivityTask
     else:
         raise ValueError(
             f"Unsupported (sender, receiver) types: {(sender_cls.__name__, receiver_cls.__name__)}"

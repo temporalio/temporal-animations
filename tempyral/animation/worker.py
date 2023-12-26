@@ -15,6 +15,25 @@ from tempyral.animation.entity import (
 from tempyral.animation.history import HistoryEvents
 
 
+class ActivityTask(VisualElement):
+    @staticmethod
+    def newm() -> Mobject:
+        return Text("Activity Task", font_size=FONT_SIZE_MEDIUM)
+
+
+class ActivityTaskCompleted(VisualElement):
+    def newm(self) -> Mobject:
+        return Text(
+            "ActivityTaskCompleted", font_size=FONT_SIZE_MEDIUM, font=MONOSPACE_FONT
+        )
+
+
+class ActivityWorker(ProxyEntity[simulation.ActivityWorker]):
+    @staticmethod
+    def newm(_: simulation.ActivityWorker) -> Mobject:
+        return Text("Activity Worker", font_size=FONT_SIZE_LARGE)
+
+
 class BoxedHistoryEvents(HistoryEvents):
     @staticmethod
     def newm(events: List[simulation.HistoryEvent]) -> Mobject:
