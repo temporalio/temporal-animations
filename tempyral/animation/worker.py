@@ -16,9 +16,9 @@ from tempyral.animation.history import HistoryEvents
 class BoxedHistoryEvents(HistoryEvents):
     @staticmethod
     def newm(events: List[simulation.HistoryEvent]) -> Mobject:
-        font_size = 16
+        font_size = FONT_SIZE_MEDIUM
         width = Text("_" * 30, font_size=font_size).width
-        eventsm = HistoryEvents.newm(events, font_size)
+        eventsm = HistoryEvents.newm(events)
         rect = Rectangle(
             width=max(width, eventsm.width) + 0.5,
             height=eventsm.height + 0.5,

@@ -8,6 +8,7 @@ from manim import (
     DOWN,
     ORIGIN,
     RIGHT,
+    SMALL_BUFF,
     UP,
     ApplyMethod,
     Indicate,
@@ -152,7 +153,7 @@ class ProxyEntityWithChildren(
                 f"align child {child.m} below {prev.m}: {prev.m.get_center()}",
                 "A: render",
             )
-            child.m.next_to(prev.m, DOWN).align_to(prev.m, RIGHT)
+            child.m.next_to(prev.m, DOWN, buff=SMALL_BUFF).align_to(prev.m, RIGHT)
             child.render(child_entity)
             prev = child
 

@@ -80,8 +80,8 @@ class Server(Entity):
             case ApplicationRequestType.StartWorkflowExecution:
                 log("", "S: handling StartWorkflowExecution")
                 await self.write_history_events(
-                    HistoryEventType.WORKFLOW_EXECUTION_STARTED,
-                    HistoryEventType.WORKFLOW_TASK_SCHEDULED,
+                    HistoryEventType.WF_STARTED,
+                    HistoryEventType.WFT_SCHEDULED,
                     seen_by_sticky_worker=False,
                 )
                 if os.path.exists("/tmp/flag"):
@@ -92,8 +92,8 @@ class Server(Entity):
                     "S: Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])",
                 )
                 await self.write_history_events(
-                    HistoryEventType.WORKFLOW_TASK_COMPLETED,
-                    HistoryEventType.WORKFLOW_EXECUTION_COMPLETED,
+                    HistoryEventType.WFT_COMPLETED,
+                    HistoryEventType.WF_COMPLETED,
                     seen_by_sticky_worker=True,
                 )
                 await self.terminate_simulation()
@@ -117,7 +117,7 @@ class Server(Entity):
             return
 
         await self.write_history_events(
-            HistoryEventType.WORKFLOW_TASK_STARTED, seen_by_sticky_worker=False
+            HistoryEventType.WFT_STARTED, seen_by_sticky_worker=False
         )
         wft = WorkflowTask(
             [e for e in self.history.events if not e.seen_by_sticky_worker]
