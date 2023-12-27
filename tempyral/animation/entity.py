@@ -107,7 +107,7 @@ class ProxyEntity(Generic[E], VisualElement):
         # locations of self and receiver.
         self.scene.add(message.m)
         self.scene.play(
-            ApplyMethod(message.m.move_to, receiver.dock_point(), run_time=1.5)
+            ApplyMethod(message.m.move_to, receiver.dock_point(), run_time=2.0)
         )
         self.scene.remove(message.m)
 
@@ -149,10 +149,11 @@ class ProxyEntityWithChildren(
 
         prev = self
         for child, child_entity in zip(self.children, child_entities):
-            log(
-                f"align child {child.m} below {prev.m}: {prev.m.get_center()}",
-                "A: render",
-            )
+            if False:
+                log(
+                    f"align child {child.m} below {prev.m}: {prev.m.get_center()}",
+                    "A: render",
+                )
             child.m.next_to(prev.m, DOWN, buff=SMALL_BUFF).align_to(
                 prev.m, self.child_align_direction
             )

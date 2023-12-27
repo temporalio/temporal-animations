@@ -1,15 +1,14 @@
-from typing import TYPE_CHECKING, List
+from typing import List
 
-from manim import DL, DOWN, DR
+from manim import DOWN
 from manim import GREEN_D as GREEN
 from manim import LEFT
 from manim import RED_D as RED
-from manim import RIGHT, UL, Line, Mobject, Point, Text, VGroup
+from manim import Mobject, Point, Text, VGroup
 
-from tempyral import log, simulation
+from tempyral import simulation
 from tempyral.animation.entity import (
     FONT_SIZE_MEDIUM,
-    FONT_SIZE_SMALL,
     ProxyEntity,
     ProxyEntityWithChildren,
     VisualElement,
@@ -38,7 +37,7 @@ class History(
     ProxyEntityWithChildren[simulation.History, simulation.HistoryEvent, HistoryEvent]
 ):
     child_cls = HistoryEvent
-    child_align_direction = RIGHT
+    child_align_direction = LEFT
 
     @staticmethod
     def newm(_: simulation.History) -> Mobject:

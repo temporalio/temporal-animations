@@ -27,7 +27,7 @@ class Entity:
         return isinstance(other, type(self)) and hash(self) == hash(other)
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(id={self.id},{id(self)})"
+        return f"{type(self).__name__}(id={self.id})"
 
     def clone(self) -> Self:
         return deepcopy(self)

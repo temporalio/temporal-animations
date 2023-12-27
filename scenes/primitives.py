@@ -18,7 +18,6 @@ class ExecuteWorkflow(TemporalScene):
         workflow_worker: workflow_worker_cls,
         _: ActivityWorker,
     ):
-        [workflow] = self.workflow_worker_cls.workflows
         yield app.start_workflow(workflow_worker.workflow.workflow_id, server)
         yield workflow_worker.poll(server)
 

@@ -1,6 +1,6 @@
 from typing import List
 
-from manim import DOWN, RIGHT, UL, UP, Indicate, Mobject, Text
+from manim import RIGHT, Mobject, Text
 
 from tempyral import simulation
 from tempyral.animation.entity import FONT_SIZE_LARGE, ProxyEntityWithChildren

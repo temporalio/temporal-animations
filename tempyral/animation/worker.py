@@ -13,12 +13,16 @@ from tempyral.animation.entity import (
     VisualElement,
 )
 from tempyral.animation.history import HistoryEvents
+from tempyral.simulation.api import WorkflowId
 
 
 class ActivityTask(VisualElement):
-    @staticmethod
-    def newm() -> Mobject:
-        return Text("Activity Task", font_size=FONT_SIZE_MEDIUM)
+    def __init__(self, workflow_id: WorkflowId):
+        self.workflow_id = workflow_id
+        super().__init__()
+
+    def newm(self) -> Mobject:
+        return Text(f"Activity Task({self.workflow_id})", font_size=FONT_SIZE_MEDIUM)
 
 
 class ActivityTaskCompleted(VisualElement):
@@ -52,10 +56,13 @@ class BoxedHistoryEvents(HistoryEvents):
 
 
 class WorkflowTask(BoxedHistoryEvents):
-    @staticmethod
-    def newm(events: List[simulation.HistoryEvent]) -> Mobject:
+    def __init__(self, workflow_id: WorkflowId, **kwargs):
+        self.workflow_id = workflow_id
+        super().__init__(**kwargs)
+
+    def newm(self, events: List[simulation.HistoryEvent]) -> Mobject:
         eventsm = BoxedHistoryEvents.newm(events)
-        task = Text("WFT", font_size=FONT_SIZE_MEDIUM)
+        task = Text(f"WFT({self.workflow_id})", font_size=FONT_SIZE_MEDIUM)
         return VGroup(task, eventsm).arrange()
 
 
