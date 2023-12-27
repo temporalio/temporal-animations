@@ -3,6 +3,7 @@ from abc import ABC
 from collections import OrderedDict
 from typing import List, Tuple, TypedDict
 
+from tempyral import log
 from tempyral.simulation.api import (
     Command,
     CommandType,
@@ -21,14 +22,19 @@ from tempyral.simulation.server import (
 
 
 class ActivityWorker(Entity):
-    async def poll(self, server: "Server"):
+    def __init__(self, server: Server):
+        super().__init__()
+        server.establish_activity_worker_long_poll_connection(self)
+
+    async def poll(self, server: Server):
         while True:
-            # Currently we're not actually simulating the long-poll; just the
-            # dispatch from server to worker.
-            at = await server.dispatch_activity_task()
-            if at:
-                await self.publish_message_event(server, self)
-                await self.handle_at(at, server)
+            log(
+                server.activity_worker_long_poll_connections[self]._queue,  # type: ignore (non-public attribute)
+                "S: ActivityWorker.poll",
+            )
+            at = await server.activity_worker_long_poll_connections[self].get()
+            await self.publish_message_event(server, self)
+            await self.handle_at(at, server)
             await asyncio.sleep(0)
 
     async def handle_at(self, at: "ActivityTask", server: "Server"):
@@ -119,21 +125,22 @@ Workflows = OrderedDict[WorkflowId, Workflow]
 class WorkflowWorker(Entity, ABC):
     workflows: Workflows
 
-    def __init__(self):
+    def __init__(self, server: Server):
         super().__init__()
+        server.establish_workflow_worker_long_poll_connection(self)
 
     async def poll(self, server: "Server"):
         while True:
-            # Currently we're not actually simulating the long-poll; just the
-            # dispatch from server to worker.
+            log(
+                server.workflow_worker_long_poll_connections[self]._queue,  # type: ignore (non-public attribute)
+                "S: WorkflowWorker.poll",
+            )
             assert (
                 len(self.workflows) == 1
             ), "Workflow worker with multiple workflows is not supported"
-            [workflow] = self.workflows.values()
-            wft = await server.dispatch_workflow_task(workflow.workflow_id)
-            if wft:
-                await self.publish_message_event(server, self, events=tuple(wft.events))
-                await self.handle_wft(wft, server)
+            wft = await server.workflow_worker_long_poll_connections[self].get()
+            await self.publish_message_event(server, self, events=tuple(wft.events))
+            await self.handle_wft(wft, server)
             await asyncio.sleep(0)
 
     async def handle_wft(self, wft: "WorkflowTask", server: "Server"):

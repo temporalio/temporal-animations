@@ -67,11 +67,12 @@ class TemporalScene(Scene, ABC):
     def make_simulation_entities(
         self,
     ) -> Tuple[Server, List[Application], List[WorkflowWorker], List[ActivityWorker]]:
+        server = Server()
         return (
-            Server(),
+            server,
             [Application()],
-            [self.workflow_worker_cls()],
-            [ActivityWorker()],
+            [self.workflow_worker_cls(server)],
+            [ActivityWorker(server)],
         )
 
     def make_animation_proxies(

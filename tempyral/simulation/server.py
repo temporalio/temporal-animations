@@ -1,5 +1,17 @@
 import os
-from typing import Any, Dict, Hashable, List, Optional, TypedDict, Union
+from asyncio import Queue
+from copy import deepcopy
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Hashable,
+    List,
+    Optional,
+    Self,
+    TypedDict,
+    Union,
+)
 
 from tempyral import log
 from tempyral.simulation.api import (
@@ -12,6 +24,9 @@ from tempyral.simulation.api import (
     WorkerRequestType,
 )
 from tempyral.simulation.entity import Entity
+
+if TYPE_CHECKING:
+    from tempyral.simulation.worker import ActivityWorker, WorkflowWorker
 
 NamespaceId = str
 WorkflowId = str
@@ -79,6 +94,18 @@ class Server(Entity):
             {DEFAULT_NAMESPACE: [History(NOOP_WORKFLOW_ID, [])]}
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
+        self.workflow_worker_long_poll_connections: Dict[
+            WorkflowWorker, Queue[WorkflowTask]
+        ] = {}
+        self.activity_worker_long_poll_connections: Dict[
+            ActivityWorker, Queue[ActivityTask]
+        ] = {}
+
+    def clone(self) -> "Server":
+        cloned = Server()
+        cloned.shards = deepcopy(self.shards)
+        cloned.id = self.id
+        return cloned
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id},{id(self)}: events={self.history.events})"
@@ -95,6 +122,11 @@ class Server(Entity):
                 await self.handle_activity_task_completed(result)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
+
+        # If this request resulted in new WFTs or ATs then dispatch them.
+        await self.dispatch_activity_task()
+        for w in [NOOP_WORKFLOW_ID, CALL_ACTIVITY_WORKFLOW_ID]:
+            await self.dispatch_workflow_task(w)
 
         if os.path.exists("/tmp/flag"):
             await self.terminate_simulation()
@@ -152,9 +184,17 @@ class Server(Entity):
         )
         await self.publish_change_event()
 
-    async def dispatch_workflow_task(
-        self, workflow_id: WorkflowId
-    ) -> Optional[WorkflowTask]:
+    def establish_workflow_worker_long_poll_connection(
+        self, worker: "WorkflowWorker"
+    ) -> None:
+        self.workflow_worker_long_poll_connections[worker] = Queue()
+
+    def establish_activity_worker_long_poll_connection(
+        self, worker: "ActivityWorker"
+    ) -> None:
+        self.activity_worker_long_poll_connections[worker] = Queue()
+
+    async def dispatch_workflow_task(self, workflow_id: WorkflowId):
         if all(e.seen_by_sticky_worker for e in self.history.events):
             return
 
@@ -168,7 +208,12 @@ class Server(Entity):
         for e in self.history.events:
             e.seen_by_sticky_worker |= True
         await self.publish_change_event()
-        return wft
+        assert (
+            len(self.workflow_worker_long_poll_connections) == 1
+        ), "Multiple workflow workers not supported"
+        [queue] = self.workflow_worker_long_poll_connections.values()
+        await queue.put(wft)
+        log(queue, "S: dispatch_workflow_task")
 
     async def dispatch_activity_task(self) -> Optional[ActivityTask]:
         # TODO: "sticky" should not apply to Activity Workers.
@@ -188,7 +233,12 @@ class Server(Entity):
         for e in undispatched:
             e.seen_by_sticky_worker |= True
         await self.publish_change_event()
-        return "fake-activity-task"
+        assert (
+            len(self.activity_worker_long_poll_connections) == 1
+        ), "Multiple activity workers not supported"
+        [queue] = self.activity_worker_long_poll_connections.values()
+        await queue.put("fake-activity-task")
+        log(queue, "S: dispatch_activity_task")
 
     @property
     def history(self) -> History:
