@@ -42,7 +42,9 @@ class HistoryEvent(Entity):
         self.data = kwargs
 
     def __repr__(self) -> str:
-        return f"{self.event_type.name}{'*' if self.seen_by_sticky_worker else ''}({self.data if self.data else ''})"
+        star = "*" if self.seen_by_sticky_worker else ""
+        data = f"({self.data})" if self.data else ""
+        return f"{self.event_type.name}{star}{data}"
 
 
 class History(Entity):
@@ -54,7 +56,7 @@ class History(Entity):
         super().__init__()
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(workflow_id={self.workflow_id},id={self.id},{id(self)}: events={self.events})"
+        return f"{type(self).__name__}(workflow_id={self.workflow_id},id={self.id}: events={self.events})"
 
 
 class WorkflowTask(Entity):
@@ -66,7 +68,7 @@ class WorkflowTask(Entity):
         super().__init__()
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(id={self.id},{id(self)}: events={self.events})"
+        return f"{type(self).__name__}(id={self.id}: events={self.events})"
 
 
 Namespace = OrderedDict[WorkflowId, History]
@@ -113,9 +115,12 @@ class Server(Entity):
         return cloned
 
     def __repr__(self) -> str:
-        return (
-            f"{type(self).__name__}(id={self.id},{id(self)}: events={self.namespace})"
-        )
+        namespace = {
+            w: ", ".join(repr(e) for e in h.events)
+            for w, h in self.namespace.items()
+            if h.events
+        }
+        return f"{type(self).__name__}(id={self.id}: namespace={namespace})"
 
     async def handle_request(self, request: Union[ApplicationRequest, WorkerRequest]):
         workflow_id: WorkflowId

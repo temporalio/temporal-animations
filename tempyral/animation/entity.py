@@ -83,7 +83,7 @@ class ProxyEntity(Generic[E], VisualElement):
         """Compute new visual representation given entity state."""
         ...
 
-    def render(self, entity: E, animate=True):
+    def render(self, entity: E, animate=False):
         """
         Mutate `self.m` so that it represents `entity` and paint the result to screen.
         """
@@ -107,9 +107,10 @@ class ProxyEntity(Generic[E], VisualElement):
         # locations of self and receiver.
         self.scene.add(message.m)
         self.scene.play(
-            ApplyMethod(message.m.move_to, receiver.dock_point(), run_time=1.5)
+            ApplyMethod(message.m.move_to, receiver.dock_point(), run_time=3.0)
         )
         self.scene.remove(message.m)
+        self.scene.wait()
 
 
 F = TypeVar("F", bound=simulation.Entity)
@@ -125,7 +126,7 @@ class ProxyEntityWithChildren(
     of child proxy entities. Examples include:
     - Server has a list of Histories
     - A History has a list of HistoryEvents
-    - A WorkflowWorker has a list of WorkflowDefinitions
+    - A WorkflowWorker has a list of Workflows
     """
 
     child_cls: Type[Q]
@@ -149,10 +150,6 @@ class ProxyEntityWithChildren(
 
         prev = self
         for child, child_entity in zip(self.children, child_entities):
-            log(
-                f"align child {child.m} below {prev.m}: {prev.m.get_center()}",
-                "A: render",
-            )
             child.m.next_to(prev.m, DOWN, buff=SMALL_BUFF).align_to(
                 prev.m, self.child_align_direction
             )
@@ -161,6 +158,7 @@ class ProxyEntityWithChildren(
 
         for new in self.children[n:]:
             self.scene.play(Indicate(new.m))
+
         super().render(entity)
 
     def append_child(self, child_entity: F):

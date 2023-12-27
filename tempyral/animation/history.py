@@ -1,15 +1,13 @@
-from typing import TYPE_CHECKING, List
+from typing import List
 
-from manim import DL, DOWN, DR
+from manim import DOWN
 from manim import GREEN_D as GREEN
-from manim import LEFT
 from manim import RED_D as RED
-from manim import RIGHT, UL, Line, Mobject, Point, Text, VGroup
+from manim import RIGHT, Mobject, Point, Text, VGroup
 
-from tempyral import log, simulation
+from tempyral import simulation
 from tempyral.animation.entity import (
     FONT_SIZE_MEDIUM,
-    FONT_SIZE_SMALL,
     ProxyEntity,
     ProxyEntityWithChildren,
     VisualElement,
