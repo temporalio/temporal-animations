@@ -50,18 +50,18 @@ async def process_simulation_events(scene: Scene):
 def _get_message_cls_for(
     sender: ProxyEntity, receiver: ProxyEntity
 ) -> Type[VisualElement]:
-    sender_cls, receiver_cls = type(sender), type(receiver)
-    if (sender_cls, receiver_cls) == (Application, Server):
-        return ApplicationRequest
-    elif (sender_cls, receiver_cls) == (WorkflowWorker, Server):
-        return WorkerRequest
-    elif (sender_cls, receiver_cls) == (ActivityWorker, Server):
-        return ActivityTaskCompleted
-    elif (sender_cls, receiver_cls) == (Server, WorkflowWorker):
-        return WorkflowTask
-    elif (sender_cls, receiver_cls) == (Server, ActivityWorker):
-        return ActivityTask
-    else:
-        raise ValueError(
-            f"Unsupported (sender, receiver) types: {(sender_cls.__name__, receiver_cls.__name__)}"
-        )
+    match (type(sender), type(receiver)):
+        case sr if sr == (Application, Server):
+            return ApplicationRequest
+        case sr if sr == (WorkflowWorker, Server):
+            return WorkerRequest
+        case sr if sr == (ActivityWorker, Server):
+            return ActivityTaskCompleted
+        case sr if sr == (Server, WorkflowWorker):
+            return WorkflowTask
+        case sr if sr == (Server, ActivityWorker):
+            return ActivityTask
+        case _:
+            raise ValueError(
+                f"Unsupported (sender, receiver) types: {(type(sender).__name__, type(receiver).__name__)}"
+            )
