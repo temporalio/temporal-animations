@@ -1,3 +1,5 @@
+import asyncio
+
 from tempyral.scene import TemporalScene
 from tempyral.simulation import (
     ActivityWorker,
@@ -35,3 +37,8 @@ class CallActivity(TemporalScene):
         yield app.start_workflow(workflow_worker.workflow.workflow_id, server)
         yield workflow_worker.poll(server)
         yield activity_worker.poll(server)
+
+
+if __name__ == "__main__":
+    scene = CallActivity()
+    asyncio.run(scene.do_simulation(*scene.make_simulation_entities(), render=False))

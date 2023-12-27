@@ -8,7 +8,13 @@ from typing import Coroutine, Iterable, List, Tuple, Type
 from manim import DL, DOWN, LEFT, ORIGIN, RIGHT, UL, UP, UR, Dot, Scene, Text
 
 from tempyral import animation
-from tempyral.simulation import ActivityWorker, Application, Server, WorkflowWorker
+from tempyral.simulation import (
+    ActivityWorker,
+    Application,
+    Entity,
+    Server,
+    WorkflowWorker,
+)
 
 
 class TemporalScene(Scene, ABC):
@@ -30,39 +36,46 @@ class TemporalScene(Scene, ABC):
 
     def construct(self):
         self.add_timestamp()
-        server, [app], [wworker], [aworker] = self.make_simulation_entities()
-        self.make_animation_proxies(server, [app], [wworker], [aworker])
-
-        async def simulation():
-            try:
-                async with asyncio.TaskGroup() as tg:
-                    simulation_tasks = [
-                        tg.create_task(coro)
-                        for coro in self.simulation(server, app, wworker, aworker)
-                    ]
-                    animation_task = tg.create_task(
-                        animation.process_simulation_events(self)
-                    )
-
-                    # The animation task terminates when the workflow is
-                    # complete. When this happens, cancel the simulation tasks
-                    # (e.g. worker polling).
-                    def cancel(_):
-                        for t in simulation_tasks:
-                            t.cancel()
-
-                    animation_task.add_done_callback(cancel)
-            except ExceptionGroup as eg:
-                print(f"Caught ExceptionGroup:", file=sys.stderr)
-                for e in eg.exceptions:
-                    print(f"    {e}", file=sys.stderr)
-                    traceback.print_exception(
-                        type(e), e, e.__traceback__, file=sys.stderr
-                    )
-                sys.exit(1)
-
-        asyncio.run(simulation())
+        server, apps, wworkers, aworkers = self.make_simulation_entities()
+        self.make_animation_proxies(server, apps, wworkers, aworkers)
+        asyncio.run(self.do_simulation(server, apps, wworkers, aworkers, render=True))
         self.wait(2)
+
+    async def do_simulation(
+        self,
+        server: Server,
+        apps: List[Application],
+        workflow_workers: List[WorkflowWorker],
+        activity_workers: List[ActivityWorker],
+        render: bool,
+    ):
+        [app] = apps
+        [wworker] = workflow_workers
+        [aworker] = activity_workers
+        try:
+            async with asyncio.TaskGroup() as tg:
+                simulation_tasks = [
+                    tg.create_task(coro)
+                    for coro in self.simulation(server, app, wworker, aworker)
+                ]
+
+                if render:
+                    simulation_tasks.append(
+                        tg.create_task(animation.process_simulation_events(self))
+                    )
+
+                def cancel(_):
+                    for t in simulation_tasks:
+                        t.cancel()
+
+                Entity.terminate_simulation = cancel
+
+        except ExceptionGroup as eg:
+            print(f"Caught ExceptionGroup:", file=sys.stderr)
+            for e in eg.exceptions:
+                print(f"    {e}", file=sys.stderr)
+                traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
+            sys.exit(1)
 
     def make_simulation_entities(
         self,
