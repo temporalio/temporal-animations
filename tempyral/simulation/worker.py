@@ -1,5 +1,5 @@
 import asyncio
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import OrderedDict
 from typing import List, Tuple, TypedDict
 
@@ -48,12 +48,13 @@ class Workflow(Entity, ABC):
     A Workflow Definition, together with fake handling of the workflow by an SDK worker.
     """
 
-    go: str
+    code: str
+    language: str
     workflow_id: WorkflowId
 
     def __init__(self):
         super().__init__()
-        self.code, commands = self.parse_code("go")
+        self.code, commands = self.parse_code(self.language)
         self.commands = iter(commands)
 
     def handle_wft(self, _: WorkflowTask) -> List[Command]:
@@ -71,10 +72,9 @@ class Workflow(Entity, ABC):
         """
         lines: List[str] = []
         commands: List[Command] = []
-        assert language == "go"
         comment_marker = COMMENT_MARKERS[language]
         i = 0
-        for i, line in enumerate(self.go.splitlines()):
+        for i, line in enumerate(self.code.splitlines()):
             code, _, command = line.partition(f"{comment_marker} tempyral:")
             if command:
                 commands.append(Command(eval(command.strip()), i))
@@ -89,11 +89,12 @@ class NoOpWorkflow(Workflow):
     """
 
     workflow_id = NOOP_WORKFLOW_ID
-    go = """
+    code = """
 func MyWorkflow(ctx workflow.Context) error {
     return nil
 }
 """
+    language = "go"
 
 
 class CallActivityWorkflow(Workflow):
@@ -102,13 +103,14 @@ class CallActivityWorkflow(Workflow):
     """
 
     workflow_id = CALL_ACTIVITY_WORKFLOW_ID
-    go = """
+    code = """
 func MyWorkflow(ctx workflow.Context) (int, error) {
     var activityResult int
     workflow.ExecuteActivity(MyActivity).Get(ctx, &result) // tempyral: CommandType.SCHEDULE_ACTIVITY_TASK
     return activityResult, nil
 }
 """
+    language = "go"
 
 
 Workflows = OrderedDict[WorkflowId, Workflow]

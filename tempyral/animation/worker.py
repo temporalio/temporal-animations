@@ -68,9 +68,9 @@ class Workflow(ProxyEntity[simulation.Workflow]):
     def newm(self, entity: simulation.Workflow) -> Mobject:
         text = Text(entity.workflow_id, font_size=FONT_SIZE_MEDIUM)
         code = Code(
-            code=entity.go,
+            code=entity.code,
             insert_line_no=False,
-            language="go",
+            language=entity.language,
             font_size=FONT_SIZE_SMALL,
         )
         return VGroup(text, code).arrange(DOWN)
