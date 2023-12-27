@@ -41,7 +41,7 @@ async def process_simulation_events(scene: Scene):
                     proxy_entity_registry.get(receiver_entity),
                 )
                 msg_cls = _get_message_cls_for(sender, receiver)
-                msg = msg_cls(**data)
+                msg = msg_cls(**data)  # TODO: type safety
                 sender.send_message(receiver, msg)
             case TerminateSimulation():
                 break

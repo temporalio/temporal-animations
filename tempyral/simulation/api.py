@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, List
 
+NamespaceId = str
+WorkflowId = str
+TaskQueueId = str
+
 
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/event_type.proto#L35
 class HistoryEventType(Enum):
@@ -28,8 +32,15 @@ class ApplicationRequestType(Enum):
     StartWorkflowExecution = 1
 
 
-class WorkerRequestType:
-    pass
+@dataclass(frozen=True)
+class ApplicationRequest:
+    workflow_id: WorkflowId
+    request_type: ApplicationRequestType
+
+
+@dataclass(frozen=True)
+class WorkerRequest:
+    workflow_id: WorkflowId
 
 
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/command_type.proto#L35
@@ -57,11 +68,11 @@ class Command:
     token: int
 
 
-@dataclass
-class RespondWorkflowTaskCompleted(WorkerRequestType):
+@dataclass(frozen=True)
+class RespondWorkflowTaskCompleted(WorkerRequest):
     commands: List[Command]
 
 
-@dataclass
-class RespondActivityTaskCompleted(WorkerRequestType):
+@dataclass(frozen=True)
+class RespondActivityTaskCompleted(WorkerRequest):
     result: Any

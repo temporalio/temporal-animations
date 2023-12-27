@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import List
 
 from manim import DOWN, RIGHT, UL, UP, Indicate, Mobject, Text
 
@@ -17,4 +17,4 @@ class Server(ProxyEntityWithChildren[simulation.Server, simulation.History, Hist
 
     @staticmethod
     def get_child_entities(entity: simulation.Server) -> List[simulation.History]:
-        return entity.namespace
+        return list(entity.namespace.values())

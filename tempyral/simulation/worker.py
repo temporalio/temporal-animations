@@ -9,6 +9,7 @@ from tempyral.simulation.api import (
     CommandType,
     RespondActivityTaskCompleted,
     RespondWorkflowTaskCompleted,
+    WorkflowId,
 )
 from tempyral.simulation.entity import Entity
 from tempyral.simulation.server import (
@@ -16,7 +17,6 @@ from tempyral.simulation.server import (
     NOOP_WORKFLOW_ID,
     ActivityTask,
     Server,
-    WorkflowId,
     WorkflowTask,
 )
 
@@ -39,7 +39,7 @@ class ActivityWorker(Entity):
 
     async def handle_at(self, at: "ActivityTask", server: "Server"):
         await self.publish_message_event(self, server)
-        await server.handle_request(RespondActivityTaskCompleted(None))
+        await server.handle_request(RespondActivityTaskCompleted(at.workflow_id, None))
 
 
 class CommentMarkers(TypedDict):
@@ -129,15 +129,20 @@ class WorkflowWorker(Entity, ABC):
         super().__init__()
         server.establish_workflow_worker_long_poll_connection(self)
 
+    @property
+    def workflow(self) -> Workflow:
+        assert (
+            len(self.workflows) == 1
+        ), "Workflow worker with multiple workflows is not supported"
+        [workflow] = self.workflows.values()
+        return workflow
+
     async def poll(self, server: "Server"):
         while True:
             log(
                 server.workflow_worker_long_poll_connections[self]._queue,  # type: ignore (non-public attribute)
                 "S: WorkflowWorker.poll",
             )
-            assert (
-                len(self.workflows) == 1
-            ), "Workflow worker with multiple workflows is not supported"
             wft = await server.workflow_worker_long_poll_connections[self].get()
             await self.publish_message_event(server, self, events=tuple(wft.events))
             await self.handle_wft(wft, server)
@@ -148,7 +153,9 @@ class WorkflowWorker(Entity, ABC):
         await self.publish_message_event(
             self, server, name="RespondWorkflowTaskCompleted"
         )
-        await server.handle_request(RespondWorkflowTaskCompleted(wf.handle_wft(wft)))
+        await server.handle_request(
+            RespondWorkflowTaskCompleted(wft.workflow_id, wf.handle_wft(wft))
+        )
 
 
 class NoOpWorkflowWorker(WorkflowWorker):

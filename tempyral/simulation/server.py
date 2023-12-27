@@ -1,36 +1,28 @@
 import os
 from asyncio import Queue
+from collections import OrderedDict
 from copy import deepcopy
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Hashable,
-    List,
-    Optional,
-    Self,
-    TypedDict,
-    Union,
-)
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Dict, Hashable, List, Optional, TypedDict, Union
 
 from tempyral import log
 from tempyral.simulation.api import (
+    ApplicationRequest,
     ApplicationRequestType,
     Command,
     CommandType,
     HistoryEventType,
+    NamespaceId,
     RespondActivityTaskCompleted,
     RespondWorkflowTaskCompleted,
-    WorkerRequestType,
+    TaskQueueId,
+    WorkerRequest,
+    WorkflowId,
 )
 from tempyral.simulation.entity import Entity
 
 if TYPE_CHECKING:
     from tempyral.simulation.worker import ActivityWorker, WorkflowWorker
-
-NamespaceId = str
-WorkflowId = str
-TaskQueueId = str
 
 DEFAULT_NAMESPACE: NamespaceId = "default"
 NOOP_WORKFLOW_ID: WorkflowId = "noop-workflow"
@@ -77,9 +69,13 @@ class WorkflowTask(Entity):
         return f"{type(self).__name__}(id={self.id},{id(self)}: events={self.events})"
 
 
-Namespace = List[History]
+Namespace = OrderedDict[WorkflowId, History]
 Shard = Dict[NamespaceId, Namespace]
-ActivityTask = str
+
+
+@dataclass
+class ActivityTask:
+    workflow_id: WorkflowId
 
 
 class TaskQueue(TypedDict):
@@ -91,7 +87,16 @@ class Server(Entity):
     def __init__(self):
         super().__init__()
         self.shards: List[Shard] = [
-            {DEFAULT_NAMESPACE: [History(NOOP_WORKFLOW_ID, [])]}
+            {
+                DEFAULT_NAMESPACE: OrderedDict(
+                    {
+                        NOOP_WORKFLOW_ID: History(NOOP_WORKFLOW_ID, []),
+                        CALL_ACTIVITY_WORKFLOW_ID: History(
+                            CALL_ACTIVITY_WORKFLOW_ID, []
+                        ),
+                    }
+                )
+            }
         ]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
         self.workflow_worker_long_poll_connections: Dict[
@@ -108,31 +113,37 @@ class Server(Entity):
         return cloned
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(id={self.id},{id(self)}: events={self.history.events})"
+        return (
+            f"{type(self).__name__}(id={self.id},{id(self)}: events={self.namespace})"
+        )
 
-    async def handle_request(
-        self, request: Union[ApplicationRequestType, WorkerRequestType]
-    ):
+    async def handle_request(self, request: Union[ApplicationRequest, WorkerRequest]):
+        workflow_id: WorkflowId
         match request:
-            case ApplicationRequestType.StartWorkflowExecution:
-                await self.start_workflow_execution()
-            case RespondWorkflowTaskCompleted(commands):
-                await self.handle_commands(commands)
-            case RespondActivityTaskCompleted(result):
-                await self.handle_activity_task_completed(result)
+            case ApplicationRequest(
+                workflow_id, ApplicationRequestType.StartWorkflowExecution
+            ):
+                workflow_id = workflow_id
+                await self.start_workflow_execution(workflow_id)
+            case RespondWorkflowTaskCompleted(workflow_id, commands):
+                workflow_id = workflow_id
+                await self.handle_commands(workflow_id, commands)
+            case RespondActivityTaskCompleted(workflow_id, result):
+                workflow_id = workflow_id
+                await self.handle_activity_task_completed(workflow_id, result)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
         # If this request resulted in new WFTs or ATs then dispatch them.
-        await self.dispatch_activity_task()
-        for w in [NOOP_WORKFLOW_ID, CALL_ACTIVITY_WORKFLOW_ID]:
-            await self.dispatch_workflow_task(w)
+        await self.dispatch_activity_task(workflow_id)
+        await self.dispatch_workflow_task(workflow_id)
 
         if os.path.exists("/tmp/flag"):
             await self.terminate_simulation()
 
-    async def start_workflow_execution(self):
+    async def start_workflow_execution(self, workflow_id: WorkflowId):
         await self.write_history_events(
+            workflow_id,
             HistoryEventType.WF_STARTED,
             HistoryEventType.WFT_SCHEDULED,
             seen_by_sticky_worker=False,
@@ -140,11 +151,12 @@ class Server(Entity):
 
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler.go#L166
-    async def handle_commands(self, commands: List[Command]):
+    async def handle_commands(self, workflow_id, commands: List[Command]):
         for command in commands:
             match command.command_type:
                 case CommandType.SCHEDULE_ACTIVITY_TASK:
                     await self.write_history_events(
+                        workflow_id,
                         HistoryEventType.ACTIVITY_TASK_SCHEDULED,
                         seen_by_sticky_worker=False,
                     )
@@ -154,6 +166,7 @@ class Server(Entity):
                         "S: Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])",
                     )
                     await self.write_history_events(
+                        workflow_id,
                         HistoryEventType.WFT_COMPLETED,
                         HistoryEventType.WF_COMPLETED,
                         seen_by_sticky_worker=True,
@@ -164,8 +177,11 @@ class Server(Entity):
                         f"Server does not support command of type: {command.command_type}"
                     )
 
-    async def handle_activity_task_completed(self, result: Any):
+    async def handle_activity_task_completed(
+        self, workflow_id: WorkflowId, result: Any
+    ):
         await self.write_history_events(
+            workflow_id,
             HistoryEventType.ACTIVITY_TASK_COMPLETED,
             HistoryEventType.WFT_SCHEDULED,
             seen_by_sticky_worker=False,
@@ -173,13 +189,14 @@ class Server(Entity):
         )
 
     async def write_history_events(
-        self, *events: HistoryEventType, seen_by_sticky_worker: bool, **kwargs: Hashable
+        self,
+        workflow_id: WorkflowId,
+        *events: HistoryEventType,
+        seen_by_sticky_worker: bool,
+        **kwargs: Hashable,
     ):
-        self.history.events.extend(
-            HistoryEvent(
-                e,
-                seen_by_sticky_worker=seen_by_sticky_worker,
-            )
+        self.namespace[workflow_id].events.extend(
+            HistoryEvent(e, seen_by_sticky_worker=seen_by_sticky_worker, **kwargs)
             for e in events
         )
         await self.publish_change_event()
@@ -195,17 +212,18 @@ class Server(Entity):
         self.activity_worker_long_poll_connections[worker] = Queue()
 
     async def dispatch_workflow_task(self, workflow_id: WorkflowId):
-        if all(e.seen_by_sticky_worker for e in self.history.events):
+        events = self.namespace[workflow_id].events
+        if all(e.seen_by_sticky_worker for e in events):
             return
 
         await self.write_history_events(
-            HistoryEventType.WFT_STARTED, seen_by_sticky_worker=False
+            workflow_id, HistoryEventType.WFT_STARTED, seen_by_sticky_worker=False
         )
         wft = WorkflowTask(
             workflow_id,
-            [e for e in self.history.events if not e.seen_by_sticky_worker],
+            [e for e in events if not e.seen_by_sticky_worker],
         )
-        for e in self.history.events:
+        for e in events:
             e.seen_by_sticky_worker |= True
         await self.publish_change_event()
         assert (
@@ -215,11 +233,13 @@ class Server(Entity):
         await queue.put(wft)
         log(queue, "S: dispatch_workflow_task")
 
-    async def dispatch_activity_task(self) -> Optional[ActivityTask]:
+    async def dispatch_activity_task(
+        self, workflow_id: WorkflowId
+    ) -> Optional[ActivityTask]:
         # TODO: "sticky" should not apply to Activity Workers.
         undispatched = [
             e
-            for e in self.history.events
+            for e in self.namespace[workflow_id].events
             if e.event_type == HistoryEventType.ACTIVITY_TASK_SCHEDULED
             and not e.seen_by_sticky_worker
         ]
@@ -228,7 +248,9 @@ class Server(Entity):
         assert len(undispatched) == 1, "Multiple undispatched activities not supported"
 
         await self.write_history_events(
-            HistoryEventType.ACTIVITY_TASK_STARTED, seen_by_sticky_worker=False
+            workflow_id,
+            HistoryEventType.ACTIVITY_TASK_STARTED,
+            seen_by_sticky_worker=False,
         )
         for e in undispatched:
             e.seen_by_sticky_worker |= True
@@ -237,22 +259,11 @@ class Server(Entity):
             len(self.activity_worker_long_poll_connections) == 1
         ), "Multiple activity workers not supported"
         [queue] = self.activity_worker_long_poll_connections.values()
-        await queue.put("fake-activity-task")
+        await queue.put(ActivityTask(workflow_id))
         log(queue, "S: dispatch_activity_task")
 
     @property
-    def history(self) -> History:
-        """
-        Return the history of the sole workflow execution.
-        """
-        try:
-            [history] = self.namespace
-        except ValueError:
-            raise ValueError("Multiple workflow executions are not supported")
-        return history
-
-    @property
-    def namespace(self) -> List[History]:
+    def namespace(self) -> OrderedDict[WorkflowId, History]:
         """
         Return the sole namespace.
 
