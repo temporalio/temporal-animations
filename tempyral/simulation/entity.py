@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Dict, Hashable, Self
+from typing import Any, Callable, Hashable, Self
 
 from tempyral import log
 from tempyral.event_bus import (
@@ -14,6 +14,7 @@ from tempyral.event_bus import (
 
 class Entity:
     next_id = defaultdict(int)
+    terminate_simulation: Callable
 
     def __init__(self):
         key = type(self).__name__
@@ -43,6 +44,3 @@ class Entity:
         log(f"{sender} -> {receiver}, {kwargs}", "S: publish message")
         await event_bus.publish(MessageEvent(sender.clone(), receiver.clone(), kwargs))
         await asyncio.sleep(0)
-
-    async def terminate_simulation(self):
-        await event_bus.publish(TerminateSimulation())

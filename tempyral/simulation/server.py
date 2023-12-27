@@ -144,7 +144,7 @@ class Server(Entity):
         await self.dispatch_workflow_task(workflow_id)
 
         if os.path.exists("/tmp/flag"):
-            await self.terminate_simulation()
+            self.terminate_simulation()
 
     async def start_workflow_execution(self, workflow_id: WorkflowId):
         await self.write_history_events(
@@ -176,7 +176,7 @@ class Server(Entity):
                         HistoryEventType.WF_COMPLETED,
                         seen_by_sticky_worker=True,
                     )
-                    await self.terminate_simulation()
+                    self.terminate_simulation()
                 case _:
                     raise ValueError(
                         f"Server does not support command of type: {command.command_type}"
