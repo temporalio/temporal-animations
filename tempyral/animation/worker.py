@@ -76,7 +76,6 @@ class WorkerRequest(VisualElement):
 
 class Workflow(ProxyEntity[simulation.Workflow]):
     def newm(self, entity: simulation.Workflow) -> Mobject:
-        text = Text(entity.workflow_id, font_size=FONT_SIZE_MEDIUM)
         code = Code(
             code=entity.code,
             insert_line_no=False,
@@ -99,7 +98,7 @@ class Workflow(ProxyEntity[simulation.Workflow]):
         )
         for line_num in entity.blocked_expressions:
             arrows[line_num - 1].set_color(PINK)
-        return VGroup(text, VGroup(code, arrows)).arrange(DOWN)
+        return VGroup(code, arrows)
 
 
 class WorkflowWorker(
