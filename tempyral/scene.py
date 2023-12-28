@@ -5,7 +5,20 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Coroutine, Iterable, List, Tuple, Type
 
-from manim import DL, DOWN, LEFT, ORIGIN, RIGHT, UL, UP, UR, Dot, Scene, Text
+from manim import (
+    DL,
+    DOWN,
+    LEFT,
+    ORIGIN,
+    RIGHT,
+    SMALL_BUFF,
+    UL,
+    UP,
+    UR,
+    Dot,
+    Scene,
+    Text,
+)
 
 from tempyral import animation
 from tempyral.simulation import (
@@ -112,12 +125,18 @@ class TemporalScene(Scene, ABC):
             for sim_aworker in simulation_activity_workers
         ]
 
-        server.set_dock_direction(LEFT).m.align_on_border(UR).shift(3 * DOWN)
-        app.set_dock_direction(RIGHT).m.align_on_border(UL)
-        aworker.set_dock_direction(RIGHT).m.next_to(app.m, DOWN).shift(1 * DOWN)
-        wworker.set_dock_direction(RIGHT).m.next_to(aworker.m, DOWN).align_to(
-            server.m, UP
+        server.set_dock_direction(LEFT).m.align_on_border(UR).shift(
+            3 * DOWN + 1.5 * LEFT
         )
+        app.set_dock_direction(RIGHT).m.align_on_border(UP).align_on_border(
+            LEFT, buff=SMALL_BUFF
+        )
+        aworker.set_dock_direction(RIGHT).m.next_to(app.m, DOWN).align_to(
+            app.m, LEFT
+        ).shift(1 * DOWN)
+        wworker.set_dock_direction(RIGHT).m.next_to(aworker.m, DOWN).align_to(
+            aworker.m, LEFT
+        ).align_to(server.m, UP)
 
         self.add(app.m, server.m, wworker.m, aworker.m)
 

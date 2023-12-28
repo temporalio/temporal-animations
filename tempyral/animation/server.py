@@ -1,6 +1,6 @@
 from typing import List
 
-from manim import RIGHT, Mobject, Text
+from manim import LEFT, Mobject, Text
 
 from tempyral import simulation
 from tempyral.animation.entity import FONT_SIZE_LARGE, ProxyEntityWithChildren
@@ -9,7 +9,7 @@ from tempyral.animation.history import History
 
 class Server(ProxyEntityWithChildren[simulation.Server, simulation.History, History]):
     child_cls = History
-    child_align_direction = RIGHT
+    child_align_direction = LEFT
 
     @staticmethod
     def newm(_: simulation.Server) -> Mobject:
