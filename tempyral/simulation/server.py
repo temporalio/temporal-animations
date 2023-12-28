@@ -38,11 +38,11 @@ class HistoryEvent(Entity):
     ):
         super().__init__()
         self.event_type = event_type
-        self.seen_by_sticky_worker = seen_by_sticky_worker
+        self.seen_by_worker = seen_by_sticky_worker
         self.data = kwargs
 
     def __repr__(self) -> str:
-        star = "*" if self.seen_by_sticky_worker else ""
+        star = "*" if self.seen_by_worker else ""
         data = f"({self.data})" if self.data else ""
         return f"{self.event_type.name}{star}{data}"
 
@@ -140,8 +140,7 @@ class Server(Entity):
                 raise ValueError(f"Server does not support request of type: {request}")
 
         # If this request resulted in new WFTs or ATs then dispatch them.
-        await self.dispatch_activity_task(workflow_id)
-        await self.dispatch_workflow_task(workflow_id)
+        await self.dispatch_workflow_or_activity_task(workflow_id)
 
         if os.path.exists("/tmp/flag"):
             self.terminate_simulation()
@@ -216,56 +215,40 @@ class Server(Entity):
     ) -> None:
         self.activity_worker_long_poll_connections[worker] = Queue()
 
-    async def dispatch_workflow_task(self, workflow_id: WorkflowId):
-        events = self.namespace[workflow_id].events
-        if all(e.seen_by_sticky_worker for e in events):
+    async def dispatch_workflow_or_activity_task(self, workflow_id: WorkflowId):
+        events = iter(self.namespace[workflow_id].events)
+        event = next((e for e in events if not e.seen_by_worker), None)
+        if event is None:
             return
-
-        await self.write_history_events(
-            workflow_id, HistoryEventType.WFT_STARTED, seen_by_sticky_worker=False
-        )
-        wft = WorkflowTask(
-            workflow_id,
-            [e for e in events if not e.seen_by_sticky_worker],
-        )
+        events = [event] + list(events)
+        assert all(
+            not e.seen_by_worker for e in events
+        ), "Expected seen_by_sticky_worker to define a unique high watermark"
         for e in events:
-            e.seen_by_sticky_worker |= True
-        await self.publish_change_event()
-        assert (
-            len(self.workflow_worker_long_poll_connections) == 1
-        ), "Multiple workflow workers not supported"
-        [queue] = self.workflow_worker_long_poll_connections.values()
-        await queue.put(wft)
-        log(queue, "S: dispatch_workflow_task")
-
-    async def dispatch_activity_task(
-        self, workflow_id: WorkflowId
-    ) -> Optional[ActivityTask]:
-        # TODO: "sticky" should not apply to Activity Workers.
-        undispatched = [
-            e
-            for e in self.namespace[workflow_id].events
-            if e.event_type == HistoryEventType.ACTIVITY_TASK_SCHEDULED
-            and not e.seen_by_sticky_worker
-        ]
-        if not undispatched:
-            return
-        assert len(undispatched) == 1, "Multiple undispatched activities not supported"
-
-        await self.write_history_events(
-            workflow_id,
-            HistoryEventType.ACTIVITY_TASK_STARTED,
-            seen_by_sticky_worker=False,
-        )
-        for e in undispatched:
-            e.seen_by_sticky_worker |= True
-        await self.publish_change_event()
-        assert (
-            len(self.activity_worker_long_poll_connections) == 1
-        ), "Multiple activity workers not supported"
-        [queue] = self.activity_worker_long_poll_connections.values()
-        await queue.put(ActivityTask(workflow_id))
-        log(queue, "S: dispatch_activity_task")
+            e.seen_by_worker = True
+        if any(
+            e.event_type == HistoryEventType.ACTIVITY_TASK_SCHEDULED for e in events
+        ):
+            assert (
+                len(events) == 1
+            ), "Expected ACTIVITY_TASK_SCHEDULED event to be sole unseen event"
+            await self.write_history_events(
+                workflow_id,
+                HistoryEventType.ACTIVITY_TASK_STARTED,
+                seen_by_sticky_worker=True,
+            )
+            await self.publish_change_event()
+            [queue] = self.activity_worker_long_poll_connections.values()
+            await queue.put(ActivityTask(workflow_id))
+        else:
+            await self.write_history_events(
+                workflow_id,
+                HistoryEventType.WFT_STARTED,
+                seen_by_sticky_worker=True,
+            )
+            await self.publish_change_event()
+            [queue] = self.workflow_worker_long_poll_connections.values()
+            await queue.put(WorkflowTask(workflow_id, events))
 
     @property
     def namespace(self) -> OrderedDict[WorkflowId, History]:

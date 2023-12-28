@@ -23,7 +23,7 @@ class HistoryEvent(ProxyEntity[simulation.HistoryEvent]):
         return Text(
             event.event_type.name,
             font_size=FONT_SIZE_MEDIUM,
-            color=GREEN if event.seen_by_sticky_worker else RED,
+            color=GREEN if event.seen_by_worker else RED,
         )
 
 
