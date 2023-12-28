@@ -164,7 +164,9 @@ class ProxyEntityWithChildren(
         super().render(entity)
 
     def append_child(self, child_entity: F):
-        self.children.append(self.child_cls(child_entity, parent=self))
+        child = self.child_cls(child_entity, parent=self)
+        self.scene.add(child.m)
+        self.children.append(child)
 
 
 class ProxyEntityRegistry(Generic[E]):
