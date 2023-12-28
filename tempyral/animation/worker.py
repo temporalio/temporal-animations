@@ -1,4 +1,4 @@
-from typing import List
+from typing import Iterable, List
 
 from manim import DOWN, LEFT, WHITE, Code, Mobject, Rectangle, Text, VGroup
 
@@ -16,13 +16,9 @@ from tempyral.animation.history import HistoryEvents
 from tempyral.simulation.api import WorkflowId
 
 
-class ActivityTask(VisualElement):
-    def __init__(self, workflow_id: WorkflowId):
-        self.workflow_id = workflow_id
-        super().__init__()
-
-    def newm(self) -> Mobject:
-        return Text(f"Activity Task({self.workflow_id})", font_size=FONT_SIZE_MEDIUM)
+class ActivityTask(ProxyEntity[simulation.ActivityTask]):
+    def newm(self, entity: simulation.ActivityTask) -> Mobject:
+        return Text(f"Activity Task({entity.workflow_id})", font_size=FONT_SIZE_MEDIUM)
 
 
 class ActivityTaskCompleted(VisualElement):
@@ -40,7 +36,7 @@ class ActivityWorker(ProxyEntity[simulation.ActivityWorker]):
 
 class BoxedHistoryEvents(HistoryEvents):
     @staticmethod
-    def newm(events: List[simulation.HistoryEvent]) -> Mobject:
+    def newm(events: Iterable[simulation.HistoryEvent]) -> Mobject:
         font_size = FONT_SIZE_MEDIUM
         width = Text("_" * 30, font_size=font_size).width
         eventsm = HistoryEvents.newm(events)
@@ -55,14 +51,10 @@ class BoxedHistoryEvents(HistoryEvents):
         return VGroup(rect, eventsm)
 
 
-class WorkflowTask(BoxedHistoryEvents):
-    def __init__(self, workflow_id: WorkflowId, **kwargs):
-        self.workflow_id = workflow_id
-        super().__init__(**kwargs)
-
-    def newm(self, events: List[simulation.HistoryEvent]) -> Mobject:
-        eventsm = BoxedHistoryEvents.newm(events)
-        task = Text(f"WFT({self.workflow_id})", font_size=FONT_SIZE_MEDIUM)
+class WorkflowTask(ProxyEntity[simulation.WorkflowTask]):
+    def newm(self, entity: simulation.WorkflowTask) -> Mobject:
+        eventsm = BoxedHistoryEvents.newm(entity.events)
+        task = Text(f"WFT({entity.workflow_id})", font_size=FONT_SIZE_MEDIUM)
         return VGroup(task, eventsm).arrange()
 
 

@@ -1,4 +1,4 @@
-from typing import List
+from typing import Iterable, List
 
 from manim import DOWN
 from manim import GREEN_D as GREEN
@@ -29,7 +29,7 @@ class HistoryEvent(ProxyEntity[simulation.HistoryEvent]):
 
 class HistoryEvents(VisualElement):
     @staticmethod
-    def newm(events: List[simulation.HistoryEvent]) -> Mobject:
+    def newm(events: Iterable[simulation.HistoryEvent]) -> Mobject:
         return VGroup(*map(HistoryEvent.newm, events)).arrange(DOWN)
 
 

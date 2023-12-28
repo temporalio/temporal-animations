@@ -33,7 +33,7 @@ class ActivityWorker(Entity):
                 "S: ActivityWorker.poll",
             )
             at = await server.activity_worker_long_poll_connections[self].get()
-            await self.publish_message_event(server, self, workflow_id=at.workflow_id)
+            await self.publish_message_event(server, self, entity=at)
             await self.handle_at(at, server)
             await asyncio.sleep(0)
 
