@@ -120,9 +120,9 @@ class CallActivityWorkflow(Workflow):
     workflow_id = CALL_ACTIVITY_WORKFLOW_ID
     code = """
 func MyWorkflow(ctx workflow.Context) (int, error) {
-    var activityResult int
+    var result int
     workflow.ExecuteActivity(MyActivity).Get(ctx, &result) // tempyral: CommandType.SCHEDULE_ACTIVITY_TASK
-    return activityResult, nil
+    return result, nil
 }
 """
     language = "go"
