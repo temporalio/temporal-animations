@@ -1,6 +1,18 @@
 from typing import Iterable, List
 
-from manim import DOWN, LEFT, WHITE, Code, Mobject, Rectangle, Text, VGroup
+from manim import (
+    BLACK,
+    DOWN,
+    LEFT,
+    PINK,
+    WHITE,
+    Arrow,
+    Code,
+    Mobject,
+    Rectangle,
+    Text,
+    VGroup,
+)
 
 from tempyral import simulation
 from tempyral.animation.entity import (
@@ -70,8 +82,24 @@ class Workflow(ProxyEntity[simulation.Workflow]):
             insert_line_no=False,
             language=entity.language,
             font_size=FONT_SIZE_SMALL,
+            line_spacing=1,
+        ).to_edge(LEFT, buff=1.0)
+        lines = code[2]
+        arrows = VGroup(
+            *(
+                Arrow(
+                    start=line.get_edge_center(LEFT) + LEFT,
+                    end=line.get_edge_center(LEFT),
+                    color=BLACK,
+                )
+                .next_to(line, LEFT, buff=0.1)
+                .shift(DOWN * 0.075)
+                for line in lines
+            )
         )
-        return VGroup(text, code).arrange(DOWN)
+        for line_num in entity.blocked_expressions:
+            arrows[line_num - 1].set_color(PINK)
+        return VGroup(text, VGroup(code, arrows)).arrange(DOWN)
 
 
 class WorkflowWorker(

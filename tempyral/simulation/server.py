@@ -63,9 +63,9 @@ class WorkflowTask(Entity):
     """A slice of history events"""
 
     def __init__(self, worklow_id: WorkflowId, events: List[HistoryEvent]) -> None:
+        super().__init__()
         self.workflow_id = worklow_id
         self.events = tuple(events)
-        super().__init__()
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id}: events={self.events})"
@@ -76,9 +76,10 @@ Shard = Dict[NamespaceId, Namespace]
 
 
 class ActivityTask(Entity):
-    def __init__(self, workflow_id: WorkflowId):
+    def __init__(self, workflow_id: WorkflowId, token: int):
         super().__init__()
         self.workflow_id = workflow_id
+        self.token = token
 
 
 class TaskQueue(TypedDict):
@@ -134,9 +135,9 @@ class Server(Entity):
             case RespondWorkflowTaskCompleted(workflow_id, commands):
                 workflow_id = workflow_id
                 await self.handle_commands(workflow_id, commands)
-            case RespondActivityTaskCompleted(workflow_id, result):
+            case RespondActivityTaskCompleted(workflow_id, result, token):
                 workflow_id = workflow_id
-                await self.handle_activity_task_completed(workflow_id, result)
+                await self.handle_activity_task_completed(workflow_id, result, token)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
@@ -164,6 +165,7 @@ class Server(Entity):
                         workflow_id,
                         HistoryEventType.ACTIVITY_TASK_SCHEDULED,
                         seen_by_sticky_worker=False,
+                        token=command.token,
                     )
                 case CommandType.COMPLETE_WORKFLOW_EXECUTION:
                     log(
@@ -183,7 +185,7 @@ class Server(Entity):
                     )
 
     async def handle_activity_task_completed(
-        self, workflow_id: WorkflowId, result: Any
+        self, workflow_id: WorkflowId, result: Any, token: int
     ):
         await self.write_history_events(
             workflow_id,
@@ -191,20 +193,23 @@ class Server(Entity):
             HistoryEventType.WFT_SCHEDULED,
             seen_by_sticky_worker=False,
             result=result,
+            token=token,
         )
 
     async def write_history_events(
         self,
         workflow_id: WorkflowId,
-        *events: HistoryEventType,
+        *event_types: HistoryEventType,
         seen_by_sticky_worker: bool,
         **kwargs: Hashable,
-    ):
-        self.namespace[workflow_id].events.extend(
+    ) -> List[HistoryEvent]:
+        events = [
             HistoryEvent(e, seen_by_sticky_worker=seen_by_sticky_worker, **kwargs)
-            for e in events
-        )
+            for e in event_types
+        ]
+        self.namespace[workflow_id].events.extend(events)
         await self.publish_change_event()
+        return events
 
     def establish_workflow_worker_long_poll_connection(
         self, worker: "WorkflowWorker"
@@ -233,19 +238,26 @@ class Server(Entity):
             assert (
                 len(events) == 1
             ), "Expected ACTIVITY_TASK_SCHEDULED event to be sole unseen event"
-            await self.write_history_events(
-                workflow_id,
-                HistoryEventType.ACTIVITY_TASK_STARTED,
-                seen_by_sticky_worker=True,
+            [at_scheduled_event] = events
+            events.extend(
+                await self.write_history_events(
+                    workflow_id,
+                    HistoryEventType.ACTIVITY_TASK_STARTED,
+                    seen_by_sticky_worker=True,
+                )
             )
             await self.publish_change_event()
             [queue] = self.activity_worker_long_poll_connections.values()
-            await queue.put(ActivityTask(workflow_id))
+            await queue.put(
+                ActivityTask(workflow_id, token=int(at_scheduled_event.data["token"]))  # type: ignore
+            )
         else:
-            await self.write_history_events(
-                workflow_id,
-                HistoryEventType.WFT_STARTED,
-                seen_by_sticky_worker=True,
+            events.extend(
+                await self.write_history_events(
+                    workflow_id,
+                    HistoryEventType.WFT_STARTED,
+                    seen_by_sticky_worker=True,
+                )
             )
             await self.publish_change_event()
             [queue] = self.workflow_worker_long_poll_connections.values()

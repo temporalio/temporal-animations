@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, List
+from typing import Any, List, Optional
 
 NamespaceId = str
 WorkflowId = str
@@ -65,7 +65,7 @@ class CommandType(Enum):
 @dataclass
 class Command:
     command_type: CommandType
-    token: int
+    token: Optional[int]
 
 
 @dataclass(frozen=True)
@@ -76,3 +76,4 @@ class RespondWorkflowTaskCompleted(WorkerRequest):
 @dataclass(frozen=True)
 class RespondActivityTaskCompleted(WorkerRequest):
     result: Any
+    token: int
