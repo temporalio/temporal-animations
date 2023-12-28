@@ -64,7 +64,7 @@ class WorkflowTask(Entity):
 
     def __init__(self, worklow_id: WorkflowId, events: List[HistoryEvent]) -> None:
         self.workflow_id = worklow_id
-        self.events = events
+        self.events = tuple(events)
         super().__init__()
 
     def __repr__(self) -> str:
@@ -75,9 +75,10 @@ Namespace = OrderedDict[WorkflowId, History]
 Shard = Dict[NamespaceId, Namespace]
 
 
-@dataclass
-class ActivityTask:
-    workflow_id: WorkflowId
+class ActivityTask(Entity):
+    def __init__(self, workflow_id: WorkflowId):
+        super().__init__()
+        self.workflow_id = workflow_id
 
 
 class TaskQueue(TypedDict):

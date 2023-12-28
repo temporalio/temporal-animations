@@ -6,9 +6,11 @@ from .application import Application
 from .entity import Entity
 from .server import History, HistoryEvent, Server
 from .worker import (
+    ActivityTask,
     ActivityWorker,
     CallActivityWorkflowWorker,
     NoOpWorkflowWorker,
     Workflow,
+    WorkflowTask,
     WorkflowWorker,
 )
