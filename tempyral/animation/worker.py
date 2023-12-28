@@ -1,24 +1,12 @@
 from typing import Iterable, List
 
-from manim import (
-    BLACK,
-    DOWN,
-    LEFT,
-    PINK,
-    WHITE,
-    Arrow,
-    Code,
-    Mobject,
-    SurroundingRectangle,
-    Text,
-    VGroup,
-)
+from manim import LEFT, WHITE, Mobject, SurroundingRectangle, Text, VGroup
 
 from tempyral import simulation
+from tempyral.animation.code import ProxyEntityWithCode
 from tempyral.animation.entity import (
     FONT_SIZE_LARGE,
     FONT_SIZE_MEDIUM,
-    FONT_SIZE_SMALL,
     MONOSPACE_FONT,
     ProxyEntity,
     ProxyEntityWithChildren,
@@ -28,7 +16,7 @@ from tempyral.animation.history import HistoryEvents
 
 
 class ActivityTask(ProxyEntity[simulation.ActivityTask]):
-    def newm(self, entity: simulation.ActivityTask) -> Mobject:
+    def newm(self, _: simulation.ActivityTask) -> Mobject:
         return Text("Activity Task", font_size=FONT_SIZE_MEDIUM)
 
 
@@ -69,32 +57,8 @@ class WorkerRequest(VisualElement):
         return Text(name, font_size=FONT_SIZE_MEDIUM, font=MONOSPACE_FONT)
 
 
-class Workflow(ProxyEntity[simulation.Workflow]):
-    def newm(self, entity: simulation.Workflow) -> Mobject:
-        code = Code(
-            code=entity.code,
-            language=entity.language,
-            insert_line_no=False,
-            font_size=FONT_SIZE_SMALL,
-            line_spacing=1,
-            background_stroke_width=0,
-        ).to_edge(LEFT, buff=1.0)
-        lines = code[2]
-        arrows = VGroup(
-            *(
-                Arrow(
-                    start=line.get_edge_center(LEFT) + LEFT,
-                    end=line.get_edge_center(LEFT),
-                    color=BLACK,
-                )
-                .next_to(line, LEFT, buff=0.1)
-                .shift(DOWN * 0.075)
-                for line in lines
-            )
-        )
-        for line_num in entity.blocked_expressions:
-            arrows[line_num - 1].set_color(PINK)
-        return VGroup(code, arrows)
+class Workflow(ProxyEntityWithCode[simulation.Workflow]):
+    pass
 
 
 class WorkflowWorker(

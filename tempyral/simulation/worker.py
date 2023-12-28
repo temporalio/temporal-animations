@@ -1,7 +1,7 @@
 import asyncio
 from abc import ABC, abstractmethod
 from asyncio import Queue
-from typing import Dict, Generic, List, Literal, Set, Tuple, Type, TypeVar, Union, cast
+from typing import Generic, List, Set, Type, TypeVar, Union, cast
 
 from tempyral import log
 from tempyral.simulation.api import (
@@ -11,6 +11,7 @@ from tempyral.simulation.api import (
     RespondWorkflowTaskCompleted,
     WorkflowId,
 )
+from tempyral.simulation.code import EntityWithCode
 from tempyral.simulation.entity import Entity
 from tempyral.simulation.server import ActivityTask, Server, WorkflowTask
 
@@ -47,47 +48,22 @@ class ActivityWorker(Worker[ActivityTask]):
         )
 
 
-Language = Literal["go", "python", "typescript", "java", "dotnet"]
-
-
-COMMENT_MARKERS: Dict[Language, str] = {
-    "go": "//",
-    "java": "//",
-    "python": "#",
-    "dotnet": "//",
-}
-
-
-class Workflow(Entity, ABC):
+class Workflow(EntityWithCode, ABC):
     """
     A Workflow Definition, together with fake handling of the workflow by an SDK worker.
     """
 
-    language: Language
-    go: str
     workflow_id: WorkflowId
 
     def __init__(self):
         super().__init__()
-        if not hasattr(self, "language"):
-            self.language = self._get_language()
-        self.code, commands = self.parse_code(self.language)
+        self.code, directives = self.parse_code(self.language)
+        commands = [Command(eval(code), line_num) for code, line_num in directives]
+        commands.append(Command(CommandType.COMPLETE_WORKFLOW_EXECUTION, None))
         self.commands = iter(commands)
-        self.blocked_expressions: Set[int] = set()
+        self.blocked_expressions = set()
 
     __publish__ = ["id", "code", "language", "blocked_expressions"]
-
-    def _get_language(self) -> Language:
-        available_languages = list(COMMENT_MARKERS)
-        languages: List[Language] = [l for l in available_languages if hasattr(self, l)]
-        assert (
-            languages
-        ), f"You must define the workflow code as a class attribute named one of {', '.join(available_languages)}"
-        assert (
-            len(languages) == 1
-        ), "You must set the 'language' class attribute when supplying workflow code in multiple languages"
-        [language] = languages
-        return language
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.blocked_expressions})"
@@ -100,26 +76,6 @@ class Workflow(Entity, ABC):
         if command.token is not None:
             self.blocked_expressions.add(command.token)
         return [command]
-
-    def parse_code(self, language: Language) -> Tuple[str, List[Command]]:
-        """
-        Return code, and list of commands.
-
-        Strip out special WFT-handling directives, and convert these into the
-        corresponding Command, together with line number.
-        """
-        lines: List[str] = []
-        commands: List[Command] = []
-        comment_marker = COMMENT_MARKERS[language]
-        code = getattr(self, language)
-        line_num = 1
-        for line_num, line in enumerate(code.strip().splitlines(), line_num):
-            code, _, command = line.partition(f"{comment_marker} tempyral:")
-            if command:
-                commands.append(Command(eval(command.strip()), line_num))
-            lines.append(code)
-        commands.append(Command(CommandType.COMPLETE_WORKFLOW_EXECUTION, line_num))
-        return "\n".join(lines), commands
 
 
 class WorkflowWorker(Worker[WorkflowTask]):
