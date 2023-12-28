@@ -118,6 +118,8 @@ class Server(Entity):
                 workflow_id = workflow_id
                 await self.start_workflow_execution(workflow_id)
             case RespondWorkflowTaskCompleted(workflow_id, commands):
+                if os.path.exists("/tmp/flag"):
+                    self.terminate_simulation()
                 workflow_id = workflow_id
                 await self.handle_commands(workflow_id, commands)
             case RespondActivityTaskCompleted(workflow_id, result, token):
@@ -128,9 +130,6 @@ class Server(Entity):
 
         # If this request resulted in new WFTs or ATs then dispatch them.
         await self.dispatch_workflow_or_activity_task(workflow_id)
-
-        if os.path.exists("/tmp/flag"):
-            self.terminate_simulation()
 
     async def start_workflow_execution(self, workflow_id: WorkflowId):
         await self.write_history_events(
