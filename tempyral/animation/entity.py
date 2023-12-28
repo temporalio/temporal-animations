@@ -21,11 +21,6 @@ from tempyral import log, simulation
 
 E = TypeVar("E", bound=simulation.Entity)
 
-MONOSPACE_FONT = "Menlo"
-FONT_SIZE_LARGE = 24
-FONT_SIZE_MEDIUM = 20
-FONT_SIZE_SMALL = 12
-
 
 class VisualElement(ABC):
     """

@@ -8,12 +8,8 @@ class ExecuteWorkflowApplication(Application):
     """
 
     go = """
-c, err := client.Dial(client.Options{})
-workflowOptions := client.StartWorkflowOptions{
-    ID:        "my-workflow-id",
-    TaskQueue: "my-task-queue",
-}
-workflowRun, err := c.ExecuteWorkflow(ctx, workflowOptions, workflows.MyWorkflow) // tempyral: ApplicationRequestType.StartWorkflowExecution "my-workflow-id"
+workflowRun, err := c.ExecuteWorkflow(          // tempyral: ApplicationRequestType.StartWorkflowExecution "my-workflow-id"
+    ctx, workflowOptions, workflows.MyWorkflow)
 if err != nil {
     log.Fatalln("Unable to execute workflow", err)
 }

@@ -7,8 +7,8 @@ from manim import RED_D as RED
 from manim import SMALL_BUFF, Mobject, Point, Text, VGroup
 
 from tempyral import simulation
+from tempyral.animation import mobject
 from tempyral.animation.entity import (
-    FONT_SIZE_SMALL,
     ProxyEntity,
     ProxyEntityWithChildren,
     VisualElement,
@@ -18,9 +18,8 @@ from tempyral.animation.entity import (
 class HistoryEvent(ProxyEntity[simulation.HistoryEvent]):
     @staticmethod
     def newm(event: simulation.HistoryEvent) -> Mobject:
-        return Text(
+        return mobject.history_event(
             event.event_type.name,
-            font_size=FONT_SIZE_SMALL,
             color=GREEN if event.seen_by_worker else RED,
         )
 

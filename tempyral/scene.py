@@ -119,13 +119,13 @@ class TemporalScene(Scene):
         )
         aworker.set_dock_direction(RIGHT).m.next_to(app.m, DOWN).align_to(
             app.m, LEFT
-        ).shift(1 * DOWN)
+        ).shift(DOWN)
         wworker.set_dock_direction(RIGHT).m.next_to(aworker.m, DOWN).align_to(
             aworker.m, LEFT
-        )
-        server.set_dock_direction(LEFT).m.align_on_border(UR).shift(
-            3 * DOWN + 1.5 * LEFT
-        ).align_to(wworker.m, UP)
+        ).shift(DOWN)
+        server.set_dock_direction(LEFT).m.align_on_border(RIGHT).align_to(
+            aworker.m, UP
+        ).shift(1.5 * LEFT)
 
         self.add(app.m, server.m, wworker.m, aworker.m)
 
@@ -138,7 +138,7 @@ class TemporalScene(Scene):
         return server, [app], [wworker]
 
     def add_timestamp(self):
-        time = Text(datetime.now().strftime("%H:%M:%S"), font_size=24)
+        time = Text(datetime.now().strftime("%H:%M:%S"), font_size=8)
         time.to_corner(DL, buff=0.1)
         self.add(time)
 

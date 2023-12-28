@@ -1,20 +1,18 @@
-from manim import DOWN, LEFT, SMALL_BUFF, Mobject, Text, VGroup
+from manim import DOWN, LEFT, SMALL_BUFF, Mobject, VGroup
 
 from tempyral import simulation
+from tempyral.animation import mobject
 from tempyral.animation.code import ProxyEntityWithCode
-from tempyral.animation.entity import FONT_SIZE_MEDIUM, MONOSPACE_FONT, VisualElement
+from tempyral.animation.entity import VisualElement
 
 
 class ApplicationRequest(VisualElement):
-    @staticmethod
-    def newm(request: simulation.ApplicationRequest) -> Mobject:
-        return Text(
-            request.request_type.name, font_size=FONT_SIZE_MEDIUM, font=MONOSPACE_FONT
-        )
+    def newm(self, request: simulation.ApplicationRequest) -> Mobject:
+        return mobject.message(request.request_type.name)
 
 
 class Application(ProxyEntityWithCode[simulation.Application]):
     def newm(self, entity: simulation.Application) -> Mobject:
         code = super().newm(entity)
-        text = Text("Application", font_size=24)
+        text = mobject.actor("Application")
         return VGroup(text, code).arrange(DOWN, buff=SMALL_BUFF, aligned_edge=LEFT)

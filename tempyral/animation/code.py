@@ -3,7 +3,8 @@ from typing import Generic, TypeVar
 from manim import BLACK, DOWN, LEFT, PINK, Arrow, Code, Mobject, VGroup
 
 from tempyral import simulation
-from tempyral.animation.entity import FONT_SIZE_SMALL, ProxyEntity
+from tempyral.animation.entity import ProxyEntity
+from tempyral.animation.mobject import FONT_SIZE_CODE
 
 E = TypeVar("E", bound=simulation.EntityWithCode)
 
@@ -14,10 +15,9 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
             code=entity.code,
             language=entity.language,
             insert_line_no=False,
-            font_size=FONT_SIZE_SMALL,
+            font_size=FONT_SIZE_CODE,
             line_spacing=0.3,
-            background_stroke_width=0,
-        ).to_edge(LEFT, buff=1.0)
+        ).to_edge(LEFT, buff=0.1)
         lines = code[2]
         arrows = VGroup(
             *(
@@ -25,9 +25,7 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
                     start=line.get_edge_center(LEFT) + LEFT,
                     end=line.get_edge_center(LEFT),
                     color=BLACK,
-                )
-                .next_to(line, LEFT, buff=0.1)
-                .shift(DOWN * 0.075)
+                ).next_to(line, LEFT, buff=0.1)
                 for line in lines
             )
         )

@@ -3,11 +3,9 @@ from typing import Iterable, List
 from manim import LEFT, WHITE, Mobject, SurroundingRectangle, Text, VGroup
 
 from tempyral import simulation
+from tempyral.animation import mobject
 from tempyral.animation.code import ProxyEntityWithCode
 from tempyral.animation.entity import (
-    FONT_SIZE_LARGE,
-    FONT_SIZE_MEDIUM,
-    MONOSPACE_FONT,
     ProxyEntity,
     ProxyEntityWithChildren,
     VisualElement,
@@ -17,20 +15,17 @@ from tempyral.animation.history import HistoryEvents
 
 class ActivityTask(ProxyEntity[simulation.ActivityTask]):
     def newm(self, _: simulation.ActivityTask) -> Mobject:
-        return Text("Activity Task", font_size=FONT_SIZE_MEDIUM)
+        return mobject.message("Activity Task")
 
 
 class ActivityTaskCompleted(VisualElement):
     def newm(self) -> Mobject:
-        return Text(
-            "ActivityTaskCompleted", font_size=FONT_SIZE_MEDIUM, font=MONOSPACE_FONT
-        )
+        return mobject.message("ActivityTaskCompleted")
 
 
 class ActivityWorker(ProxyEntity[simulation.ActivityWorker]):
-    @staticmethod
-    def newm(_: simulation.ActivityWorker) -> Mobject:
-        return Text("Activity Worker", font_size=FONT_SIZE_LARGE)
+    def newm(self, _: simulation.ActivityWorker) -> Mobject:
+        return mobject.actor("Activity Worker")
 
 
 class BoxedHistoryEvents(HistoryEvents):
@@ -48,13 +43,13 @@ class BoxedHistoryEvents(HistoryEvents):
 class WorkflowTask(ProxyEntity[simulation.WorkflowTask]):
     def newm(self, entity: simulation.WorkflowTask) -> Mobject:
         eventsm = BoxedHistoryEvents.newm(entity.events)
-        task = Text("WFT", font_size=FONT_SIZE_MEDIUM)
+        task = mobject.message("WFT")
         return VGroup(task, eventsm).arrange()
 
 
 class WorkerRequest(VisualElement):
     def newm(self, name: str) -> Mobject:
-        return Text(name, font_size=FONT_SIZE_MEDIUM, font=MONOSPACE_FONT)
+        return mobject.message(name)
 
 
 class Workflow(ProxyEntityWithCode[simulation.Workflow]):
@@ -67,9 +62,8 @@ class WorkflowWorker(
     child_cls = Workflow
     child_align_direction = LEFT
 
-    @staticmethod
-    def newm(_: simulation.WorkflowWorker) -> Mobject:
-        return Text("Workflow Worker", font_size=FONT_SIZE_LARGE)
+    def newm(self, _: simulation.WorkflowWorker) -> Mobject:
+        return mobject.actor("Workflow Worker")
 
     @staticmethod
     def get_child_entities(
