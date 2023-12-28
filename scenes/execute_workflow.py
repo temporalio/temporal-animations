@@ -1,7 +1,25 @@
-from typing import Coroutine, Iterable
-
 from tempyral.scene import TemporalScene
-from tempyral.simulation import Application, Server, Workflow
+from tempyral.simulation import Application, Workflow
+
+
+class ExecuteWorkflowApplication(Application):
+    """
+    An application that executes a workflow
+    """
+
+    go = """
+c, err := client.Dial(client.Options{})
+workflowOptions := client.StartWorkflowOptions{
+    ID:        "my-workflow-id",
+    TaskQueue: "my-task-queue",
+}
+workflowRun, err := c.ExecuteWorkflow(ctx, workflowOptions, workflows.MyWorkflow) // tempyral: ApplicationRequestType.StartWorkflowExecution "my-workflow-id"
+if err != nil {
+    log.Fatalln("Unable to execute workflow", err)
+}
+var result string
+err = workflowRun.Get(ctx, &result)
+"""
 
 
 class NoOpWorkflow(Workflow):
@@ -14,15 +32,8 @@ func MyWorkflow(ctx workflow.Context) error {
     return nil
 }
 """
-    workflow_id = "noop-workflow"
 
 
 class ExecuteWorkflow(TemporalScene):
+    application_classes = [ExecuteWorkflowApplication]
     workflow_classes = [NoOpWorkflow]
-
-    def simulation(
-        self,
-        app: Application,
-        server: Server,
-    ) -> Iterable[Coroutine]:
-        yield app.start_workflow(NoOpWorkflow.workflow_id, server)

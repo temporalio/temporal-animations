@@ -1,9 +1,8 @@
 import asyncio
 import sys
 import traceback
-from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Coroutine, Iterable, List, Tuple, Type
+from typing import Coroutine, List, Tuple, Type
 
 from manim import (
     DL,
@@ -32,7 +31,7 @@ from tempyral.simulation import (
 )
 
 
-class TemporalScene(Scene, ABC):
+class TemporalScene(Scene):
     """
     To create an animation:
 
@@ -41,21 +40,8 @@ class TemporalScene(Scene, ABC):
     - implement `simulation()`
     """
 
+    application_classes: List[Type[Application]]
     workflow_classes: List[Type[Workflow]]
-
-    @abstractmethod
-    def simulation(
-        self,
-        app: Application,
-        server: Server,
-    ) -> Iterable[Coroutine]:
-        """Return an iterable of coroutines defining the simulation.
-
-        For example, one returned coroutine will probably look like
-
-        app.start_workflow(workflow_id, server)
-        """
-        ...
 
     def construct(self):
         self.add_timestamp()
@@ -75,8 +61,8 @@ class TemporalScene(Scene, ABC):
         coros: List[Coroutine] = [
             worker.poll(server) for worker in workflow_workers + activity_workers
         ]
-        [app] = apps
-        coros.extend(self.simulation(app, server))
+        for app in apps:
+            coros.extend(app.get_coroutines(server))
         if render:
             coros.append(animation.process_simulation_events())
 
@@ -99,7 +85,7 @@ class TemporalScene(Scene, ABC):
 
         return (
             server,
-            [Application()],
+            [cls() for cls in self.application_classes],
             [WorkflowWorker(self.workflow_classes, server)],
             [ActivityWorker(server)],
         )
@@ -128,9 +114,6 @@ class TemporalScene(Scene, ABC):
             for sim_aworker in simulation_activity_workers
         ]
 
-        server.set_dock_direction(LEFT).m.align_on_border(UR).shift(
-            3 * DOWN + 1.5 * LEFT
-        )
         app.set_dock_direction(RIGHT).m.align_on_border(UP).align_on_border(
             LEFT, buff=SMALL_BUFF
         )
@@ -139,7 +122,10 @@ class TemporalScene(Scene, ABC):
         ).shift(1 * DOWN)
         wworker.set_dock_direction(RIGHT).m.next_to(aworker.m, DOWN).align_to(
             aworker.m, LEFT
-        ).align_to(server.m, UP)
+        )
+        server.set_dock_direction(LEFT).m.align_on_border(UR).shift(
+            3 * DOWN + 1.5 * LEFT
+        ).align_to(wworker.m, UP)
 
         self.add(app.m, server.m, wworker.m, aworker.m)
 

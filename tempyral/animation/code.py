@@ -15,7 +15,7 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
             language=entity.language,
             insert_line_no=False,
             font_size=FONT_SIZE_SMALL,
-            line_spacing=1,
+            line_spacing=0.3,
             background_stroke_width=0,
         ).to_edge(LEFT, buff=1.0)
         lines = code[2]

@@ -1,7 +1,6 @@
-from typing import Coroutine, Iterable
-
+from scenes.execute_workflow import ExecuteWorkflowApplication
 from tempyral.scene import TemporalScene
-from tempyral.simulation import Application, Server, Workflow
+from tempyral.simulation import Workflow
 
 
 class CallActivityWorkflow(Workflow):
@@ -16,15 +15,8 @@ func MyWorkflow(ctx workflow.Context) (int, error) {
     return result, nil
 }
 """
-    workflow_id = "call-activity-workflow"
 
 
 class CallActivity(TemporalScene):
+    application_classes = [ExecuteWorkflowApplication]
     workflow_classes = [CallActivityWorkflow]
-
-    def simulation(
-        self,
-        app: Application,
-        server: Server,
-    ) -> Iterable[Coroutine]:
-        yield app.start_workflow(CallActivityWorkflow.workflow_id, server)

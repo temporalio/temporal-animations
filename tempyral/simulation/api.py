@@ -36,6 +36,7 @@ class ApplicationRequestType(Enum):
 class ApplicationRequest:
     workflow_id: WorkflowId
     request_type: ApplicationRequestType
+    token: Optional[int]
 
 
 @dataclass(frozen=True)
