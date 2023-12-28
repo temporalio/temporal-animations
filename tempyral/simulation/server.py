@@ -209,13 +209,17 @@ class Server(Entity):
 
     def establish_workflow_worker_long_poll_connection(
         self, worker: "WorkflowWorker"
-    ) -> None:
-        self.workflow_worker_long_poll_connections[worker] = Queue()
+    ) -> Queue[WorkflowTask]:
+        connection = Queue()
+        self.workflow_worker_long_poll_connections[worker] = connection
+        return connection
 
     def establish_activity_worker_long_poll_connection(
         self, worker: "ActivityWorker"
-    ) -> None:
-        self.activity_worker_long_poll_connections[worker] = Queue()
+    ) -> Queue[ActivityTask]:
+        connection = Queue()
+        self.activity_worker_long_poll_connections[worker] = connection
+        return connection
 
     async def dispatch_workflow_or_activity_task(self, workflow_id: WorkflowId):
         events = iter(self.namespace[workflow_id].events)

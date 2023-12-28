@@ -1,6 +1,7 @@
 import asyncio
-from abc import ABC
-from typing import Dict, List, Literal, Set, Tuple, Type, cast
+from abc import ABC, abstractmethod
+from asyncio import Queue
+from typing import Dict, Generic, List, Literal, Set, Tuple, Type, TypeVar, Union, cast
 
 from tempyral import log
 from tempyral.simulation.api import (
@@ -13,24 +14,36 @@ from tempyral.simulation.api import (
 from tempyral.simulation.entity import Entity
 from tempyral.simulation.server import ActivityTask, Server, WorkflowTask
 
+T = TypeVar("T", bound=Union[ActivityTask, WorkflowTask])
 
-class ActivityWorker(Entity):
-    def __init__(self, server: Server):
-        super().__init__()
-        server.establish_activity_worker_long_poll_connection(self)
+
+class Worker(Entity, ABC, Generic[T]):
+    long_poll_connection: Queue[T]
 
     async def poll(self, server: Server):
         while True:
-            log(
-                server.activity_worker_long_poll_connections[self]._queue,  # type: ignore (non-public attribute)
-                "S: ActivityWorker.poll",
-            )
-            at = await server.activity_worker_long_poll_connections[self].get()
-            await self.publish_message_event(server, self, entity=at)
-            await self.handle_at(at, server)
+            task = await self.long_poll_connection.get()
+            # TODO: Move this into server.dispatch method?
+            await self.publish_message_event(server, self, entity=task)
+            await self.handle_task(task, server)
             await asyncio.sleep(0)
 
-    async def handle_at(self, at: "ActivityTask", server: "Server"):
+    @abstractmethod
+    async def handle_task(self, task: T, server: Server):
+        ...
+
+    def __getstate__(self) -> dict:
+        return {k: v for k, v in self.__dict__.items() if k != "long_poll_connection"}
+
+
+class ActivityWorker(Worker[ActivityTask]):
+    def __init__(self, server: Server):
+        super().__init__()
+        self.long_poll_connection = (
+            server.establish_activity_worker_long_poll_connection(self)
+        )
+
+    async def handle_task(self, at: ActivityTask, server: Server):
         await self.publish_message_event(self, server)
         await server.handle_request(
             RespondActivityTaskCompleted(at.workflow_id, None, at.token)
@@ -110,11 +123,13 @@ class Workflow(Entity, ABC):
         return "\n".join(lines), commands
 
 
-class WorkflowWorker(Entity, ABC):
+class WorkflowWorker(Worker[WorkflowTask]):
     def __init__(self, workflow_classes: List[Type[Workflow]], server: Server):
         super().__init__()
-        server.establish_workflow_worker_long_poll_connection(self)
         self.workflows = [cls() for cls in workflow_classes]
+        self.long_poll_connection = (
+            server.establish_workflow_worker_long_poll_connection(self)
+        )
 
     @property
     def workflow(self) -> Workflow:
@@ -124,18 +139,7 @@ class WorkflowWorker(Entity, ABC):
         [workflow] = self.workflows
         return workflow
 
-    async def poll(self, server: "Server"):
-        while True:
-            log(
-                server.workflow_worker_long_poll_connections[self]._queue,  # type: ignore (non-public attribute)
-                "S: WorkflowWorker.poll",
-            )
-            wft = await server.workflow_worker_long_poll_connections[self].get()
-            await self.publish_message_event(server, self, entity=wft)
-            await self.handle_wft(wft, server)
-            await asyncio.sleep(0)
-
-    async def handle_wft(self, wft: "WorkflowTask", server: "Server"):
+    async def handle_task(self, wft: WorkflowTask, server: Server):
         wf = self.workflow
         log(f"wf={wf} wft={wft}", "S: handle_wft")
         for e in wft.events:

@@ -26,6 +26,7 @@ from tempyral.simulation import (
     Application,
     Entity,
     Server,
+    Worker,
     Workflow,
     WorkflowWorker,
 )
@@ -71,14 +72,13 @@ class TemporalScene(Scene, ABC):
         activity_workers: List[ActivityWorker],
         render: bool,
     ):
+        coros: List[Coroutine] = [
+            worker.poll(server) for worker in workflow_workers + activity_workers
+        ]
         [app] = apps
-        [wworker] = workflow_workers
-        [aworker] = activity_workers
-
-        coros = [worker.poll(server) for worker in [wworker, aworker]]
         coros.extend(self.simulation(app, server))
         if render:
-            coros.append(animation.process_simulation_events(self))
+            coros.append(animation.process_simulation_events())
 
         try:
             async with asyncio.TaskGroup() as tg:

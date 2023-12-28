@@ -27,7 +27,7 @@ def set_scene(scene: Scene):
     VisualElement.scene = scene
 
 
-async def process_simulation_events(scene: Scene):
+async def process_simulation_events():
     while True:
         match await event_bus.bus.get():
             case StateChangeEvent(entity):
