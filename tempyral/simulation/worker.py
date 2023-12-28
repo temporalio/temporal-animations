@@ -1,7 +1,6 @@
 import asyncio
 from abc import ABC
-from collections import OrderedDict
-from typing import List, Set, Tuple, TypedDict, cast
+from typing import Dict, List, Literal, Set, Tuple, Type, cast
 
 from tempyral import log
 from tempyral.simulation.api import (
@@ -12,13 +11,7 @@ from tempyral.simulation.api import (
     WorkflowId,
 )
 from tempyral.simulation.entity import Entity
-from tempyral.simulation.server import (
-    CALL_ACTIVITY_WORKFLOW_ID,
-    NOOP_WORKFLOW_ID,
-    ActivityTask,
-    Server,
-    WorkflowTask,
-)
+from tempyral.simulation.server import ActivityTask, Server, WorkflowTask
 
 
 class ActivityWorker(Entity):
@@ -44,11 +37,15 @@ class ActivityWorker(Entity):
         )
 
 
-class CommentMarkers(TypedDict):
-    go: str
+Language = Literal["go", "python", "typescript", "java", "dotnet"]
 
 
-COMMENT_MARKERS: CommentMarkers = {"go": "//"}
+COMMENT_MARKERS: Dict[Language, str] = {
+    "go": "//",
+    "java": "//",
+    "python": "#",
+    "dotnet": "//",
+}
 
 
 class Workflow(Entity, ABC):
@@ -56,15 +53,29 @@ class Workflow(Entity, ABC):
     A Workflow Definition, together with fake handling of the workflow by an SDK worker.
     """
 
-    code: str
-    language: str
+    language: Language
+    go: str
     workflow_id: WorkflowId
 
     def __init__(self):
         super().__init__()
+        if not hasattr(self, "language"):
+            self.language = self._get_language()
         self.code, commands = self.parse_code(self.language)
         self.commands = iter(commands)
         self.blocked_expressions: Set[int] = set()
+
+    def _get_language(self) -> Language:
+        available_languages = list(COMMENT_MARKERS)
+        languages: List[Language] = [l for l in available_languages if hasattr(self, l)]
+        assert (
+            languages
+        ), f"You must define the workflow code as a class attribute named one of {', '.join(available_languages)}"
+        assert (
+            len(languages) == 1
+        ), "You must set the 'language' class attribute when supplying workflow code in multiple languages"
+        [language] = languages
+        return language
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.blocked_expressions})"
@@ -78,7 +89,7 @@ class Workflow(Entity, ABC):
             self.blocked_expressions.add(command.token)
         return [command]
 
-    def parse_code(self, language: str) -> Tuple[str, List[Command]]:
+    def parse_code(self, language: Language) -> Tuple[str, List[Command]]:
         """
         Return code, and list of commands.
 
@@ -88,8 +99,9 @@ class Workflow(Entity, ABC):
         lines: List[str] = []
         commands: List[Command] = []
         comment_marker = COMMENT_MARKERS[language]
+        code = getattr(self, language)
         line_num = 1
-        for line_num, line in enumerate(self.code.strip().splitlines(), line_num):
+        for line_num, line in enumerate(code.strip().splitlines(), line_num):
             code, _, command = line.partition(f"{comment_marker} tempyral:")
             if command:
                 commands.append(Command(eval(command.strip()), line_num))
@@ -98,52 +110,18 @@ class Workflow(Entity, ABC):
         return "\n".join(lines), commands
 
 
-class NoOpWorkflow(Workflow):
-    """
-    A workflow that does nothing (completes immediately).
-    """
-
-    workflow_id = NOOP_WORKFLOW_ID
-    code = """
-func MyWorkflow(ctx workflow.Context) error {
-    return nil
-}
-"""
-    language = "go"
-
-
-class CallActivityWorkflow(Workflow):
-    """
-    A workflow that calls an activity.
-    """
-
-    workflow_id = CALL_ACTIVITY_WORKFLOW_ID
-    code = """
-func MyWorkflow(ctx workflow.Context) (int, error) {
-    var result int
-    workflow.ExecuteActivity(MyActivity).Get(ctx, &result) // tempyral: CommandType.SCHEDULE_ACTIVITY_TASK
-    return result, nil
-}
-"""
-    language = "go"
-
-
-Workflows = OrderedDict[WorkflowId, Workflow]
-
-
 class WorkflowWorker(Entity, ABC):
-    workflows: Workflows
-
-    def __init__(self, server: Server):
+    def __init__(self, workflow_classes: List[Type[Workflow]], server: Server):
         super().__init__()
         server.establish_workflow_worker_long_poll_connection(self)
+        self.workflows = [cls() for cls in workflow_classes]
 
     @property
     def workflow(self) -> Workflow:
         assert (
             len(self.workflows) == 1
         ), "Workflow worker with multiple workflows is not supported"
-        [workflow] = self.workflows.values()
+        [workflow] = self.workflows
         return workflow
 
     async def poll(self, server: "Server"):
@@ -158,7 +136,7 @@ class WorkflowWorker(Entity, ABC):
             await asyncio.sleep(0)
 
     async def handle_wft(self, wft: "WorkflowTask", server: "Server"):
-        wf = self.workflows[wft.workflow_id]
+        wf = self.workflow
         log(f"wf={wf} wft={wft}", "S: handle_wft")
         for e in wft.events:
             if (token := e.data.get("token")) != None:
@@ -181,11 +159,3 @@ class WorkflowWorker(Entity, ABC):
         await server.handle_request(
             RespondWorkflowTaskCompleted(wft.workflow_id, commands)
         )
-
-
-class NoOpWorkflowWorker(WorkflowWorker):
-    workflows = OrderedDict([(NOOP_WORKFLOW_ID, NoOpWorkflow())])
-
-
-class CallActivityWorkflowWorker(WorkflowWorker):
-    workflows = OrderedDict([(CALL_ACTIVITY_WORKFLOW_ID, CallActivityWorkflow())])

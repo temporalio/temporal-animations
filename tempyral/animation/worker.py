@@ -115,4 +115,4 @@ class WorkflowWorker(
     def get_child_entities(
         entity: simulation.WorkflowWorker,
     ) -> List[simulation.Workflow]:
-        return list(entity.workflows.values())
+        return entity.workflows

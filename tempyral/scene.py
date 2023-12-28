@@ -26,25 +26,34 @@ from tempyral.simulation import (
     Application,
     Entity,
     Server,
+    Workflow,
     WorkflowWorker,
 )
 
 
 class TemporalScene(Scene, ABC):
     """
-    To create an animation, subclass TemporalScene and implement `simulation()`.
+    To create an animation:
+
+    - create a subclass of this class
+    - set the `workflow_classes` class attribute
+    - implement `simulation()`
     """
 
-    workflow_worker_cls: Type[WorkflowWorker]
+    workflow_classes: List[Type[Workflow]]
 
     @abstractmethod
     def simulation(
         self,
-        server: Server,
         app: Application,
-        workflow_worker: WorkflowWorker,
-        activity_worker: ActivityWorker,
+        server: Server,
     ) -> Iterable[Coroutine]:
+        """Return an iterable of coroutines defining the simulation.
+
+        For example, one returned coroutine will probably look like
+
+        app.start_workflow(workflow_id, server)
+        """
         ...
 
     def construct(self):
@@ -65,23 +74,16 @@ class TemporalScene(Scene, ABC):
         [app] = apps
         [wworker] = workflow_workers
         [aworker] = activity_workers
+
+        coros = [worker.poll(server) for worker in [wworker, aworker]]
+        coros.extend(self.simulation(app, server))
+        if render:
+            coros.append(animation.process_simulation_events(self))
+
         try:
             async with asyncio.TaskGroup() as tg:
-                simulation_tasks = [
-                    tg.create_task(coro)
-                    for coro in self.simulation(server, app, wworker, aworker)
-                ]
-
-                if render:
-                    simulation_tasks.append(
-                        tg.create_task(animation.process_simulation_events(self))
-                    )
-
-                def cancel(_):
-                    for t in simulation_tasks:
-                        t.cancel()
-
-                Entity.terminate_simulation = cancel
+                tasks = [tg.create_task(coro) for coro in coros]
+                Entity.terminate_simulation = lambda _: [t.cancel() for t in tasks]
 
         except ExceptionGroup as eg:
             print(f"Caught ExceptionGroup:", file=sys.stderr)
@@ -94,10 +96,11 @@ class TemporalScene(Scene, ABC):
         self,
     ) -> Tuple[Server, List[Application], List[WorkflowWorker], List[ActivityWorker]]:
         server = Server()
+
         return (
             server,
             [Application()],
-            [self.workflow_worker_cls(server)],
+            [WorkflowWorker(self.workflow_classes, server)],
             [ActivityWorker(server)],
         )
 
@@ -160,3 +163,7 @@ class TemporalScene(Scene, ABC):
         wworker: animation.WorkflowWorker,
     ):
         self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
+
+
+def run_simulation(scene: TemporalScene):
+    asyncio.run(scene.do_simulation(*scene.make_simulation_entities(), render=False))

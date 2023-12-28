@@ -25,8 +25,6 @@ if TYPE_CHECKING:
     from tempyral.simulation.worker import ActivityWorker, WorkflowWorker
 
 DEFAULT_NAMESPACE: NamespaceId = "default"
-NOOP_WORKFLOW_ID: WorkflowId = "noop-workflow"
-CALL_ACTIVITY_WORKFLOW_ID: WorkflowId = "call-activity-workflow"
 
 
 class HistoryEvent(Entity):
@@ -90,18 +88,7 @@ class TaskQueue(TypedDict):
 class Server(Entity):
     def __init__(self):
         super().__init__()
-        self.shards: List[Shard] = [
-            {
-                DEFAULT_NAMESPACE: OrderedDict(
-                    {
-                        NOOP_WORKFLOW_ID: History(NOOP_WORKFLOW_ID, []),
-                        CALL_ACTIVITY_WORKFLOW_ID: History(
-                            CALL_ACTIVITY_WORKFLOW_ID, []
-                        ),
-                    }
-                )
-            }
-        ]
+        self.shards: List[Shard] = [{DEFAULT_NAMESPACE: OrderedDict()}]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
         self.workflow_worker_long_poll_connections: Dict[
             WorkflowWorker, Queue[WorkflowTask]
@@ -213,7 +200,9 @@ class Server(Entity):
             HistoryEvent(e, seen_by_sticky_worker=seen_by_sticky_worker, **kwargs)
             for e in event_types
         ]
-        self.namespace[workflow_id].events.extend(events)
+        self.namespace.setdefault(workflow_id, History(workflow_id, [])).events.extend(
+            events
+        )
         if publish:
             await self.publish_change_event()
         return events
