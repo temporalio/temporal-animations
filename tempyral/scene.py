@@ -38,8 +38,6 @@ class TemporalScene(Scene, ABC):
         self.add_timestamp()
         server, apps, wworkers, aworkers = self.make_simulation_entities()
         self.make_animation_proxies(server, apps, wworkers, aworkers)
-        asyncio.run(self.do_simulation(server, apps, wworkers, aworkers, render=True))
-        self.wait(2)
 
     async def do_simulation(
         self,

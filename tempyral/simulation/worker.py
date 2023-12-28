@@ -1,7 +1,7 @@
 import asyncio
 from abc import ABC
 from collections import OrderedDict
-from typing import List, Tuple, TypedDict
+from typing import List, Set, Tuple, TypedDict
 
 from tempyral import log
 from tempyral.simulation.api import (
@@ -62,12 +62,15 @@ class Workflow(Entity, ABC):
         super().__init__()
         self.code, commands = self.parse_code(self.language)
         self.commands = iter(commands)
+        self.blocked_expressions: Set[int] = set()
 
     def handle_wft(self, _: WorkflowTask) -> List[Command]:
         """
         Currently, we assume that each WFT is handled by emitting a single command.
         """
-        return [next(self.commands)]
+        command = next(self.commands)
+        self.blocked_expressions.add(command.token)
+        return [command]
 
     def parse_code(self, language: str) -> Tuple[str, List[Command]]:
         """
@@ -79,13 +82,13 @@ class Workflow(Entity, ABC):
         lines: List[str] = []
         commands: List[Command] = []
         comment_marker = COMMENT_MARKERS[language]
-        i = 0
-        for i, line in enumerate(self.code.splitlines()):
+        line_num = 1
+        for line_num, line in enumerate(self.code.splitlines(), line_num):
             code, _, command = line.partition(f"{comment_marker} tempyral:")
             if command:
-                commands.append(Command(eval(command.strip()), i))
+                commands.append(Command(eval(command.strip()), line_num))
             lines.append(code)
-        commands.append(Command(CommandType.COMPLETE_WORKFLOW_EXECUTION, i))
+        commands.append(Command(CommandType.COMPLETE_WORKFLOW_EXECUTION, line_num))
         return "\n".join(lines), commands
 
 
@@ -144,9 +147,7 @@ class WorkflowWorker(Entity, ABC):
                 "S: WorkflowWorker.poll",
             )
             wft = await server.workflow_worker_long_poll_connections[self].get()
-            await self.publish_message_event(
-                server, self, workflow_id=wft.id, events=tuple(wft.events)
-            )
+            await self.publish_message_event(server, self, entity=wft)
             await self.handle_wft(wft, server)
             await asyncio.sleep(0)
 

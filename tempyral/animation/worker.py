@@ -1,6 +1,18 @@
 from typing import Iterable, List
 
-from manim import DOWN, LEFT, WHITE, Code, Mobject, Rectangle, Text, VGroup
+from manim import (
+    BLACK,
+    DOWN,
+    LEFT,
+    PINK,
+    WHITE,
+    Arrow,
+    Code,
+    Mobject,
+    Rectangle,
+    Text,
+    VGroup,
+)
 
 from tempyral import simulation
 from tempyral.animation.entity import (
@@ -64,6 +76,10 @@ class WorkerRequest(VisualElement):
 
 
 class Workflow(ProxyEntity[simulation.Workflow]):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.highlighted_line = None
+
     def newm(self, entity: simulation.Workflow) -> Mobject:
         text = Text(entity.workflow_id, font_size=FONT_SIZE_MEDIUM)
         code = Code(
@@ -71,8 +87,29 @@ class Workflow(ProxyEntity[simulation.Workflow]):
             insert_line_no=False,
             language=entity.language,
             font_size=FONT_SIZE_SMALL,
+            line_spacing=1,
+        ).to_edge(LEFT, buff=1.0)
+        lines = code[2]
+        arrows = VGroup(
+            *(
+                Arrow(
+                    start=line.get_edge_center(LEFT) + LEFT,
+                    end=line.get_edge_center(LEFT),
+                    color=BLACK,
+                )
+                .next_to(line, LEFT, buff=0.1)
+                .shift(DOWN * 0.075)
+                for line in lines
+            )
         )
-        return VGroup(text, code).arrange(DOWN)
+        return VGroup(text, VGroup(code, arrows)).arrange(DOWN)
+
+    def highlight_line(self, line_num: int):
+        arrows = self.m[1][1]
+        if self.highlighted_line is not None:
+            arrows[self.highlighted_line].set_color(BLACK)
+        self.highlighted_line = line_num
+        arrows[self.highlighted_line].set_color(PINK)
 
 
 class WorkflowWorker(
