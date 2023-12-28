@@ -1,15 +1,14 @@
 """
 Manim representations of Temporal entities.
 """
-from abc import ABC, abstractmethod, abstractstaticmethod
+from abc import ABC, abstractstaticmethod
 from typing import Any, Dict, Generic, List, Self, Type, TypeVar
 
+import numpy as np
 from manim import (
     DOWN,
     ORIGIN,
-    RIGHT,
     SMALL_BUFF,
-    UP,
     ApplyMethod,
     Indicate,
     Mobject,
@@ -106,9 +105,12 @@ class ProxyEntity(Generic[E], VisualElement):
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.
         self.scene.add(message.m)
-        self.scene.play(
-            ApplyMethod(message.m.move_to, receiver.dock_point(), run_time=3.0)
+        halfway = tuple(
+            np.array(list(message.m.get_center() + receiver.dock_point())) / 2.0
         )
+        self.scene.play(ApplyMethod(message.m.move_to, halfway))
+        self.scene.wait(0.5)
+        self.scene.play(ApplyMethod(message.m.move_to, receiver.dock_point()))
         self.scene.remove(message.m)
         self.scene.wait()
 

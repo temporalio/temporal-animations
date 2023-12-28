@@ -9,7 +9,7 @@ from manim import (
     Arrow,
     Code,
     Mobject,
-    Rectangle,
+    SurroundingRectangle,
     Text,
     VGroup,
 )
@@ -29,7 +29,7 @@ from tempyral.animation.history import HistoryEvents
 
 class ActivityTask(ProxyEntity[simulation.ActivityTask]):
     def newm(self, entity: simulation.ActivityTask) -> Mobject:
-        return Text(f"Activity Task({entity.workflow_id})", font_size=FONT_SIZE_MEDIUM)
+        return Text("Activity Task", font_size=FONT_SIZE_MEDIUM)
 
 
 class ActivityTaskCompleted(VisualElement):
@@ -48,24 +48,19 @@ class ActivityWorker(ProxyEntity[simulation.ActivityWorker]):
 class BoxedHistoryEvents(HistoryEvents):
     @staticmethod
     def newm(events: Iterable[simulation.HistoryEvent]) -> Mobject:
-        font_size = FONT_SIZE_MEDIUM
-        width = Text("_" * 30, font_size=font_size).width
         eventsm = HistoryEvents.newm(events)
-        rect = Rectangle(
-            width=max(width, eventsm.width) + 0.5,
-            height=eventsm.height + 0.5,
+        rect = SurroundingRectangle(
+            eventsm,
             color=WHITE,
+            stroke_width=1,
         )
-        if events:
-            rect.surround(eventsm)
-
         return VGroup(rect, eventsm)
 
 
 class WorkflowTask(ProxyEntity[simulation.WorkflowTask]):
     def newm(self, entity: simulation.WorkflowTask) -> Mobject:
         eventsm = BoxedHistoryEvents.newm(entity.events)
-        task = Text(f"WFT({entity.workflow_id})", font_size=FONT_SIZE_MEDIUM)
+        task = Text("WFT", font_size=FONT_SIZE_MEDIUM)
         return VGroup(task, eventsm).arrange()
 
 
@@ -78,10 +73,11 @@ class Workflow(ProxyEntity[simulation.Workflow]):
     def newm(self, entity: simulation.Workflow) -> Mobject:
         code = Code(
             code=entity.code,
-            insert_line_no=False,
             language=entity.language,
+            insert_line_no=False,
             font_size=FONT_SIZE_SMALL,
             line_spacing=1,
+            background_stroke_width=0,
         ).to_edge(LEFT, buff=1.0)
         lines = code[2]
         arrows = VGroup(

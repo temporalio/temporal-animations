@@ -1,10 +1,10 @@
 from typing import Iterable, List
 
-from manim import DOWN
+from manim import BLACK, DOWN
 from manim import GREEN_D as GREEN
 from manim import LEFT
 from manim import RED_D as RED
-from manim import Mobject, Point, Text, VGroup
+from manim import SMALL_BUFF, Mobject, Point, Text, VGroup
 
 from tempyral import simulation
 from tempyral.animation.entity import (
@@ -13,8 +13,6 @@ from tempyral.animation.entity import (
     ProxyEntityWithChildren,
     VisualElement,
 )
-
-InvisibleMobject = Point
 
 
 class HistoryEvent(ProxyEntity[simulation.HistoryEvent]):
@@ -30,7 +28,9 @@ class HistoryEvent(ProxyEntity[simulation.HistoryEvent]):
 class HistoryEvents(VisualElement):
     @staticmethod
     def newm(events: Iterable[simulation.HistoryEvent]) -> Mobject:
-        return VGroup(*map(HistoryEvent.newm, events)).arrange(DOWN)
+        return VGroup(*map(HistoryEvent.newm, events)).arrange(
+            DOWN, buff=SMALL_BUFF, aligned_edge=LEFT
+        )
 
 
 class History(
@@ -41,7 +41,9 @@ class History(
 
     @staticmethod
     def newm(_: simulation.History) -> Mobject:
-        return InvisibleMobject()
+        m = Point(color=BLACK)
+        m.set_stroke_width(0)
+        return m
 
     @staticmethod
     def get_child_entities(entity: simulation.History) -> List[simulation.HistoryEvent]:
