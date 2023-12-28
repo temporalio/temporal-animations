@@ -190,10 +190,15 @@ class Server(Entity):
         await self.write_history_events(
             workflow_id,
             HistoryEventType.ACTIVITY_TASK_COMPLETED,
-            HistoryEventType.WFT_SCHEDULED,
             seen_by_sticky_worker=False,
+            publish=False,
             result=result,
             token=token,
+        )
+        await self.write_history_events(
+            workflow_id,
+            HistoryEventType.WFT_SCHEDULED,
+            seen_by_sticky_worker=False,
         )
 
     async def write_history_events(
@@ -201,6 +206,7 @@ class Server(Entity):
         workflow_id: WorkflowId,
         *event_types: HistoryEventType,
         seen_by_sticky_worker: bool,
+        publish=True,
         **kwargs: Hashable,
     ) -> List[HistoryEvent]:
         events = [
@@ -208,7 +214,8 @@ class Server(Entity):
             for e in event_types
         ]
         self.namespace[workflow_id].events.extend(events)
-        await self.publish_change_event()
+        if publish:
+            await self.publish_change_event()
         return events
 
     def establish_workflow_worker_long_poll_connection(
@@ -246,7 +253,6 @@ class Server(Entity):
                     seen_by_sticky_worker=True,
                 )
             )
-            await self.publish_change_event()
             [queue] = self.activity_worker_long_poll_connections.values()
             await queue.put(
                 ActivityTask(workflow_id, token=int(at_scheduled_event.data["token"]))  # type: ignore
@@ -259,7 +265,6 @@ class Server(Entity):
                     seen_by_sticky_worker=True,
                 )
             )
-            await self.publish_change_event()
             [queue] = self.workflow_worker_long_poll_connections.values()
             await queue.put(WorkflowTask(workflow_id, events))
 
