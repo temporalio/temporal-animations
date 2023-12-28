@@ -4,15 +4,18 @@ from copy import deepcopy
 from typing import Any, Callable, Hashable, Self
 
 from tempyral import log
-from tempyral.event_bus import (
-    MessageEvent,
-    StateChangeEvent,
-    TerminateSimulation,
-    event_bus,
-)
+from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
 
 
 class Entity:
+    """
+    An entity in the simulation.
+
+    It can publish two types of events to a renderer:
+    - a change to its internal state
+    - a message between two entities
+    """
+
     next_id = defaultdict(int)
     terminate_simulation: Callable
 
@@ -30,17 +33,24 @@ class Entity:
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id})"
 
-    def clone(self) -> Self:
+    __publish__ = ["id"]
+
+    def publish(self) -> Self:
         return deepcopy(self)
+
+    def __getstate__(self) -> dict:
+        return {k: v for k, v in self.__dict__.items() if k in self.__publish__}
 
     async def publish_change_event(self):
         log(f"{self}", "S: publish change")
-        await event_bus.publish(StateChangeEvent(self.clone()))
+        await event_bus.publish(StateChangeEvent(self.publish()))
         await asyncio.sleep(0)
 
     async def publish_message_event(
         self, sender: "Entity", receiver: "Entity", **kwargs: Hashable
     ):
         log(f"{sender} -> {receiver}, {kwargs}", "S: publish message")
-        await event_bus.publish(MessageEvent(sender.clone(), receiver.clone(), kwargs))
+        await event_bus.publish(
+            MessageEvent(sender.publish(), receiver.publish(), kwargs)
+        )
         await asyncio.sleep(0)

@@ -32,9 +32,6 @@ class Worker(Entity, ABC, Generic[T]):
     async def handle_task(self, task: T, server: Server):
         ...
 
-    def __getstate__(self) -> dict:
-        return {k: v for k, v in self.__dict__.items() if k != "long_poll_connection"}
-
 
 class ActivityWorker(Worker[ActivityTask]):
     def __init__(self, server: Server):
@@ -77,6 +74,8 @@ class Workflow(Entity, ABC):
         self.code, commands = self.parse_code(self.language)
         self.commands = iter(commands)
         self.blocked_expressions: Set[int] = set()
+
+    __publish__ = ["id", "code", "language", "blocked_expressions"]
 
     def _get_language(self) -> Language:
         available_languages = list(COMMENT_MARKERS)
@@ -130,6 +129,8 @@ class WorkflowWorker(Worker[WorkflowTask]):
         self.long_poll_connection = (
             server.establish_workflow_worker_long_poll_connection(self)
         )
+
+    __publish__ = ["id", "workflows"]
 
     @property
     def workflow(self) -> Workflow:

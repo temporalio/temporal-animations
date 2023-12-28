@@ -1,9 +1,7 @@
 import os
 from asyncio import Queue
 from collections import OrderedDict
-from copy import deepcopy
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, Hashable, List, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Dict, Hashable, List, TypedDict, Union
 
 from tempyral import log
 from tempyral.simulation.api import (
@@ -39,6 +37,8 @@ class HistoryEvent(Entity):
         self.seen_by_worker = seen_by_sticky_worker
         self.data = kwargs
 
+    __publish__ = ["id", "seen_by_worker", "data", "event_type"]
+
     def __repr__(self) -> str:
         star = "*" if self.seen_by_worker else ""
         data = f"({self.data})" if self.data else ""
@@ -52,6 +52,8 @@ class History(Entity):
         self.workflow_id = workflow_id
         self.events = events
         super().__init__()
+
+    __publish__ = ["id", "events"]
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(workflow_id={self.workflow_id},id={self.id}: events={self.events})"
@@ -97,11 +99,7 @@ class Server(Entity):
             ActivityWorker, Queue[ActivityTask]
         ] = {}
 
-    def clone(self) -> "Server":
-        cloned = Server()
-        cloned.shards = deepcopy(self.shards)
-        cloned.id = self.id
-        return cloned
+    __publish__ = ["id", "shards"]
 
     def __repr__(self) -> str:
         namespace = {
