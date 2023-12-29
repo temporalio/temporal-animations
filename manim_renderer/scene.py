@@ -107,17 +107,13 @@ class TemporalScene(Scene):
         Create proxy entities and add them to the manim scene.
         """
         renderer.set_scene(self)
-        server = renderer.Server(simulation_server)
-        [app] = [
-            renderer.Application(simulation_app) for simulation_app in simulation_apps
-        ]
+        server = renderer.Server(simulation_server.publish())
+        [app] = [renderer.Application(a.publish()) for a in simulation_apps]
         [wworker] = [
-            renderer.WorkflowWorker(sim_wworker)
-            for sim_wworker in simulation_workflow_workers
+            renderer.WorkflowWorker(w.publish()) for w in simulation_workflow_workers
         ]
         [aworker] = [
-            renderer.ActivityWorker(sim_aworker)
-            for sim_aworker in simulation_activity_workers
+            renderer.ActivityWorker(w.publish()) for w in simulation_activity_workers
         ]
 
         app.set_dock_direction(RIGHT).mobj.align_on_border(UP).align_on_border(
@@ -139,7 +135,7 @@ class TemporalScene(Scene):
             [server, *[app], *[wworker]],
             [simulation_server, *simulation_apps, *simulation_workflow_workers],
         ):
-            a.update(s)  # type:ignore
+            a.update(s.publish())  # type: ignore
 
         return server, [app], [wworker]
 
