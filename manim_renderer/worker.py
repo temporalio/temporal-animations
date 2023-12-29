@@ -15,7 +15,7 @@ from manim_renderer.message import (
 
 
 class ActivityTask(ProxyEntityResponseMessage[tempyral.ActivityTask]):
-    def render(self, _: tempyral.ActivityTask) -> Mobject:
+    def render(self, entity: tempyral.ActivityTask) -> Mobject:
         return mobject.message("Activity Task")
 
 
