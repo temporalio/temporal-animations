@@ -114,8 +114,7 @@ class ProxyEntity(Generic[E], VisualElement):
         self.scene.play(ApplyMethod(message.mobj.move_to, halfway))
         self.scene.wait(0.5)
         self.scene.play(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
-        if message.message_stage == MessageStage.Response:
-            self.scene.remove(message.mobj)
+        self.scene.remove(message.mobj)
         self.scene.wait()
 
 
