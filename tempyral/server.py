@@ -1,24 +1,10 @@
-import asyncio
 import os
 from asyncio import Queue
 from collections import OrderedDict
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Hashable,
-    List,
-    Optional,
-    TypedDict,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Dict, Hashable, List, Optional, TypedDict, Union
 
 from log import log
 from tempyral.api import (
-    ApplicationRequest,
-    ApplicationRequestType,
-    ApplicationResponse,
     Command,
     CommandType,
     HistoryEventType,
@@ -30,6 +16,7 @@ from tempyral.api import (
     WorkflowId,
 )
 from tempyral.entity import Entity
+from tempyral.message import ApplicationRequest, ApplicationResponse
 
 if TYPE_CHECKING:
     from tempyral.worker import ActivityWorker, WorkflowWorker

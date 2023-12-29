@@ -3,8 +3,8 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Callable, Hashable, Self
 
-from log import log
 from event_bus import MessageEvent, StateChangeEvent, event_bus
+from log import log
 
 
 class Entity:
@@ -25,6 +25,9 @@ class Entity:
         self.id = self.next_id[key]
 
     def __hash__(self) -> int:
+        # Cloned instances have the same hash value. The cloned instances are
+        # published to the event bus; sharing hash values like this allows event
+        # bus consumers to track entity identities across different events.
         return hash((type(self).__name__, self.id))
 
     def __eq__(self, other: Any) -> bool:
