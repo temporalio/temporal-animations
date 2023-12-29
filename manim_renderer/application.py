@@ -3,7 +3,7 @@ from manim import DOWN, LEFT, SMALL_BUFF, Mobject, VGroup
 import tempyral
 from manim_renderer import mobject
 from manim_renderer.code import ProxyEntityWithCode
-from manim_renderer.entity import Message, MessageStage, VisualElement
+from manim_renderer.message import Message, MessageStage
 
 
 class ApplicationRequest(Message):

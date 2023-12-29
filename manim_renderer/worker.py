@@ -5,14 +5,9 @@ from manim import LEFT, WHITE, Mobject, SurroundingRectangle, Text, VGroup
 import tempyral
 from manim_renderer import mobject
 from manim_renderer.code import ProxyEntityWithCode
-from manim_renderer.entity import (
-    Message,
-    MessageStage,
-    ProxyEntity,
-    ProxyEntityMessage,
-    ProxyEntityWithChildren,
-)
+from manim_renderer.entity import MessageStage, ProxyEntity, ProxyEntityWithChildren
 from manim_renderer.history import HistoryEvents
+from manim_renderer.message import Message, ProxyEntityMessage
 
 
 class ActivityTask(ProxyEntityMessage[tempyral.ActivityTask]):

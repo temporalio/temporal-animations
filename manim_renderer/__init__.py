@@ -9,13 +9,8 @@ from manim_renderer.application import (
     ApplicationRequest,
     ApplicationResponse,
 )
-from manim_renderer.entity import (
-    Message,
-    ProxyEntity,
-    ProxyEntityMessage,
-    VisualElement,
-    proxy_entity_registry,
-)
+from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
+from manim_renderer.message import Message, ProxyEntityMessage
 from manim_renderer.server import Server
 from manim_renderer.worker import (
     ActivityTask,

@@ -3,7 +3,18 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import Enum
-from typing import Any, Dict, Generic, List, Protocol, Self, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generic,
+    List,
+    Protocol,
+    Self,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 from manim import (
@@ -21,7 +32,15 @@ from manim.typing import Point3D, Vector3
 import tempyral
 from log import log
 
+if TYPE_CHECKING:
+    from manim_renderer.message import Message, ProxyEntityMessage
+
 E = TypeVar("E", bound=tempyral.Entity)
+
+
+class MessageStage(Enum):
+    Request = 1
+    Response = 2
 
 
 class VisualElement(ABC):
@@ -43,19 +62,6 @@ class VisualElement(ABC):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}"
-
-
-class MessageStage(Enum):
-    Request = 1
-    Response = 2
-
-
-class HasMessageStage(Protocol):
-    message_stage: MessageStage
-
-
-class Message(VisualElement, HasMessageStage):
-    pass
 
 
 class Root(VisualElement):
@@ -103,7 +109,7 @@ class ProxyEntity(Generic[E], VisualElement):
             self.mobj.become(mobj)
 
     def send_message(
-        self, receiver: "ProxyEntity", message: Union[Message, "ProxyEntityMessage"]
+        self, receiver: "ProxyEntity", message: Union["Message", "ProxyEntityMessage"]
     ):
         """
         Animate sending a message.
@@ -122,10 +128,6 @@ class ProxyEntity(Generic[E], VisualElement):
         if message.message_stage == MessageStage.Response:
             self.scene.remove(message.mobj)
         self.scene.wait()
-
-
-class ProxyEntityMessage(ProxyEntity, HasMessageStage, Generic[E]):
-    pass
 
 
 F = TypeVar("F", bound=tempyral.Entity)
