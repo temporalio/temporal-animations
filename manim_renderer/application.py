@@ -3,15 +3,19 @@ from manim import DOWN, LEFT, SMALL_BUFF, Mobject, VGroup
 import tempyral
 from manim_renderer import mobject
 from manim_renderer.code import ProxyEntityWithCode
-from manim_renderer.entity import VisualElement
+from manim_renderer.entity import Message, MessageStage, VisualElement
 
 
-class ApplicationRequest(VisualElement):
+class ApplicationRequest(Message):
+    message_stage = MessageStage.Request
+
     def render(self, request: tempyral.ApplicationRequest) -> Mobject:
         return mobject.message(request.request_type.name)
 
 
-class ApplicationResponse(VisualElement):
+class ApplicationResponse(Message):
+    message_stage = MessageStage.Response
+
     def render(self, response: tempyral.ApplicationResponse) -> Mobject:
         return mobject.message(response.request.request_type.name)
 

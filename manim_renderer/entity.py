@@ -2,7 +2,8 @@
 Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
-from typing import Any, Dict, Generic, List, Self, Type, TypeVar
+from enum import Enum
+from typing import Any, Dict, Generic, List, Protocol, Self, Type, TypeVar, Union
 
 import numpy as np
 from manim import (
@@ -42,6 +43,19 @@ class VisualElement(ABC):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}"
+
+
+class MessageStage(Enum):
+    Request = 1
+    Response = 2
+
+
+class HasMessageStage(Protocol):
+    message_stage: MessageStage
+
+
+class Message(VisualElement, HasMessageStage):
+    pass
 
 
 class Root(VisualElement):
@@ -89,9 +103,7 @@ class ProxyEntity(Generic[E], VisualElement):
             self.mobj.become(mobj)
 
     def send_message(
-        self,
-        receiver: "ProxyEntity",
-        message: VisualElement,
+        self, receiver: "ProxyEntity", message: Union[Message, "ProxyEntityMessage"]
     ):
         """
         Animate sending a message.
@@ -107,8 +119,13 @@ class ProxyEntity(Generic[E], VisualElement):
         self.scene.play(ApplyMethod(message.mobj.move_to, halfway))
         self.scene.wait(0.5)
         self.scene.play(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
-        self.scene.remove(message.mobj)
+        if message.message_stage == MessageStage.Response:
+            self.scene.remove(message.mobj)
         self.scene.wait()
+
+
+class ProxyEntityMessage(ProxyEntity, HasMessageStage, Generic[E]):
+    pass
 
 
 F = TypeVar("F", bound=tempyral.Entity)

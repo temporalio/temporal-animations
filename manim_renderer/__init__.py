@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Union
 
 from manim import Scene
 
@@ -9,7 +9,13 @@ from manim_renderer.application import (
     ApplicationRequest,
     ApplicationResponse,
 )
-from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
+from manim_renderer.entity import (
+    Message,
+    ProxyEntity,
+    ProxyEntityMessage,
+    VisualElement,
+    proxy_entity_registry,
+)
 from manim_renderer.server import Server
 from manim_renderer.worker import (
     ActivityTask,
@@ -48,7 +54,7 @@ async def process_simulation_events():
 
 def _get_message_cls_for(
     sender: ProxyEntity, receiver: ProxyEntity
-) -> Type[VisualElement]:
+) -> Union[Type[Message], Type[ProxyEntityMessage]]:
     match (type(sender), type(receiver)):
         case sr if sr == (Application, Server):
             return ApplicationRequest

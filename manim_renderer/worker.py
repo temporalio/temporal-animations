@@ -5,16 +5,26 @@ from manim import LEFT, WHITE, Mobject, SurroundingRectangle, Text, VGroup
 import tempyral
 from manim_renderer import mobject
 from manim_renderer.code import ProxyEntityWithCode
-from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren, VisualElement
+from manim_renderer.entity import (
+    Message,
+    MessageStage,
+    ProxyEntity,
+    ProxyEntityMessage,
+    ProxyEntityWithChildren,
+)
 from manim_renderer.history import HistoryEvents
 
 
-class ActivityTask(ProxyEntity[tempyral.ActivityTask]):
+class ActivityTask(ProxyEntityMessage[tempyral.ActivityTask]):
+    message_stage = MessageStage.Response
+
     def render(self, _: tempyral.ActivityTask) -> Mobject:
         return mobject.message("Activity Task")
 
 
-class ActivityTaskCompleted(VisualElement):
+class ActivityTaskCompleted(Message):
+    message_stage = MessageStage.Response
+
     def render(self) -> Mobject:
         return mobject.message("ActivityTaskCompleted")
 
@@ -36,14 +46,21 @@ class BoxedHistoryEvents(HistoryEvents):
         return VGroup(rect, eventsm)
 
 
-class WorkflowTask(ProxyEntity[tempyral.WorkflowTask]):
+class WorkflowTask(ProxyEntityMessage[tempyral.WorkflowTask]):
+    message_stage = MessageStage.Response
+
     def render(self, entity: tempyral.WorkflowTask) -> Mobject:
         eventsm = BoxedHistoryEvents.render(entity.events)
         task = mobject.message("WFT")
         return VGroup(task, eventsm).arrange()
 
 
-class WorkerRequest(VisualElement):
+class WorkerRequest(Message):
+    # For example RespondWorkflowTaskCompleted. It's really a Request, but the
+    # response isn't interesting, so we model the request as a response and do
+    # not visualize the true response.
+    message_stage = MessageStage.Response
+
     def render(self, name: str) -> Mobject:
         return mobject.message(name)
 
