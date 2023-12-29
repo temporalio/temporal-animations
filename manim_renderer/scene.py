@@ -22,6 +22,7 @@ from manim import (
 )
 
 import manim_renderer as renderer
+from manim_renderer.utils import debug
 from tempyral import (
     ActivityWorker,
     Application,
@@ -67,9 +68,9 @@ class TemporalScene(Scene):
             worker.poll(server) for worker in workflow_workers + activity_workers
         ]
         for app in apps:
-            coros.extend(app.get_coroutines(server))
+            coros.extend(map(debug, app.get_coroutines(server)))
         if render:
-            coros.append(renderer.process_simulation_events())
+            coros.append(debug(renderer.process_simulation_events()))
 
         try:
             async with asyncio.TaskGroup() as tg:
