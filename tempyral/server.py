@@ -14,6 +14,8 @@ from typing import (
     cast,
 )
 
+from attr import dataclass
+
 from log import log
 from tempyral.api import (
     ApplicationRequest,
@@ -65,10 +67,22 @@ class History(Entity):
         self.events = events
         super().__init__()
 
-    __publish__ = {"id", "events"}
+    __publish__ = {"id", "events", "workflow_id"}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(workflow_id={self.workflow_id},id={self.id}: events={self.events})"
+
+
+@dataclass
+class UpdateInfo:
+    workflow_id: WorkflowId
+    update_name: str
+
+
+@dataclass
+class WorkflowData:
+    history: History
+    pending_updates: List[UpdateInfo]
 
 
 class WorkflowTask(Entity):
@@ -83,7 +97,7 @@ class WorkflowTask(Entity):
         return f"{type(self).__name__}(id={self.id}: events={self.events})"
 
 
-Namespace = OrderedDict[WorkflowId, History]
+Namespace = OrderedDict[WorkflowId, WorkflowData]
 Shard = Dict[NamespaceId, Namespace]
 
 
@@ -110,7 +124,6 @@ class Server(Entity):
         self.activity_worker_long_poll_connections: Dict[
             ActivityWorker, Queue[ActivityTask]
         ] = {}
-
         self.in_flight_application_request_channels: Dict[
             NamespaceId,
             OrderedDict[Tuple[ApplicationRequestType, WorkflowId], Queue[HistoryEvent]],
@@ -132,9 +145,9 @@ class Server(Entity):
 
     def __repr__(self) -> str:
         namespace = {
-            w: ", ".join(repr(e) for e in h.events)
-            for w, h in self.namespace.items()
-            if h.events
+            w: ", ".join(repr(e) for e in wd.history.events)
+            for w, wd in self.namespace.items()
+            if wd.history.events
         }
         return f"{type(self).__name__}(id={self.id}: namespace={namespace})"
 
@@ -234,13 +247,13 @@ class Server(Entity):
                         "",
                         "S: Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])",
                     )
-                    _, wf_completed_event = await self.write_history_events(
+                    [event] = await self.write_history_events(
                         workflow_id,
                         HistoryEventType.WF_COMPLETED,
                         seen_by_sticky_worker=True,
                     )
                     key = ApplicationRequestType.ExecuteWorkflow, workflow_id
-                    await chans[key].put(wf_completed_event)
+                    await chans[key].put(event)
                 case _:
                     raise ValueError(
                         f"Server does not support command of type: {command.command_type}"
@@ -275,9 +288,9 @@ class Server(Entity):
             HistoryEvent(e, seen_by_sticky_worker=seen_by_sticky_worker, **kwargs)
             for e in event_types
         ]
-        self.namespace.setdefault(workflow_id, History(workflow_id, [])).events.extend(
-            events
-        )
+        self.namespace.setdefault(
+            workflow_id, WorkflowData(History(workflow_id, []), [])
+        ).history.events.extend(events)
         if publish:
             await self.publish_change_event()
         await self.dispatch_workflow_or_activity_task(workflow_id)
@@ -298,7 +311,7 @@ class Server(Entity):
         return connection
 
     async def dispatch_workflow_or_activity_task(self, workflow_id: WorkflowId):
-        events = iter(self.namespace[workflow_id].events)
+        events = iter(self.namespace[workflow_id].history.events)
         event = next((e for e in events if not e.seen_by_worker), None)
         if event is None:
             return
@@ -340,7 +353,7 @@ class Server(Entity):
             await queue.put(WorkflowTask(workflow_id, events))
 
     @property
-    def namespace(self) -> OrderedDict[WorkflowId, History]:
+    def namespace(self) -> OrderedDict[WorkflowId, WorkflowData]:
         """
         Return the sole namespace.
 

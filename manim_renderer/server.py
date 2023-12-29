@@ -20,4 +20,4 @@ class Server(ProxyEntityWithChildren[tempyral.Server, tempyral.History, History]
 
     @staticmethod
     def get_child_entities(entity: tempyral.Server) -> List[tempyral.History]:
-        return list(entity.namespace.values())
+        return [w.history for w in entity.namespace.values()]

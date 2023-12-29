@@ -65,7 +65,7 @@ class TemporalScene(Scene):
         render: bool,
     ):
         coros: List[Coroutine] = [
-            worker.poll(server) for worker in workflow_workers + activity_workers
+            debug(w.poll(server)) for w in workflow_workers + activity_workers
         ]
         for app in apps:
             coros.extend(map(debug, app.get_coroutines(server)))
@@ -116,9 +116,9 @@ class TemporalScene(Scene):
             renderer.ActivityWorker(w.clone()) for w in simulation_activity_workers
         ]
 
-        app.set_dock_direction(RIGHT).mobj.align_on_border(UP).align_on_border(
-            LEFT, buff=SMALL_BUFF
-        )
+        app.set_dock_direction(RIGHT).mobj.align_on_border(
+            UP, buff=SMALL_BUFF
+        ).align_on_border(LEFT, buff=SMALL_BUFF)
         aworker.set_dock_direction(RIGHT).mobj.next_to(app.mobj, DOWN).align_to(
             app.mobj, LEFT
         ).shift(DOWN)
