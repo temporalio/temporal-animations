@@ -1,4 +1,5 @@
 import asyncio
+import os
 import sys
 import traceback
 from datetime import datetime
@@ -17,6 +18,7 @@ from manim import (
     Dot,
     Scene,
     Text,
+    config,
 )
 
 import manim_renderer as renderer
@@ -29,6 +31,9 @@ from tempyral import (
     Workflow,
     WorkflowWorker,
 )
+
+if os.getenv("MANIM_DRY_RUN"):
+    config.dry_run = True
 
 
 class TemporalScene(Scene):
