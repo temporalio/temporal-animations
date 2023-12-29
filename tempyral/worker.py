@@ -59,9 +59,7 @@ class Workflow(EntityWithCode, ABC):
         if not hasattr(self, "language"):
             self.language = self._get_language()
         self.code, directives = self.parse_code(self.language)
-        commands = [Command(eval(code), line_num) for code, line_num in directives]
-        commands.append(Command(CommandType.COMPLETE_WORKFLOW_EXECUTION, None))
-        self.commands = iter(commands)
+        self.commands = (Command(eval(code), line_num) for code, line_num in directives)
         self.blocked_expressions = set()
         super().__init__()
 
