@@ -17,10 +17,10 @@ class Application(EntityWithCode):
         for directive, line_num in raw_requests:
             try:
                 code, workflow_id = directive.split()
-                match eval(code):
-                    case ApplicationRequestType.ExecuteWorkflow as req:
+                match req := eval(code):
+                    case ApplicationRequestType.ExecuteWorkflow:
                         requests.append(
-                            ApplicationRequest(eval(workflow_id), req, line_num)
+                            ApplicationRequest(req, eval(workflow_id), line_num)
                         )
                     case _:
                         raise ValueError

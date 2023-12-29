@@ -142,7 +142,7 @@ class Server(Entity):
         self, request: Union[ApplicationRequest, WorkerRequest]
     ) -> Optional[ApplicationResponse]:
         match request:
-            case ApplicationRequest():
+            case ApplicationRequest(ApplicationRequestType.ExecuteWorkflow):
                 return await self.execute_workflow(request)
             case RespondWorkflowTaskCompleted(workflow_id, commands):
                 if os.path.exists("/tmp/flag"):
@@ -198,6 +198,13 @@ class Server(Entity):
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler.go#L166
     async def handle_commands(self, workflow_id, commands: List[Command]):
+        chans = self.in_flight_application_request_channels[DEFAULT_NAMESPACE]
+
+        await self.write_history_events(
+            workflow_id,
+            HistoryEventType.WFT_COMPLETED,
+            seen_by_sticky_worker=True,
+        )
         for command in commands:
             match command.command_type:
                 case CommandType.SCHEDULE_ACTIVITY_TASK:
@@ -214,13 +221,9 @@ class Server(Entity):
                     )
                     _, wf_completed_event = await self.write_history_events(
                         workflow_id,
-                        HistoryEventType.WFT_COMPLETED,
                         HistoryEventType.WF_COMPLETED,
                         seen_by_sticky_worker=True,
                     )
-                    chans = self.in_flight_application_request_channels[
-                        DEFAULT_NAMESPACE
-                    ]
                     key = ApplicationRequestType.ExecuteWorkflow, workflow_id
                     await chans[key].put(wf_completed_event)
                 case _:
