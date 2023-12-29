@@ -1,9 +1,8 @@
 from asyncio import Queue
 from typing import Coroutine, Iterable
 
-from tempyral.api import ApplicationRequestType
+from tempyral.api import ApplicationRequest, ApplicationRequestType
 from tempyral.code import EntityWithCode
-from tempyral.message import ApplicationRequest
 from tempyral.server import Server
 
 
@@ -46,9 +45,9 @@ class Application(EntityWithCode):
                 if request.token is not None:
                     self.blocked_expressions.add(request.token)
                     await self.publish_change_event()
-                await self.publish_message_event(self, server, entity=request)
+                await self.publish_message_event(self, server, request=request)
                 response = await server.handle_request(request)
-                await self.publish_message_event(server, self, entity=response)
+                await self.publish_message_event(server, self, response=response)
                 assert response
                 if response.request.token:
                     self.blocked_expressions.remove(response.request.token)
