@@ -40,6 +40,12 @@ class ApplicationRequest:
 
 
 @dataclass(frozen=True)
+class ApplicationResponse:
+    request: ApplicationRequest
+    payload: Any
+
+
+@dataclass(frozen=True)
 class WorkerRequest:
     workflow_id: WorkflowId
 
@@ -63,7 +69,7 @@ class CommandType(Enum):
     MODIFY_WORKFLOW_PROPERTIES = 16
 
 
-@dataclass
+@dataclass(frozen=True)
 class Command:
     command_type: CommandType
     token: Optional[int]

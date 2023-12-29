@@ -2,7 +2,13 @@ from typing import Type
 
 from manim import Scene
 
-from manim_renderer.application import Application, ApplicationRequest
+from event_bus import MessageEvent, StateChangeEvent, TerminateSimulation, event_bus
+from log import log
+from manim_renderer.application import (
+    Application,
+    ApplicationRequest,
+    ApplicationResponse,
+)
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
 from manim_renderer.server import Server
 from manim_renderer.worker import (
@@ -12,13 +18,6 @@ from manim_renderer.worker import (
     WorkerRequest,
     WorkflowTask,
     WorkflowWorker,
-)
-from log import log
-from event_bus import (
-    MessageEvent,
-    StateChangeEvent,
-    TerminateSimulation,
-    event_bus,
 )
 
 
@@ -53,6 +52,8 @@ def _get_message_cls_for(
     match (type(sender), type(receiver)):
         case sr if sr == (Application, Server):
             return ApplicationRequest
+        case sr if sr == (Server, Application):
+            return ApplicationResponse
         case sr if sr == (WorkflowWorker, Server):
             return WorkerRequest
         case sr if sr == (ActivityWorker, Server):

@@ -11,6 +11,11 @@ class ApplicationRequest(VisualElement):
         return mobject.message(request.request_type.name)
 
 
+class ApplicationResponse(VisualElement):
+    def render(self, response: tempyral.ApplicationResponse) -> Mobject:
+        return mobject.message(response.request.request_type.name)
+
+
 class Application(ProxyEntityWithCode[tempyral.Application]):
     def render(self, entity: tempyral.Application) -> Mobject:
         code = super().render(entity)

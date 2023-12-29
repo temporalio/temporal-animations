@@ -1,12 +1,24 @@
+import asyncio
 import os
 from asyncio import Queue
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Dict, Hashable, List, TypedDict, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Hashable,
+    List,
+    Optional,
+    TypedDict,
+    Union,
+    cast,
+)
 
 from log import log
 from tempyral.api import (
     ApplicationRequest,
     ApplicationRequestType,
+    ApplicationResponse,
     Command,
     CommandType,
     HistoryEventType,
@@ -98,6 +110,9 @@ class Server(Entity):
         self.activity_worker_long_poll_connections: Dict[
             ActivityWorker, Queue[ActivityTask]
         ] = {}
+        self.workflow_result_channels: Dict[
+            NamespaceId, Dict[WorkflowId, Queue[HistoryEvent]]
+        ] = {DEFAULT_NAMESPACE: {}}
 
     __publish__ = ["id", "shards"]
 
@@ -109,35 +124,39 @@ class Server(Entity):
         }
         return f"{type(self).__name__}(id={self.id}: namespace={namespace})"
 
-    async def handle_request(self, request: Union[ApplicationRequest, WorkerRequest]):
-        workflow_id: WorkflowId
+    async def handle_request(
+        self, request: Union[ApplicationRequest, WorkerRequest]
+    ) -> Optional[ApplicationResponse]:
         match request:
-            case ApplicationRequest(
-                workflow_id, ApplicationRequestType.StartWorkflowExecution
-            ):
-                workflow_id = workflow_id
-                await self.start_workflow_execution(workflow_id)
+            case ApplicationRequest():
+                return await self.execute_workflow(request)
             case RespondWorkflowTaskCompleted(workflow_id, commands):
                 if os.path.exists("/tmp/flag"):
                     self.terminate_simulation()
-                workflow_id = workflow_id
                 await self.handle_commands(workflow_id, commands)
             case RespondActivityTaskCompleted(workflow_id, result, token):
-                workflow_id = workflow_id
                 await self.handle_activity_task_completed(workflow_id, result, token)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
-        # If this request resulted in new WFTs or ATs then dispatch them.
-        await self.dispatch_workflow_or_activity_task(workflow_id)
-
-    async def start_workflow_execution(self, workflow_id: WorkflowId):
+    async def execute_workflow(
+        self, request: ApplicationRequest
+    ) -> ApplicationResponse:
+        workflow_id = request.workflow_id
         await self.write_history_events(
             workflow_id,
             HistoryEventType.WF_STARTED,
             HistoryEventType.WFT_SCHEDULED,
             seen_by_sticky_worker=False,
         )
+        assert (
+            workflow_id not in self.workflow_result_channels[DEFAULT_NAMESPACE]
+        ), "Multiple concurrent workflow executions for same workflow ID"
+        chan: Queue[HistoryEvent] = Queue(maxsize=1)
+        self.workflow_result_channels[DEFAULT_NAMESPACE][workflow_id] = chan
+        event = await chan.get()
+        del self.workflow_result_channels[DEFAULT_NAMESPACE][workflow_id]
+        return ApplicationResponse(request, event.data.get("payload"))
 
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler.go#L166
@@ -156,13 +175,15 @@ class Server(Entity):
                         "",
                         "S: Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])",
                     )
-                    await self.write_history_events(
+                    _, wf_completed_event = await self.write_history_events(
                         workflow_id,
                         HistoryEventType.WFT_COMPLETED,
                         HistoryEventType.WF_COMPLETED,
                         seen_by_sticky_worker=True,
                     )
-                    self.terminate_simulation()
+                    await self.workflow_result_channels[DEFAULT_NAMESPACE][
+                        workflow_id
+                    ].put(wf_completed_event)
                 case _:
                     raise ValueError(
                         f"Server does not support command of type: {command.command_type}"
@@ -202,6 +223,7 @@ class Server(Entity):
         )
         if publish:
             await self.publish_change_event()
+        await self.dispatch_workflow_or_activity_task(workflow_id)
         return events
 
     def establish_workflow_worker_long_poll_connection(
@@ -227,14 +249,14 @@ class Server(Entity):
         assert all(
             not e.seen_by_worker for e in events
         ), "Expected seen_by_sticky_worker to define a unique high watermark"
-        for e in events:
-            e.seen_by_worker = True
         if any(
             e.event_type == HistoryEventType.ACTIVITY_TASK_SCHEDULED for e in events
         ):
             assert (
                 len(events) == 1
             ), "Expected ACTIVITY_TASK_SCHEDULED event to be sole unseen event"
+            for e in events:
+                e.seen_by_worker = True
             [at_scheduled_event] = events
             events.extend(
                 await self.write_history_events(
@@ -247,7 +269,9 @@ class Server(Entity):
             await queue.put(
                 ActivityTask(workflow_id, token=int(at_scheduled_event.data["token"]))  # type: ignore
             )
-        else:
+        elif any(e.event_type == HistoryEventType.WFT_SCHEDULED for e in events):
+            for e in events:
+                e.seen_by_worker = True
             events.extend(
                 await self.write_history_events(
                     workflow_id,
