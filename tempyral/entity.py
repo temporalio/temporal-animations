@@ -39,7 +39,7 @@ class Entity:
     # available to consumers (JSON, JSONSchema).
     __publish__ = {"id"}
 
-    def publish(self) -> Self:
+    def clone(self) -> Self:
         cloned = deepcopy(self)
         # Computed properties to be cloned must be named with a _ prefix.
         for k in self.__publish__ - self.__dict__.keys():
@@ -55,14 +55,12 @@ class Entity:
 
     async def publish_change_event(self):
         log(f"{self}", "S: publish change")
-        await event_bus.publish(StateChangeEvent(self.publish()))
+        await event_bus.publish(StateChangeEvent(self.clone()))
         await asyncio.sleep(0)
 
     async def publish_message_event(
         self, sender: "Entity", receiver: "Entity", **kwargs: Hashable
     ):
         log(f"{sender} -> {receiver}, {kwargs}", "S: publish message")
-        await event_bus.publish(
-            MessageEvent(sender.publish(), receiver.publish(), kwargs)
-        )
+        await event_bus.publish(MessageEvent(sender.clone(), receiver.clone(), kwargs))
         await asyncio.sleep(0)
