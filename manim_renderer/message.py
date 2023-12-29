@@ -13,3 +13,19 @@ class Message(VisualElement, HasMessageStage):
 
 class ProxyEntityMessage(ProxyEntity, HasMessageStage, Generic[E]):
     pass
+
+
+class RequestMessage(Message):
+    message_stage = MessageStage.Request
+
+
+class ProxyEntityRequestMessage(ProxyEntity, Generic[E]):
+    message_stage = MessageStage.Request
+
+
+class ResponseMessage(Message):
+    message_stage = MessageStage.Response
+
+
+class ProxyEntityResponseMessage(ProxyEntity, Generic[E]):
+    message_stage = MessageStage.Response

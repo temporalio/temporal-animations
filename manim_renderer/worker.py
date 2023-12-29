@@ -1,25 +1,27 @@
 from typing import Iterable, List
 
-from manim import LEFT, WHITE, Mobject, SurroundingRectangle, Text, VGroup
+from manim import LEFT, WHITE, Mobject, SurroundingRectangle, VGroup
 
 import tempyral
 from manim_renderer import mobject
 from manim_renderer.code import ProxyEntityWithCode
 from manim_renderer.entity import MessageStage, ProxyEntity, ProxyEntityWithChildren
 from manim_renderer.history import HistoryEvents
-from manim_renderer.message import Message, ProxyEntityMessage
+from manim_renderer.message import (
+    ProxyEntityMessage,
+    ProxyEntityResponseMessage,
+    ResponseMessage,
+)
 
 
-class ActivityTask(ProxyEntityMessage[tempyral.ActivityTask]):
-    message_stage = MessageStage.Response
-
+class ActivityTask(ProxyEntityResponseMessage[tempyral.ActivityTask]):
     def render(self, _: tempyral.ActivityTask) -> Mobject:
         return mobject.message("Activity Task")
 
 
-class ActivityTaskCompleted(Message):
-    message_stage = MessageStage.Response
-
+class ActivityTaskCompleted(ResponseMessage):
+    # It's really a Request, but the response isn't interesting, so we model the
+    # request as a response and do not visualize the true response.
     def render(self) -> Mobject:
         return mobject.message("ActivityTaskCompleted")
 
@@ -41,20 +43,17 @@ class BoxedHistoryEvents(HistoryEvents):
         return VGroup(rect, eventsm)
 
 
-class WorkflowTask(ProxyEntityMessage[tempyral.WorkflowTask]):
-    message_stage = MessageStage.Response
-
+class WorkflowTask(ProxyEntityResponseMessage[tempyral.WorkflowTask]):
     def render(self, entity: tempyral.WorkflowTask) -> Mobject:
         eventsm = BoxedHistoryEvents.render(entity.events)
         task = mobject.message("WFT")
         return VGroup(task, eventsm).arrange()
 
 
-class WorkerRequest(Message):
+class WorkerRequest(ResponseMessage):
     # For example RespondWorkflowTaskCompleted. It's really a Request, but the
     # response isn't interesting, so we model the request as a response and do
     # not visualize the true response.
-    message_stage = MessageStage.Response
 
     def render(self, name: str) -> Mobject:
         return mobject.message(name)

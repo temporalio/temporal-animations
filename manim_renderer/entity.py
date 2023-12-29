@@ -3,18 +3,7 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Generic,
-    List,
-    Protocol,
-    Self,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Dict, Generic, List, Self, Type, TypeVar, Union
 
 import numpy as np
 from manim import (
