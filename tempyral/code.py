@@ -1,6 +1,6 @@
 from typing import Dict, List, Literal, Set, Tuple
 
-from tempyral.simulation.entity import Entity
+from tempyral.entity import Entity
 
 Language = Literal["go", "python", "typescript", "java", "dotnet"]
 

@@ -1,6 +1,6 @@
+from manim_renderer.scene import TemporalScene
 from scenes.execute_workflow import ExecuteWorkflowApplication
-from tempyral.scene import TemporalScene
-from tempyral.simulation import Workflow
+from tempyral import Workflow
 
 
 class CallActivityWorkflow(Workflow):

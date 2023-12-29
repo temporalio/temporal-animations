@@ -1,9 +1,9 @@
 from asyncio import Queue
 from typing import Coroutine, Iterable
 
-from tempyral.simulation.api import ApplicationRequest, ApplicationRequestType
-from tempyral.simulation.code import EntityWithCode
-from tempyral.simulation.server import Server
+from tempyral.api import ApplicationRequest, ApplicationRequestType
+from tempyral.code import EntityWithCode
+from tempyral.server import Server
 
 
 class Application(EntityWithCode):

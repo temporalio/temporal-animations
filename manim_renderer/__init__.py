@@ -2,11 +2,10 @@ from typing import Type
 
 from manim import Scene
 
-from tempyral import log
-from tempyral.animation.application import Application, ApplicationRequest
-from tempyral.animation.entity import ProxyEntity, VisualElement, proxy_entity_registry
-from tempyral.animation.server import Server
-from tempyral.animation.worker import (
+from manim_renderer.application import Application, ApplicationRequest
+from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
+from manim_renderer.server import Server
+from manim_renderer.worker import (
     ActivityTask,
     ActivityTaskCompleted,
     ActivityWorker,
@@ -14,7 +13,8 @@ from tempyral.animation.worker import (
     WorkflowTask,
     WorkflowWorker,
 )
-from tempyral.event_bus import (
+from log import log
+from event_bus import (
     MessageEvent,
     StateChangeEvent,
     TerminateSimulation,

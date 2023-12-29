@@ -3,17 +3,17 @@ from abc import ABC, abstractmethod
 from asyncio import Queue
 from typing import Generic, List, Set, Type, TypeVar, Union, cast
 
-from tempyral import log
-from tempyral.simulation.api import (
+from log import log
+from tempyral.api import (
     Command,
     CommandType,
     RespondActivityTaskCompleted,
     RespondWorkflowTaskCompleted,
     WorkflowId,
 )
-from tempyral.simulation.code import EntityWithCode
-from tempyral.simulation.entity import Entity
-from tempyral.simulation.server import ActivityTask, Server, WorkflowTask
+from tempyral.code import EntityWithCode
+from tempyral.entity import Entity
+from tempyral.server import ActivityTask, Server, WorkflowTask
 
 T = TypeVar("T", bound=Union[ActivityTask, WorkflowTask])
 

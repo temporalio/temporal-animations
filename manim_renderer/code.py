@@ -2,11 +2,11 @@ from typing import Generic, TypeVar
 
 from manim import BLACK, DOWN, LEFT, PINK, Arrow, Code, Mobject, VGroup
 
-from tempyral import simulation
-from tempyral.animation.entity import ProxyEntity
-from tempyral.animation.mobject import FONT_SIZE_CODE
+import tempyral
+from manim_renderer.entity import ProxyEntity
+from manim_renderer.mobject import FONT_SIZE_CODE
 
-E = TypeVar("E", bound=simulation.EntityWithCode)
+E = TypeVar("E", bound=tempyral.EntityWithCode)
 
 
 class ProxyEntityWithCode(ProxyEntity, Generic[E]):

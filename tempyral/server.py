@@ -3,8 +3,8 @@ from asyncio import Queue
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Dict, Hashable, List, TypedDict, Union
 
-from tempyral import log
-from tempyral.simulation.api import (
+from log import log
+from tempyral.api import (
     ApplicationRequest,
     ApplicationRequestType,
     Command,
@@ -17,10 +17,10 @@ from tempyral.simulation.api import (
     WorkerRequest,
     WorkflowId,
 )
-from tempyral.simulation.entity import Entity
+from tempyral.entity import Entity
 
 if TYPE_CHECKING:
-    from tempyral.simulation.worker import ActivityWorker, WorkflowWorker
+    from tempyral.worker import ActivityWorker, WorkflowWorker
 
 DEFAULT_NAMESPACE: NamespaceId = "default"
 

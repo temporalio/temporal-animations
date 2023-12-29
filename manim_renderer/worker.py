@@ -2,19 +2,15 @@ from typing import Iterable, List
 
 from manim import LEFT, WHITE, Mobject, SurroundingRectangle, Text, VGroup
 
-from tempyral import simulation
-from tempyral.animation import mobject
-from tempyral.animation.code import ProxyEntityWithCode
-from tempyral.animation.entity import (
-    ProxyEntity,
-    ProxyEntityWithChildren,
-    VisualElement,
-)
-from tempyral.animation.history import HistoryEvents
+import tempyral
+from manim_renderer import mobject
+from manim_renderer.code import ProxyEntityWithCode
+from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren, VisualElement
+from manim_renderer.history import HistoryEvents
 
 
-class ActivityTask(ProxyEntity[simulation.ActivityTask]):
-    def render(self, _: simulation.ActivityTask) -> Mobject:
+class ActivityTask(ProxyEntity[tempyral.ActivityTask]):
+    def render(self, _: tempyral.ActivityTask) -> Mobject:
         return mobject.message("Activity Task")
 
 
@@ -23,14 +19,14 @@ class ActivityTaskCompleted(VisualElement):
         return mobject.message("ActivityTaskCompleted")
 
 
-class ActivityWorker(ProxyEntity[simulation.ActivityWorker]):
-    def render(self, _: simulation.ActivityWorker) -> Mobject:
+class ActivityWorker(ProxyEntity[tempyral.ActivityWorker]):
+    def render(self, _: tempyral.ActivityWorker) -> Mobject:
         return mobject.actor("Activity Worker")
 
 
 class BoxedHistoryEvents(HistoryEvents):
     @staticmethod
-    def render(events: Iterable[simulation.HistoryEvent]) -> Mobject:
+    def render(events: Iterable[tempyral.HistoryEvent]) -> Mobject:
         eventsm = HistoryEvents.render(events)
         rect = SurroundingRectangle(
             eventsm,
@@ -40,8 +36,8 @@ class BoxedHistoryEvents(HistoryEvents):
         return VGroup(rect, eventsm)
 
 
-class WorkflowTask(ProxyEntity[simulation.WorkflowTask]):
-    def render(self, entity: simulation.WorkflowTask) -> Mobject:
+class WorkflowTask(ProxyEntity[tempyral.WorkflowTask]):
+    def render(self, entity: tempyral.WorkflowTask) -> Mobject:
         eventsm = BoxedHistoryEvents.render(entity.events)
         task = mobject.message("WFT")
         return VGroup(task, eventsm).arrange()
@@ -52,21 +48,21 @@ class WorkerRequest(VisualElement):
         return mobject.message(name)
 
 
-class Workflow(ProxyEntityWithCode[simulation.Workflow]):
+class Workflow(ProxyEntityWithCode[tempyral.Workflow]):
     pass
 
 
 class WorkflowWorker(
-    ProxyEntityWithChildren[simulation.WorkflowWorker, simulation.Workflow, Workflow]
+    ProxyEntityWithChildren[tempyral.WorkflowWorker, tempyral.Workflow, Workflow]
 ):
     child_cls = Workflow
     child_align_direction = LEFT
 
-    def render(self, _: simulation.WorkflowWorker) -> Mobject:
+    def render(self, _: tempyral.WorkflowWorker) -> Mobject:
         return mobject.actor("Workflow Worker")
 
     @staticmethod
     def get_child_entities(
-        entity: simulation.WorkflowWorker,
-    ) -> List[simulation.Workflow]:
+        entity: tempyral.WorkflowWorker,
+    ) -> List[tempyral.Workflow]:
         return entity.workflows

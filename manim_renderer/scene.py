@@ -19,8 +19,8 @@ from manim import (
     Text,
 )
 
-from tempyral import animation
-from tempyral.simulation import (
+import manim_renderer as renderer
+from tempyral import (
     ActivityWorker,
     Application,
     Entity,
@@ -46,7 +46,7 @@ class TemporalScene(Scene):
     def construct(self):
         self.add_timestamp()
         server, apps, wworkers, aworkers = self.make_simulation_entities()
-        self.make_animation_proxies(server, apps, wworkers, aworkers)
+        self.make_renderer_proxies(server, apps, wworkers, aworkers)
         asyncio.run(self.do_simulation(server, apps, wworkers, aworkers, render=True))
         self.wait(2)
 
@@ -64,7 +64,7 @@ class TemporalScene(Scene):
         for app in apps:
             coros.extend(app.get_coroutines(server))
         if render:
-            coros.append(animation.process_simulation_events())
+            coros.append(renderer.process_simulation_events())
 
         try:
             async with asyncio.TaskGroup() as tg:
@@ -90,7 +90,7 @@ class TemporalScene(Scene):
             [ActivityWorker(server)],
         )
 
-    def make_animation_proxies(
+    def make_renderer_proxies(
         self,
         simulation_server: Server,
         simulation_apps: List[Application],
@@ -98,19 +98,19 @@ class TemporalScene(Scene):
         simulation_activity_workers: List[ActivityWorker],
     ):
         """
-        Create proxy entities in the animation domain, adding them to the scene.
+        Create proxy entities and add them to the manim scene.
         """
-        animation.set_scene(self)
-        server = animation.Server(simulation_server)
+        renderer.set_scene(self)
+        server = renderer.Server(simulation_server)
         [app] = [
-            animation.Application(simulation_app) for simulation_app in simulation_apps
+            renderer.Application(simulation_app) for simulation_app in simulation_apps
         ]
         [wworker] = [
-            animation.WorkflowWorker(sim_wworker)
+            renderer.WorkflowWorker(sim_wworker)
             for sim_wworker in simulation_workflow_workers
         ]
         [aworker] = [
-            animation.ActivityWorker(sim_aworker)
+            renderer.ActivityWorker(sim_aworker)
             for sim_aworker in simulation_activity_workers
         ]
 
@@ -144,9 +144,9 @@ class TemporalScene(Scene):
 
     def add_dock_points(
         self,
-        server: animation.Server,
-        app: animation.Application,
-        wworker: animation.WorkflowWorker,
+        server: renderer.Server,
+        app: renderer.Application,
+        wworker: renderer.WorkflowWorker,
     ):
         self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
 

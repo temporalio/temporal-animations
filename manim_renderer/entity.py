@@ -17,9 +17,10 @@ from manim import (
 )
 from manim.typing import Point3D, Vector3
 
-from tempyral import log, simulation
+import tempyral
+from log import log
 
-E = TypeVar("E", bound=simulation.Entity)
+E = TypeVar("E", bound=tempyral.Entity)
 
 
 class VisualElement(ABC):
@@ -110,7 +111,7 @@ class ProxyEntity(Generic[E], VisualElement):
         self.scene.wait()
 
 
-F = TypeVar("F", bound=simulation.Entity)
+F = TypeVar("F", bound=tempyral.Entity)
 Q = TypeVar("Q", bound=ProxyEntity)
 
 
@@ -170,7 +171,7 @@ class ProxyEntityRegistry(Generic[E]):
     """
 
     def __init__(self):
-        self._registry: Dict[simulation.Entity, ProxyEntity] = {}
+        self._registry: Dict[tempyral.Entity, ProxyEntity] = {}
 
     def set(self, entity: E, proxy: ProxyEntity[E]) -> None:
         assert (

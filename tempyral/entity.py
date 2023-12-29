@@ -3,8 +3,8 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Callable, Hashable, Self
 
-from tempyral import log
-from tempyral.event_bus import MessageEvent, StateChangeEvent, event_bus
+from log import log
+from event_bus import MessageEvent, StateChangeEvent, event_bus
 
 
 class Entity:
