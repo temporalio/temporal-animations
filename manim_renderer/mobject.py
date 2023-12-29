@@ -1,4 +1,4 @@
-from manim import Mobject, Text
+from manim import ORANGE, Mobject, Text
 
 FONT_MESSAGE = "Monospace"
 FONT_ACTOR = "Noto Sans Kannada"
@@ -10,7 +10,9 @@ FONT_SIZE_CODE = 12
 
 
 def message(name: str, **kwargs) -> Mobject:
-    return Text(name, font=FONT_MESSAGE, font_size=FONT_SIZE_MESSAGE, **kwargs)
+    return Text(
+        name, font=FONT_MESSAGE, font_size=FONT_SIZE_MESSAGE, color=ORANGE, **kwargs
+    )
 
 
 def actor(name: str, **kwargs) -> Mobject:
