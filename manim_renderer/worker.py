@@ -1,27 +1,20 @@
 from typing import Iterable, List
 
-from manim import LEFT, WHITE, Mobject, SurroundingRectangle, VGroup
+from manim import LEFT, WHITE, Mobject, SurroundingRectangle, Text, VGroup
 
 import tempyral
 from manim_renderer import mobject
 from manim_renderer.code import ProxyEntityWithCode
-from manim_renderer.entity import MessageStage, ProxyEntity, ProxyEntityWithChildren
+from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren, VisualElement
 from manim_renderer.history import HistoryEvents
-from manim_renderer.message import (
-    ProxyEntityMessage,
-    ProxyEntityResponseMessage,
-    ResponseMessage,
-)
 
 
-class ActivityTask(ProxyEntityResponseMessage[tempyral.ActivityTask]):
-    def render(self, entity: tempyral.ActivityTask) -> Mobject:
+class ActivityTask(ProxyEntity[tempyral.ActivityTask]):
+    def render(self, _: tempyral.ActivityTask) -> Mobject:
         return mobject.message("Activity Task")
 
 
-class ActivityTaskCompleted(ResponseMessage):
-    # It's really a Request, but the response isn't interesting, so we model the
-    # request as a response and do not visualize the true response.
+class ActivityTaskCompleted(VisualElement):
     def render(self) -> Mobject:
         return mobject.message("ActivityTaskCompleted")
 
@@ -43,18 +36,14 @@ class BoxedHistoryEvents(HistoryEvents):
         return VGroup(rect, eventsm)
 
 
-class WorkflowTask(ProxyEntityResponseMessage[tempyral.WorkflowTask]):
+class WorkflowTask(ProxyEntity[tempyral.WorkflowTask]):
     def render(self, entity: tempyral.WorkflowTask) -> Mobject:
         eventsm = BoxedHistoryEvents.render(entity.events)
         task = mobject.message("WFT")
         return VGroup(task, eventsm).arrange()
 
 
-class WorkerRequest(ResponseMessage):
-    # For example RespondWorkflowTaskCompleted. It's really a Request, but the
-    # response isn't interesting, so we model the request as a response and do
-    # not visualize the true response.
-
+class WorkerRequest(VisualElement):
     def render(self, name: str) -> Mobject:
         return mobject.message(name)
 
