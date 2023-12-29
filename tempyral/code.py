@@ -19,11 +19,6 @@ class EntityWithCode(Entity):
     code: str
     blocked_expressions: Set[int]
 
-    def __init__(self, *args, **kwargs):
-        if not hasattr(self, "language"):
-            self.language = self._get_language()
-        super().__init__(*args, **kwargs)
-
     def _get_language(self) -> Language:
         available_languages = list(COMMENT_MARKERS)
         languages: List[Language] = [l for l in available_languages if hasattr(self, l)]

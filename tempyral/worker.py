@@ -56,12 +56,14 @@ class Workflow(EntityWithCode, ABC):
     workflow_id: WorkflowId
 
     def __init__(self):
-        super().__init__()
+        if not hasattr(self, "language"):
+            self.language = self._get_language()
         self.code, directives = self.parse_code(self.language)
         commands = [Command(eval(code), line_num) for code, line_num in directives]
         commands.append(Command(CommandType.COMPLETE_WORKFLOW_EXECUTION, None))
         self.commands = iter(commands)
         self.blocked_expressions = set()
+        super().__init__()
 
     __publish__ = ["id", "code", "language", "blocked_expressions"]
 

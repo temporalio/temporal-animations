@@ -7,8 +7,11 @@ from tempyral.server import Server
 
 
 class Application(EntityWithCode):
+    __publish__ = ["id", "code", "language", "blocked_expressions"]
+
     def __init__(self):
-        super().__init__()
+        if not hasattr(self, "language"):
+            self.language = self._get_language()
         self.code, raw_requests = self.parse_code(self.language)
         requests = []
         for directive, line_num in raw_requests:
@@ -16,7 +19,9 @@ class Application(EntityWithCode):
                 code, workflow_id = directive.split()
                 match eval(code):
                     case ApplicationRequestType.StartWorkflowExecution as req:
-                        requests.append(ApplicationRequest(workflow_id, req, line_num))
+                        requests.append(
+                            ApplicationRequest(eval(workflow_id), req, line_num)
+                        )
                     case _:
                         raise ValueError
             except ValueError:
@@ -24,6 +29,7 @@ class Application(EntityWithCode):
         self.requests = iter(requests)
         self.blocked_expressions = set()
         self.requests_queue: Queue[ApplicationRequest] = Queue()
+        super().__init__()
 
     def get_coroutines(self, server: Server) -> Iterable[Coroutine]:
         """
@@ -36,6 +42,9 @@ class Application(EntityWithCode):
             await self.requests_queue.put(request)
             while not self.requests_queue.empty():
                 request = await self.requests_queue.get()
+                if request.token is not None:
+                    self.blocked_expressions.add(request.token)
+                    await self.publish_change_event()
                 await self.publish_message_event(self, server, request=request)
                 await server.handle_request(request)
 
