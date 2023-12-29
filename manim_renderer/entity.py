@@ -59,8 +59,8 @@ class ProxyEntity(Generic[E], VisualElement):
 
     def __init__(self, entity: E, parent: VisualElement = root) -> None:
         self.parent = parent
-        self.mobj = self.render(entity)  # Current visual representation
         self.dock_direction = ORIGIN
+        self.mobj = self.render(entity)  # Current visual representation
         proxy_entity_registry.set(entity, self)
 
     def __repr__(self) -> str:

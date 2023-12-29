@@ -1,4 +1,3 @@
-import asyncio
 import os
 from asyncio import Queue
 from collections import OrderedDict
@@ -9,6 +8,7 @@ from typing import (
     Hashable,
     List,
     Optional,
+    Tuple,
     TypedDict,
     Union,
     cast,
@@ -110,11 +110,25 @@ class Server(Entity):
         self.activity_worker_long_poll_connections: Dict[
             ActivityWorker, Queue[ActivityTask]
         ] = {}
-        self.workflow_result_channels: Dict[
-            NamespaceId, Dict[WorkflowId, Queue[HistoryEvent]]
-        ] = {DEFAULT_NAMESPACE: {}}
 
-    __publish__ = {"id", "shards"}
+        self.in_flight_application_request_channels: Dict[
+            NamespaceId,
+            OrderedDict[Tuple[ApplicationRequestType, WorkflowId], Queue[HistoryEvent]],
+        ] = {DEFAULT_NAMESPACE: OrderedDict()}
+
+    __publish__ = {"id", "shards", "in_flight_application_request_types"}
+
+    # Computed property published to event bus without the underscore prefix.
+    in_flight_application_request_types: List[str]
+
+    @property
+    def _in_flight_application_request_types(self) -> List[str]:
+        return [
+            req.name
+            for req, _ in self.in_flight_application_request_channels[
+                DEFAULT_NAMESPACE
+            ].keys()
+        ]
 
     def __repr__(self) -> str:
         namespace = {
@@ -142,21 +156,44 @@ class Server(Entity):
     async def execute_workflow(
         self, request: ApplicationRequest
     ) -> ApplicationResponse:
-        workflow_id = request.workflow_id
+        event = await self._get_application_request_response(
+            request, [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED]
+        )
+        return ApplicationResponse(request, event.data.get("payload"))
+
+    async def _get_application_request_response(
+        self, request: ApplicationRequest, events_to_be_written: List[HistoryEventType]
+    ) -> HistoryEvent:
+        """
+        Handle request by writing history events, and return response.
+
+        When handling an application request, we create a new channel
+        (maxsize=1) and block, waiting for the response to be pushed to the
+        channel. The value pushed to the channel is a HistoryEvent that contains
+        within it information needed to unblock the corresponding client-side
+        awaitable. The handler deletes the channel when it receives the response
+        from it.
+        """
+
+        chans = self.in_flight_application_request_channels[DEFAULT_NAMESPACE]
+        key = request.request_type, request.workflow_id
+        assert (
+            key not in chans
+        ), "Multiple concurrent requests of same type for same workflow ID are not supported"
+        chan: Queue[HistoryEvent] = Queue(maxsize=1)
+        chans[key] = chan
+        await self.publish_change_event()
+
         await self.write_history_events(
-            workflow_id,
-            HistoryEventType.WF_STARTED,
-            HistoryEventType.WFT_SCHEDULED,
+            request.workflow_id,
+            *events_to_be_written,
             seen_by_sticky_worker=False,
         )
-        assert (
-            workflow_id not in self.workflow_result_channels[DEFAULT_NAMESPACE]
-        ), "Multiple concurrent workflow executions for same workflow ID"
-        chan: Queue[HistoryEvent] = Queue(maxsize=1)
-        self.workflow_result_channels[DEFAULT_NAMESPACE][workflow_id] = chan
+
         event = await chan.get()
-        del self.workflow_result_channels[DEFAULT_NAMESPACE][workflow_id]
-        return ApplicationResponse(request, event.data.get("payload"))
+        del chans[key]
+        await self.publish_change_event()
+        return event
 
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler.go#L166
@@ -181,9 +218,11 @@ class Server(Entity):
                         HistoryEventType.WF_COMPLETED,
                         seen_by_sticky_worker=True,
                     )
-                    await self.workflow_result_channels[DEFAULT_NAMESPACE][
-                        workflow_id
-                    ].put(wf_completed_event)
+                    chans = self.in_flight_application_request_channels[
+                        DEFAULT_NAMESPACE
+                    ]
+                    key = ApplicationRequestType.StartWorkflowExecution, workflow_id
+                    await chans[key].put(wf_completed_event)
                 case _:
                     raise ValueError(
                         f"Server does not support command of type: {command.command_type}"

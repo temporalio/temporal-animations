@@ -125,7 +125,7 @@ class TemporalScene(Scene):
         wworker.set_dock_direction(RIGHT).mobj.next_to(aworker.mobj, DOWN).align_to(
             aworker.mobj, LEFT
         ).shift(DOWN)
-        server.set_dock_direction(LEFT).mobj.align_on_border(RIGHT).align_to(
+        server.set_dock_direction(UP).mobj.align_on_border(RIGHT).align_to(
             aworker.mobj, UP
         ).shift(1.5 * LEFT)
 
