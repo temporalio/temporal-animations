@@ -32,7 +32,7 @@ async def process_simulation_events():
             case StateChangeEvent(entity):
                 log(f"{entity}", "A: handle change event")
                 proxy_entity = proxy_entity_registry.get(entity)
-                proxy_entity.update(entity)
+                proxy_entity.render_to_scene(entity)
             case MessageEvent(sender_entity, receiver_entity, data):
                 log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
                 sender, receiver = (

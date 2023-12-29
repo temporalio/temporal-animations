@@ -135,7 +135,7 @@ class TemporalScene(Scene):
             [server, *[app], *[wworker]],
             [simulation_server, *simulation_apps, *simulation_workflow_workers],
         ):
-            a.update(s.clone())  # type: ignore
+            a.render_to_scene(s.clone())  # type: ignore
 
         return server, [app], [wworker]
 

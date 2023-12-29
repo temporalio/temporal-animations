@@ -78,9 +78,9 @@ class ProxyEntity(Generic[E], VisualElement):
         """Compute new visual representation given entity state."""
         ...
 
-    def update(self, entity: E, animate=False):
+    def render_to_scene(self, entity: E, animate=False):
         """
-        Mutate `self.mobj` so that it represents `entity` and paint the result to screen.
+        Mutate `self.mobj` so that it represents the current state of `entity` and update the scene.
         """
         mobj = self.render(entity).move_to(self.mobj)
         if animate:
@@ -140,7 +140,7 @@ class ProxyEntityWithChildren(
     def get_child_entities(entity: E) -> List[F]:  # type: ignore (bug in Pyright?)
         ...
 
-    def update(self, entity: E):
+    def render_to_scene(self, entity: E):
         n = len(self.children)
         child_entities = self.get_child_entities(entity)
         for new in child_entities[n:]:
@@ -151,13 +151,13 @@ class ProxyEntityWithChildren(
             child.mobj.next_to(prev.mobj, DOWN, buff=SMALL_BUFF).align_to(
                 prev.mobj, self.child_align_direction
             )
-            child.update(child_entity)
+            child.render_to_scene(child_entity)
             prev = child
 
         for new in self.children[n:]:
             self.scene.play(Indicate(new.mobj))
 
-        super().update(entity)
+        super().render_to_scene(entity)
 
     def append_child(self, child_entity: F):
         child = self.child_cls(child_entity, parent=self)
