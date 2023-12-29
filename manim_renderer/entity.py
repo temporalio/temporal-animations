@@ -3,7 +3,20 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, Generic, List, Self, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Self,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import numpy as np
 from manim import (
@@ -20,6 +33,7 @@ from manim.typing import Point3D, Vector3
 
 import tempyral
 from log import log
+from manim_renderer.utils import only
 
 if TYPE_CHECKING:
     from manim_renderer.message import Message, ProxyEntityMessage
@@ -70,7 +84,15 @@ class ProxyEntity(Generic[E], VisualElement):
         self.parent = parent
         self.mobj = self.render(entity)  # Current visual representation
         self.dock_direction = ORIGIN
+
+        # TODO: should only be necessary to do first time
         proxy_entity_registry.set(entity, self)
+
+        self.in_flight_requests = set()  # requests waiting for a response
+
+    @property
+    def entity(self) -> E:
+        return proxy_entity_registry.reverse_get(self)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}"
@@ -104,6 +126,9 @@ class ProxyEntity(Generic[E], VisualElement):
         Animate sending a message.
         """
         log(f"{self} -> {receiver}: {message}\n", "A: send_message")
+        match message.message_stage:
+            case MessageStage.Response:
+                self.in_flight_requests -= {message}
         message.mobj.next_to(self.dock_point())
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.
@@ -114,8 +139,28 @@ class ProxyEntity(Generic[E], VisualElement):
         self.scene.play(ApplyMethod(message.mobj.move_to, halfway))
         self.scene.wait(0.5)
         self.scene.play(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
-        if message.message_stage == MessageStage.Response:
-            self.scene.remove(message.mobj)
+
+        match message.message_stage:
+            case MessageStage.Request:
+                # When a client sends a request to a server, the message is
+                # shown waiting at the server end until the response is sent.
+                # So, when a server sends a response to a client, it needs to be
+                # able to find and remove from the scene the in-flight request
+                # that is waiting there. To achieve this, we store on the
+                # receiver a reference to the simulation entity representing the
+                # request. When the receiver comes to send the response, it will
+                # be able to obtain the corresponding request entity (because
+                # response entities contain references to their corresponding
+                # requests), and remove the now-responded-to in-flight request
+                # from the scene.
+                assert hasattr(
+                    message, "entity"
+                ), f"Expected message {message} to be a ProxyEntityMessage"
+                receiver.in_flight_requests.add(
+                    cast("ProxyEntityMessage", message).entity
+                )
+            case MessageStage.Response:
+                self.scene.remove(message.mobj)
         self.scene.wait()
 
 
@@ -189,6 +234,9 @@ class ProxyEntityRegistry(Generic[E]):
 
     def get(self, entity: E) -> ProxyEntity[E]:
         return self._registry[entity]
+
+    def reverse_get(self, proxy: ProxyEntity[E]) -> E:
+        return cast(E, only(k for k, v in self._registry.items() if v == proxy))
 
 
 proxy_entity_registry = ProxyEntityRegistry()
