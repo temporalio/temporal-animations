@@ -221,7 +221,7 @@ class Server(Entity):
                     chans = self.in_flight_application_request_channels[
                         DEFAULT_NAMESPACE
                     ]
-                    key = ApplicationRequestType.StartWorkflowExecution, workflow_id
+                    key = ApplicationRequestType.ExecuteWorkflow, workflow_id
                     await chans[key].put(wf_completed_event)
                 case _:
                     raise ValueError(

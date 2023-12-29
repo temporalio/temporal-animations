@@ -8,7 +8,7 @@ class ExecuteWorkflowApplication(Application):
     """
 
     go = """
-workflowRun, err := c.ExecuteWorkflow(          // tempyral: ApplicationRequestType.StartWorkflowExecution "my-workflow-id"
+workflowRun, err := c.ExecuteWorkflow(          // tempyral: ApplicationRequestType.ExecuteWorkflow "my-workflow-id"
     ctx, workflowOptions, workflows.MyWorkflow)
 if err != nil {
     log.Fatalln("Unable to execute workflow", err)

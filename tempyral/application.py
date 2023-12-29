@@ -18,7 +18,7 @@ class Application(EntityWithCode):
             try:
                 code, workflow_id = directive.split()
                 match eval(code):
-                    case ApplicationRequestType.StartWorkflowExecution as req:
+                    case ApplicationRequestType.ExecuteWorkflow as req:
                         requests.append(
                             ApplicationRequest(eval(workflow_id), req, line_num)
                         )
