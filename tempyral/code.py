@@ -6,16 +6,18 @@ Language = Literal["go", "python", "typescript", "java", "dotnet"]
 
 
 COMMENT_MARKERS: Dict[Language, str] = {
+    "dotnet": "//",
     "go": "//",
     "java": "//",
     "python": "#",
-    "dotnet": "//",
+    "typescript": "//",
 }
 
 
 class EntityWithCode(Entity):
     language: Language
     go: str
+    typescript: str
     code: str
     blocked_expressions: Set[int]
 
