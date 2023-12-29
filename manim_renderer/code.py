@@ -25,7 +25,9 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
                     start=line.get_edge_center(LEFT) + LEFT,
                     end=line.get_edge_center(LEFT),
                     color=BLACK,
-                ).next_to(line, LEFT, buff=0.1)
+                )
+                .next_to(line, LEFT, buff=0.1)
+                .shift(DOWN * 0.025)
                 for line in lines
             )
         )
