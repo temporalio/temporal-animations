@@ -29,7 +29,8 @@ class HistoryEventType(Enum):
 
 
 class ApplicationRequestType(Enum):
-    ExecuteWorkflow = 1
+    StartWorkflow = 1
+    ExecuteWorkflow = 2
 
 
 @dataclass(frozen=True)

@@ -142,6 +142,8 @@ class Server(Entity):
         self, request: Union[ApplicationRequest, WorkerRequest]
     ) -> Optional[ApplicationResponse]:
         match request:
+            case ApplicationRequest(ApplicationRequestType.StartWorkflow):
+                return await self.start_workflow(request)
             case ApplicationRequest(ApplicationRequestType.ExecuteWorkflow):
                 return await self.execute_workflow(request)
             case RespondWorkflowTaskCompleted(workflow_id, commands):
@@ -152,6 +154,18 @@ class Server(Entity):
                 await self.handle_activity_task_completed(workflow_id, result, token)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
+
+    async def start_workflow(self, request: ApplicationRequest) -> ApplicationResponse:
+        # This is a non-blocking request; we don't need to wait for a
+        # HistoryEvent to be written, beyond those we write synchronously on
+        # handling the request.
+        wf_started, _ = await self.write_history_events(
+            request.workflow_id,
+            HistoryEventType.WF_STARTED,
+            HistoryEventType.WFT_SCHEDULED,
+            seen_by_sticky_worker=False,
+        )
+        return ApplicationResponse(request, wf_started.data.get("payload"))
 
     async def execute_workflow(
         self, request: ApplicationRequest
@@ -205,6 +219,7 @@ class Server(Entity):
             HistoryEventType.WFT_COMPLETED,
             seen_by_sticky_worker=True,
         )
+
         for command in commands:
             match command.command_type:
                 case CommandType.SCHEDULE_ACTIVITY_TASK:
