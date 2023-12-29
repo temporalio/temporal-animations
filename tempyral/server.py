@@ -13,10 +13,12 @@ from typing import (
     Union,
     cast,
 )
+from uuid import uuid4
 
 from attr import dataclass
 
 from log import log
+from manim_renderer.utils import drain
 from tempyral.api import (
     ApplicationRequest,
     ApplicationRequestType,
@@ -25,6 +27,9 @@ from tempyral.api import (
     CommandType,
     HistoryEventType,
     NamespaceId,
+    ProtocolInstanceId,
+    ProtocolMessage,
+    ProtocolMessageType,
     RespondActivityTaskCompleted,
     RespondWorkflowTaskCompleted,
     TaskQueueId,
@@ -75,7 +80,7 @@ class History(Entity):
 
 @dataclass
 class UpdateInfo:
-    workflow_id: WorkflowId
+    update_id: ProtocolInstanceId
     update_name: str
 
 
@@ -88,13 +93,19 @@ class WorkflowData:
 class WorkflowTask(Entity):
     """A slice of history events"""
 
-    def __init__(self, worklow_id: WorkflowId, events: List[HistoryEvent]) -> None:
+    def __init__(
+        self,
+        worklow_id: WorkflowId,
+        events: List[HistoryEvent],
+        pending_updates: List[UpdateInfo],
+    ) -> None:
         super().__init__()
         self.workflow_id = worklow_id
         self.events = tuple(events)
+        self.pending_updates = tuple(pending_updates)
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(id={self.id}: events={self.events})"
+        return f"{type(self).__name__}(id={self.id}: events={self.events}, updates={self.pending_updates})"
 
 
 Namespace = OrderedDict[WorkflowId, WorkflowData]
@@ -159,6 +170,8 @@ class Server(Entity):
                 return await self.start_workflow(request)
             case ApplicationRequest(ApplicationRequestType.ExecuteWorkflow):
                 return await self.execute_workflow(request)
+            case ApplicationRequest(ApplicationRequestType.ExecuteUpdate):
+                return await self.execute_update(request)
             case RespondWorkflowTaskCompleted(workflow_id, commands):
                 if os.path.exists("/tmp/flag"):
                     self.terminate_simulation()
@@ -183,6 +196,15 @@ class Server(Entity):
     async def execute_workflow(
         self, request: ApplicationRequest
     ) -> ApplicationResponse:
+        event = await self._get_application_request_response(
+            request, [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED]
+        )
+        return ApplicationResponse(request, event.data.get("payload"))
+
+    async def execute_update(self, request: ApplicationRequest) -> ApplicationResponse:
+        self.get_workflow_data(request.workflow_id).pending_updates.append(
+            UpdateInfo(uuid4().hex, "fake-update-name")
+        )
         event = await self._get_application_request_response(
             request, [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED]
         )
@@ -253,7 +275,38 @@ class Server(Entity):
                         seen_by_sticky_worker=True,
                     )
                     key = ApplicationRequestType.ExecuteWorkflow, workflow_id
-                    await chans[key].put(event)
+                    if key in chans:
+                        await chans[key].put(event)
+                case CommandType.PROTOCOL_MESSAGE:
+                    assert command.protocol_message
+                    match command.protocol_message:
+                        # TODO: Make Accepted and Rejected do something; use update_id
+                        case ProtocolMessage(
+                            ProtocolMessageType.UPDATE_ACCEPTED, update_id
+                        ):
+                            await self.write_history_events(
+                                workflow_id,
+                                HistoryEventType.WF_UPDATE_ACCEPTED,
+                                seen_by_sticky_worker=True,
+                            )
+                        case ProtocolMessage(
+                            ProtocolMessageType.UPDATE_REJECTED, update_id
+                        ):
+                            await self.write_history_events(
+                                workflow_id,
+                                HistoryEventType.WF_UPDATE_REJECTED,
+                                seen_by_sticky_worker=True,
+                            )
+                        case ProtocolMessage(
+                            ProtocolMessageType.UPDATE_COMPLETED, update_id
+                        ):
+                            [event] = await self.write_history_events(
+                                workflow_id,
+                                HistoryEventType.WF_UPDATE_COMPLETED,
+                                seen_by_sticky_worker=True,
+                            )
+                            key = ApplicationRequestType.ExecuteUpdate, workflow_id
+                            await chans[key].put(event)
                 case _:
                     raise ValueError(
                         f"Server does not support command of type: {command.command_type}"
@@ -288,9 +341,7 @@ class Server(Entity):
             HistoryEvent(e, seen_by_sticky_worker=seen_by_sticky_worker, **kwargs)
             for e in event_types
         ]
-        self.namespace.setdefault(
-            workflow_id, WorkflowData(History(workflow_id, []), [])
-        ).history.events.extend(events)
+        self.get_workflow_data(workflow_id).history.events.extend(events)
         if publish:
             await self.publish_change_event()
         await self.dispatch_workflow_or_activity_task(workflow_id)
@@ -349,8 +400,9 @@ class Server(Entity):
                     seen_by_sticky_worker=True,
                 )
             )
+            pending_updates = drain(self.namespace[workflow_id].pending_updates)
             [queue] = self.workflow_worker_long_poll_connections.values()
-            await queue.put(WorkflowTask(workflow_id, events))
+            await queue.put(WorkflowTask(workflow_id, events, pending_updates))
 
     @property
     def namespace(self) -> OrderedDict[WorkflowId, WorkflowData]:
@@ -368,3 +420,8 @@ class Server(Entity):
         except ValueError:
             raise ValueError("Multiple namespaces are not supported")
         return namespace
+
+    def get_workflow_data(self, workflow_id: WorkflowId) -> WorkflowData:
+        return self.namespace.setdefault(
+            workflow_id, WorkflowData(History(workflow_id, []), [])
+        )

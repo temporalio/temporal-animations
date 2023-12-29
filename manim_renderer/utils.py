@@ -1,7 +1,7 @@
 import asyncio
 import sys
 import traceback
-from typing import Coroutine, Iterable
+from typing import Coroutine, Iterable, List
 
 
 def only[T](it: Iterable[T], msg="") -> T:
@@ -15,6 +15,13 @@ def only[T](it: Iterable[T], msg="") -> T:
         raise ValueError(f"Iterable had more than one item{msg and f': {msg}'}")
     except StopIteration:
         return t
+
+
+def drain[T](source: List[T]) -> List[T]:
+    vals = []
+    while source:
+        vals.append(source.pop())
+    return vals
 
 
 async def debug(coro: Coroutine):

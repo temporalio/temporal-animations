@@ -5,6 +5,7 @@ from typing import Any, List, Optional
 NamespaceId = str
 WorkflowId = str
 TaskQueueId = str
+ProtocolInstanceId = str
 
 
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/event_type.proto#L35
@@ -31,6 +32,7 @@ class HistoryEventType(Enum):
 class ApplicationRequestType(Enum):
     StartWorkflow = 1
     ExecuteWorkflow = 2
+    ExecuteUpdate = 3
 
 
 @dataclass(frozen=True)
@@ -70,10 +72,23 @@ class CommandType(Enum):
     MODIFY_WORKFLOW_PROPERTIES = 16
 
 
+class ProtocolMessageType(Enum):
+    UPDATE_ACCEPTED = 1
+    UPDATE_REJECTED = 2
+    UPDATE_COMPLETED = 3
+
+
+@dataclass
+class ProtocolMessage:
+    message_type: ProtocolMessageType
+    instance_id: ProtocolInstanceId
+
+
 @dataclass(frozen=True)
 class Command:
     command_type: CommandType
-    token: Optional[int]
+    protocol_message: Optional[ProtocolMessage] = None
+    token: Optional[int] = None
 
 
 @dataclass(frozen=True)

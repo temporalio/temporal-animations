@@ -7,6 +7,8 @@ from log import log
 from tempyral.api import (
     Command,
     CommandType,
+    ProtocolMessage,
+    ProtocolMessageType,
     RespondActivityTaskCompleted,
     RespondWorkflowTaskCompleted,
     WorkflowId,
@@ -59,7 +61,9 @@ class Workflow(EntityWithCode, ABC):
         if not hasattr(self, "language"):
             self.language = self._get_language()
         self.code, directives = self.parse_code(self.language)
-        self.commands = (Command(eval(code), line_num) for code, line_num in directives)
+        self.commands = (
+            Command(eval(code), None, line_num) for code, line_num in directives
+        )
         self.blocked_expressions = set()
         super().__init__()
 
@@ -68,14 +72,28 @@ class Workflow(EntityWithCode, ABC):
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.blocked_expressions})"
 
-    def handle_wft(self, _: WorkflowTask) -> List[Command]:
+    def handle_wft(self, wft: WorkflowTask) -> List[Command]:
         """
         Currently, we assume that each WFT is handled by emitting a single command.
         """
-        command = next(self.commands)
-        if command.token is not None:
+        commands = []
+        command = next(self.commands, None)
+        if command and command.token is not None:
             self.blocked_expressions.add(command.token)
-        return [command]
+            commands.append(command)
+        for u in wft.pending_updates:
+            commands.extend(
+                Command(
+                    CommandType.PROTOCOL_MESSAGE,
+                    ProtocolMessage(m, u.update_id),
+                    None,
+                )
+                for m in [
+                    ProtocolMessageType.UPDATE_ACCEPTED,
+                    ProtocolMessageType.UPDATE_COMPLETED,
+                ]
+            )
+        return commands
 
 
 class WorkflowWorker(Worker[WorkflowTask]):
