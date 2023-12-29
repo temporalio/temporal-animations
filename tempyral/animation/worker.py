@@ -14,24 +14,24 @@ from tempyral.animation.history import HistoryEvents
 
 
 class ActivityTask(ProxyEntity[simulation.ActivityTask]):
-    def newm(self, _: simulation.ActivityTask) -> Mobject:
+    def render(self, _: simulation.ActivityTask) -> Mobject:
         return mobject.message("Activity Task")
 
 
 class ActivityTaskCompleted(VisualElement):
-    def newm(self) -> Mobject:
+    def render(self) -> Mobject:
         return mobject.message("ActivityTaskCompleted")
 
 
 class ActivityWorker(ProxyEntity[simulation.ActivityWorker]):
-    def newm(self, _: simulation.ActivityWorker) -> Mobject:
+    def render(self, _: simulation.ActivityWorker) -> Mobject:
         return mobject.actor("Activity Worker")
 
 
 class BoxedHistoryEvents(HistoryEvents):
     @staticmethod
-    def newm(events: Iterable[simulation.HistoryEvent]) -> Mobject:
-        eventsm = HistoryEvents.newm(events)
+    def render(events: Iterable[simulation.HistoryEvent]) -> Mobject:
+        eventsm = HistoryEvents.render(events)
         rect = SurroundingRectangle(
             eventsm,
             color=WHITE,
@@ -41,14 +41,14 @@ class BoxedHistoryEvents(HistoryEvents):
 
 
 class WorkflowTask(ProxyEntity[simulation.WorkflowTask]):
-    def newm(self, entity: simulation.WorkflowTask) -> Mobject:
-        eventsm = BoxedHistoryEvents.newm(entity.events)
+    def render(self, entity: simulation.WorkflowTask) -> Mobject:
+        eventsm = BoxedHistoryEvents.render(entity.events)
         task = mobject.message("WFT")
         return VGroup(task, eventsm).arrange()
 
 
 class WorkerRequest(VisualElement):
-    def newm(self, name: str) -> Mobject:
+    def render(self, name: str) -> Mobject:
         return mobject.message(name)
 
 
@@ -62,7 +62,7 @@ class WorkflowWorker(
     child_cls = Workflow
     child_align_direction = LEFT
 
-    def newm(self, _: simulation.WorkflowWorker) -> Mobject:
+    def render(self, _: simulation.WorkflowWorker) -> Mobject:
         return mobject.actor("Workflow Worker")
 
     @staticmethod

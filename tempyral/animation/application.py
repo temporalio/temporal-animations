@@ -7,12 +7,12 @@ from tempyral.animation.entity import VisualElement
 
 
 class ApplicationRequest(VisualElement):
-    def newm(self, request: simulation.ApplicationRequest) -> Mobject:
+    def render(self, request: simulation.ApplicationRequest) -> Mobject:
         return mobject.message(request.request_type.name)
 
 
 class Application(ProxyEntityWithCode[simulation.Application]):
-    def newm(self, entity: simulation.Application) -> Mobject:
-        code = super().newm(entity)
+    def render(self, entity: simulation.Application) -> Mobject:
+        code = super().render(entity)
         text = mobject.actor("Application")
         return VGroup(text, code).arrange(DOWN, buff=SMALL_BUFF, aligned_edge=LEFT)

@@ -10,7 +10,7 @@ E = TypeVar("E", bound=simulation.EntityWithCode)
 
 
 class ProxyEntityWithCode(ProxyEntity, Generic[E]):
-    def newm(self, entity: E) -> Mobject:
+    def render(self, entity: E) -> Mobject:
         code = Code(
             code=entity.code,
             language=entity.language,

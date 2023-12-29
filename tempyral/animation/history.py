@@ -17,7 +17,7 @@ from tempyral.animation.entity import (
 
 class HistoryEvent(ProxyEntity[simulation.HistoryEvent]):
     @staticmethod
-    def newm(event: simulation.HistoryEvent) -> Mobject:
+    def render(event: simulation.HistoryEvent) -> Mobject:
         return mobject.history_event(
             event.event_type.name,
             color=GREEN if event.seen_by_worker else RED,
@@ -26,8 +26,8 @@ class HistoryEvent(ProxyEntity[simulation.HistoryEvent]):
 
 class HistoryEvents(VisualElement):
     @staticmethod
-    def newm(events: Iterable[simulation.HistoryEvent]) -> Mobject:
-        return VGroup(*map(HistoryEvent.newm, events)).arrange(
+    def render(events: Iterable[simulation.HistoryEvent]) -> Mobject:
+        return VGroup(*map(HistoryEvent.render, events)).arrange(
             DOWN, buff=SMALL_BUFF, aligned_edge=LEFT
         )
 
@@ -39,7 +39,7 @@ class History(
     child_align_direction = LEFT
 
     @staticmethod
-    def newm(_: simulation.History) -> Mobject:
+    def render(_: simulation.History) -> Mobject:
         m = Point(color=BLACK)
         m.set_stroke_width(0)
         return m

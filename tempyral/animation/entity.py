@@ -1,7 +1,7 @@
 """
 Manim representations of Temporal entities.
 """
-from abc import ABC, abstractstaticmethod
+from abc import ABC, abstractmethod, abstractstaticmethod
 from typing import Any, Dict, Generic, List, Self, Type, TypeVar
 
 import numpy as np
@@ -26,16 +26,16 @@ class VisualElement(ABC):
     """
     An entity participating in the scene.
 
-    This is a manim Mobject (self.m) that knows how to re-render itself.
+    This is a manim Mobject (self.mobj) that knows how to re-render itself.
     """
 
     scene = Scene()
 
     def __init__(self, **kwargs) -> None:
-        self.m = self.newm(**kwargs)  # Current visual representation
+        self.mobj = self.render(**kwargs)  # Current visual representation
 
-    @abstractstaticmethod
-    def newm(**kwargs) -> Mobject:
+    @abstractmethod
+    def render(self, **kwargs) -> Mobject:
         """Compute new visual representation given kwargs data."""
         ...
 
@@ -44,7 +44,7 @@ class VisualElement(ABC):
 
 
 class Root(VisualElement):
-    def newm(self) -> Mobject:
+    def render(self) -> Mobject:
         return Mobject()
 
 
@@ -58,7 +58,7 @@ class ProxyEntity(Generic[E], VisualElement):
 
     def __init__(self, entity: E, parent: VisualElement = root) -> None:
         self.parent = parent
-        self.m = self.newm(entity)  # Current visual representation
+        self.mobj = self.render(entity)  # Current visual representation
         self.dock_direction = ORIGIN
         proxy_entity_registry.set(entity, self)
 
@@ -70,22 +70,22 @@ class ProxyEntity(Generic[E], VisualElement):
         return self
 
     def dock_point(self) -> Point3D:
-        return self.m.get_edge_center(self.dock_direction)
+        return self.mobj.get_edge_center(self.dock_direction)
 
-    @abstractstaticmethod
-    def newm(entity: E) -> Mobject:  # type: ignore (bug in Pyright?)
+    @abstractmethod
+    def render(self, entity: E) -> Mobject:
         """Compute new visual representation given entity state."""
         ...
 
-    def render(self, entity: E, animate=False):
+    def update(self, entity: E, animate=False):
         """
-        Mutate `self.m` so that it represents `entity` and paint the result to screen.
+        Mutate `self.mobj` so that it represents `entity` and paint the result to screen.
         """
-        newm = self.newm(entity).move_to(self.m)
+        mobj = self.render(entity).move_to(self.mobj)
         if animate:
-            self.scene.play(Transform(self.m, newm))
+            self.scene.play(Transform(self.mobj, mobj))
         else:
-            self.m.become(newm)
+            self.mobj.become(mobj)
 
     def send_message(
         self,
@@ -96,17 +96,17 @@ class ProxyEntity(Generic[E], VisualElement):
         Animate sending a message.
         """
         log(f"{self} -> {receiver}: {message}\n", "A: send_message")
-        message.m.next_to(self.dock_point())
+        message.mobj.next_to(self.dock_point())
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.
-        self.scene.add(message.m)
+        self.scene.add(message.mobj)
         halfway = tuple(
-            np.array(list(message.m.get_center() + receiver.dock_point())) / 2.0
+            np.array(list(message.mobj.get_center() + receiver.dock_point())) / 2.0
         )
-        self.scene.play(ApplyMethod(message.m.move_to, halfway))
+        self.scene.play(ApplyMethod(message.mobj.move_to, halfway))
         self.scene.wait(0.5)
-        self.scene.play(ApplyMethod(message.m.move_to, receiver.dock_point()))
-        self.scene.remove(message.m)
+        self.scene.play(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
+        self.scene.remove(message.mobj)
         self.scene.wait()
 
 
@@ -139,7 +139,7 @@ class ProxyEntityWithChildren(
     def get_child_entities(entity: E) -> List[F]:  # type: ignore (bug in Pyright?)
         ...
 
-    def render(self, entity: E):
+    def update(self, entity: E):
         n = len(self.children)
         child_entities = self.get_child_entities(entity)
         for new in child_entities[n:]:
@@ -147,20 +147,20 @@ class ProxyEntityWithChildren(
 
         prev = self
         for child, child_entity in zip(self.children, child_entities):
-            child.m.next_to(prev.m, DOWN, buff=SMALL_BUFF).align_to(
-                prev.m, self.child_align_direction
+            child.mobj.next_to(prev.mobj, DOWN, buff=SMALL_BUFF).align_to(
+                prev.mobj, self.child_align_direction
             )
-            child.render(child_entity)
+            child.update(child_entity)
             prev = child
 
         for new in self.children[n:]:
-            self.scene.play(Indicate(new.m))
+            self.scene.play(Indicate(new.mobj))
 
-        super().render(entity)
+        super().update(entity)
 
     def append_child(self, child_entity: F):
         child = self.child_cls(child_entity, parent=self)
-        self.scene.add(child.m)
+        self.scene.add(child.mobj)
         self.children.append(child)
 
 

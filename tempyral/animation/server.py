@@ -12,7 +12,7 @@ class Server(ProxyEntityWithChildren[simulation.Server, simulation.History, Hist
     child_cls = History
     child_align_direction = LEFT
 
-    def newm(self, _: simulation.Server) -> Mobject:
+    def render(self, _: simulation.Server) -> Mobject:
         return mobject.actor("Server")
 
     @staticmethod

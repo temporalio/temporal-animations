@@ -114,26 +114,26 @@ class TemporalScene(Scene):
             for sim_aworker in simulation_activity_workers
         ]
 
-        app.set_dock_direction(RIGHT).m.align_on_border(UP).align_on_border(
+        app.set_dock_direction(RIGHT).mobj.align_on_border(UP).align_on_border(
             LEFT, buff=SMALL_BUFF
         )
-        aworker.set_dock_direction(RIGHT).m.next_to(app.m, DOWN).align_to(
-            app.m, LEFT
+        aworker.set_dock_direction(RIGHT).mobj.next_to(app.mobj, DOWN).align_to(
+            app.mobj, LEFT
         ).shift(DOWN)
-        wworker.set_dock_direction(RIGHT).m.next_to(aworker.m, DOWN).align_to(
-            aworker.m, LEFT
+        wworker.set_dock_direction(RIGHT).mobj.next_to(aworker.mobj, DOWN).align_to(
+            aworker.mobj, LEFT
         ).shift(DOWN)
-        server.set_dock_direction(LEFT).m.align_on_border(RIGHT).align_to(
-            aworker.m, UP
+        server.set_dock_direction(LEFT).mobj.align_on_border(RIGHT).align_to(
+            aworker.mobj, UP
         ).shift(1.5 * LEFT)
 
-        self.add(app.m, server.m, wworker.m, aworker.m)
+        self.add(app.mobj, server.mobj, wworker.mobj, aworker.mobj)
 
         for a, s in zip(
             [server, *[app], *[wworker]],
             [simulation_server, *simulation_apps, *simulation_workflow_workers],
         ):
-            a.render(s)  # type:ignore
+            a.update(s)  # type:ignore
 
         return server, [app], [wworker]
 
