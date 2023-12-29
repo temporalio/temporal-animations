@@ -63,7 +63,7 @@ class Workflow(EntityWithCode, ABC):
         self.blocked_expressions = set()
         super().__init__()
 
-    __publish__ = ["id", "code", "language", "blocked_expressions"]
+    __publish__ = {"id", "code", "language", "blocked_expressions"}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.blocked_expressions})"
@@ -86,7 +86,7 @@ class WorkflowWorker(Worker[WorkflowTask]):
             server.establish_workflow_worker_long_poll_connection(self)
         )
 
-    __publish__ = ["id", "workflows"]
+    __publish__ = {"id", "workflows"}
 
     @property
     def workflow(self) -> Workflow:

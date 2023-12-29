@@ -49,7 +49,7 @@ class HistoryEvent(Entity):
         self.seen_by_worker = seen_by_sticky_worker
         self.data = kwargs
 
-    __publish__ = ["id", "seen_by_worker", "data", "event_type"]
+    __publish__ = {"id", "seen_by_worker", "data", "event_type"}
 
     def __repr__(self) -> str:
         star = "*" if self.seen_by_worker else ""
@@ -65,7 +65,7 @@ class History(Entity):
         self.events = events
         super().__init__()
 
-    __publish__ = ["id", "events"]
+    __publish__ = {"id", "events"}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(workflow_id={self.workflow_id},id={self.id}: events={self.events})"
@@ -114,7 +114,7 @@ class Server(Entity):
             NamespaceId, Dict[WorkflowId, Queue[HistoryEvent]]
         ] = {DEFAULT_NAMESPACE: {}}
 
-    __publish__ = ["id", "shards"]
+    __publish__ = {"id", "shards"}
 
     def __repr__(self) -> str:
         namespace = {

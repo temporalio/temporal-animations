@@ -3,8 +3,8 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Callable, Hashable, Self
 
-from log import log
 from event_bus import MessageEvent, StateChangeEvent, event_bus
+from log import log
 
 
 class Entity:
@@ -33,13 +33,25 @@ class Entity:
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id})"
 
-    __publish__ = ["id"]
+    # A whitelist of instance attributes to be included in the object published
+    # to the event bus.
+    # TODO: publish serialized data to the event bus and make the schema
+    # available to consumers (JSON, JSONSchema).
+    __publish__ = {"id"}
 
     def publish(self) -> Self:
-        return deepcopy(self)
+        cloned = deepcopy(self)
+        # Computed properties to be cloned must be named with a _ prefix.
+        for k in self.__publish__ - self.__dict__.keys():
+            setattr(cloned, k, deepcopy(getattr(self, "_" + k)))
+        return cloned
 
     def __getstate__(self) -> dict:
-        return {k: v for k, v in self.__dict__.items() if k in self.__publish__}
+        return {
+            k: v
+            for k, v in self.__dict__.items()
+            if k in self.__publish__ & self.__dict__.keys()
+        }
 
     async def publish_change_event(self):
         log(f"{self}", "S: publish change")
