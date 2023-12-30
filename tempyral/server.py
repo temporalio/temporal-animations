@@ -187,8 +187,7 @@ class Server(Entity):
         # handling the request.
         wf_started, _ = await self.write_history_events(
             request.workflow_id,
-            HistoryEventType.WF_STARTED,
-            HistoryEventType.WFT_SCHEDULED,
+            [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED],
             seen_by_sticky_worker=False,
         )
         return ApplicationResponse(request, wf_started.data.get("payload"))
@@ -235,7 +234,7 @@ class Server(Entity):
 
         await self.write_history_events(
             request.workflow_id,
-            *events_to_be_written,
+            events_to_be_written,
             seen_by_sticky_worker=False,
         )
 
@@ -251,7 +250,7 @@ class Server(Entity):
 
         await self.write_history_events(
             workflow_id,
-            HistoryEventType.WFT_COMPLETED,
+            [HistoryEventType.WFT_COMPLETED],
             seen_by_sticky_worker=True,
         )
 
@@ -260,7 +259,7 @@ class Server(Entity):
                 case CommandType.SCHEDULE_ACTIVITY_TASK:
                     await self.write_history_events(
                         workflow_id,
-                        HistoryEventType.ACTIVITY_TASK_SCHEDULED,
+                        [HistoryEventType.ACTIVITY_TASK_SCHEDULED],
                         seen_by_sticky_worker=False,
                         token=command.token,
                     )
@@ -271,7 +270,7 @@ class Server(Entity):
                     )
                     [event] = await self.write_history_events(
                         workflow_id,
-                        HistoryEventType.WF_COMPLETED,
+                        [HistoryEventType.WF_COMPLETED],
                         seen_by_sticky_worker=True,
                     )
                     key = ApplicationRequestType.ExecuteWorkflow, workflow_id
@@ -286,7 +285,7 @@ class Server(Entity):
                         ):
                             await self.write_history_events(
                                 workflow_id,
-                                HistoryEventType.WF_UPDATE_ACCEPTED,
+                                [HistoryEventType.WF_UPDATE_ACCEPTED],
                                 seen_by_sticky_worker=True,
                             )
                         case ProtocolMessage(
@@ -294,7 +293,7 @@ class Server(Entity):
                         ):
                             await self.write_history_events(
                                 workflow_id,
-                                HistoryEventType.WF_UPDATE_REJECTED,
+                                [HistoryEventType.WF_UPDATE_REJECTED],
                                 seen_by_sticky_worker=True,
                             )
                         case ProtocolMessage(
@@ -302,7 +301,7 @@ class Server(Entity):
                         ):
                             [event] = await self.write_history_events(
                                 workflow_id,
-                                HistoryEventType.WF_UPDATE_COMPLETED,
+                                [HistoryEventType.WF_UPDATE_COMPLETED],
                                 seen_by_sticky_worker=True,
                             )
                             key = ApplicationRequestType.ExecuteUpdate, workflow_id
@@ -317,7 +316,7 @@ class Server(Entity):
     ):
         await self.write_history_events(
             workflow_id,
-            HistoryEventType.ACTIVITY_TASK_COMPLETED,
+            [HistoryEventType.ACTIVITY_TASK_COMPLETED],
             seen_by_sticky_worker=False,
             publish=False,
             result=result,
@@ -325,14 +324,14 @@ class Server(Entity):
         )
         await self.write_history_events(
             workflow_id,
-            HistoryEventType.WFT_SCHEDULED,
+            [HistoryEventType.WFT_SCHEDULED],
             seen_by_sticky_worker=False,
         )
 
     async def write_history_events(
         self,
         workflow_id: WorkflowId,
-        *event_types: HistoryEventType,
+        event_types: List[HistoryEventType],
         seen_by_sticky_worker: bool,
         publish=True,
         **kwargs: Hashable,
@@ -382,7 +381,7 @@ class Server(Entity):
             events.extend(
                 await self.write_history_events(
                     workflow_id,
-                    HistoryEventType.ACTIVITY_TASK_STARTED,
+                    [HistoryEventType.ACTIVITY_TASK_STARTED],
                     seen_by_sticky_worker=True,
                 )
             )
@@ -396,7 +395,7 @@ class Server(Entity):
             events.extend(
                 await self.write_history_events(
                     workflow_id,
-                    HistoryEventType.WFT_STARTED,
+                    [HistoryEventType.WFT_STARTED],
                     seen_by_sticky_worker=True,
                 )
             )
