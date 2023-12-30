@@ -29,7 +29,6 @@ class Worker(Entity, ABC, Generic[T]):
             # TODO: Move this into server.dispatch method?
             await self.publish_message_event(server, self, entity=task)
             await self.handle_task(task, server)
-            await asyncio.sleep(0)
 
     @abstractmethod
     async def handle_task(self, task: T, server: Server):
