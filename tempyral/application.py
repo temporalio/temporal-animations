@@ -35,12 +35,12 @@ class Application(EntityWithCode):
                 if request.token is not None:
                     self.blocked_expressions.add(request.token)
                     await self.publish_change_event()
-                await self.publish_message_event(self, server, request=request)
+                await self.publish_message_event(self, server, entity=request)
                 response = await server.handle_request(request)
                 assert response
                 if response.request.token:
                     self.blocked_expressions.remove(response.request.token)
-                await self.publish_message_event(server, self, response=response)
+                await self.publish_message_event(server, self, entity=response)
             server.terminate_simulation()
 
         yield coro()

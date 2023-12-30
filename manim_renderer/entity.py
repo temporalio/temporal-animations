@@ -2,6 +2,7 @@
 Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
+from enum import Enum
 from typing import Any, Dict, Generic, List, Self, Type, TypeVar
 
 import numpy as np
@@ -21,6 +22,11 @@ import tempyral
 from log import log
 
 E = TypeVar("E", bound=tempyral.Entity)
+
+
+class MessageStage(Enum):
+    Request = 1
+    Response = 2
 
 
 class VisualElement(ABC):
