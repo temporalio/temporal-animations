@@ -1,6 +1,6 @@
 from typing import List
 
-from manim import DOWN, LEFT, UP, Mobject, VGroup
+from manim import LEFT, Mobject
 
 import tempyral
 from manim_renderer import mobject
@@ -12,13 +12,8 @@ class Server(ProxyEntityWithChildren[tempyral.Server, tempyral.History, History]
     child_cls = History
     child_align_direction = LEFT
 
-    def render(self, entity: tempyral.Server) -> Mobject:
-        in_flight_request_types = VGroup(
-            *(mobject.message(m) for m in entity.in_flight_application_request_types)
-        ).arrange(DOWN)
-        return VGroup(
-            mobject.actor("Temporal Server"), in_flight_request_types
-        ).arrange(UP)
+    def render(self, _: tempyral.Server) -> Mobject:
+        return mobject.actor("Temporal Server")
 
     @staticmethod
     def get_child_entities(entity: tempyral.Server) -> List[tempyral.History]:
