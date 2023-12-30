@@ -16,7 +16,9 @@ class Server(ProxyEntityWithChildren[tempyral.Server, tempyral.History, History]
         in_flight_request_types = VGroup(
             *(mobject.message(m) for m in entity.in_flight_application_request_types)
         ).arrange(DOWN)
-        return VGroup(mobject.actor("Server"), in_flight_request_types).arrange(UP)
+        return VGroup(
+            mobject.actor("Temporal Server"), in_flight_request_types
+        ).arrange(UP)
 
     @staticmethod
     def get_child_entities(entity: tempyral.Server) -> List[tempyral.History]:

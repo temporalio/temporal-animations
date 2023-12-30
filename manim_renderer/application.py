@@ -19,5 +19,5 @@ class ApplicationResponse(ProxyEntityResponseMessage[tempyral.ApplicationRespons
 class Application(ProxyEntityWithCode[tempyral.Application]):
     def render(self, entity: tempyral.Application) -> Mobject:
         code = super().render(entity)
-        text = mobject.actor("Application")
+        text = mobject.actor("Your Application")
         return VGroup(text, code).arrange(DOWN, buff=SMALL_BUFF, aligned_edge=LEFT)
