@@ -1,12 +1,15 @@
 from manim import ORANGE, Mobject, Text
 
-FONT_MESSAGE = "Monospace"
-FONT_ACTOR = "Noto Sans Kannada"
-FONT_HISTORY_EVENT = "Monospace"
+FONT_MONOSPACE = "Monaco"  # Menlo PT Mono
+FONT_SANS = "Noto Sans Kannada"
+FONT_MESSAGE = FONT_MONOSPACE
+FONT_ACTOR = FONT_SANS
+FONT_HISTORY_EVENT = FONT_MONOSPACE
+FONT_CODE = FONT_MONOSPACE
 FONT_SIZE_HISTORY_EVENT = 12
 FONT_SIZE_ACTOR = 20
 FONT_SIZE_MESSAGE = 16
-FONT_SIZE_CODE = 12
+FONT_SIZE_CODE = 10
 
 
 def message(name: str, **kwargs) -> Mobject:

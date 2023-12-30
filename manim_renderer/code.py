@@ -4,7 +4,7 @@ from manim import BLACK, DOWN, LEFT, PINK, Arrow, Code, Mobject, VGroup
 
 import tempyral
 from manim_renderer.entity import ProxyEntity
-from manim_renderer.mobject import FONT_SIZE_CODE
+from manim_renderer.mobject import FONT_CODE, FONT_SIZE_CODE
 
 E = TypeVar("E", bound=tempyral.EntityWithCode)
 
@@ -16,7 +16,9 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
             language=entity.language,
             insert_line_no=False,
             font_size=FONT_SIZE_CODE,
-            line_spacing=0.3,
+            font=FONT_CODE,
+            background_stroke_width=0,
+            line_spacing=0.7,
         ).to_edge(LEFT, buff=0.1)
         lines = code[2]
         arrows = VGroup(
