@@ -21,11 +21,3 @@ class RequestMessage(Message):
 
 class ProxyEntityRequestMessage(ProxyEntity, Generic[E]):
     message_stage = MessageStage.Request
-
-
-class ResponseMessage(Message):
-    message_stage = MessageStage.Response
-
-
-class ProxyEntityResponseMessage(ProxyEntity, Generic[E]):
-    message_stage = MessageStage.Response

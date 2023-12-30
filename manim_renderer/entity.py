@@ -180,10 +180,12 @@ class ProxyEntityRegistry(Generic[E]):
         self._registry: Dict[tempyral.Entity, ProxyEntity] = {}
 
     def set(self, entity: E, proxy: ProxyEntity[E]) -> None:
-        assert (
-            entity not in self._registry
-        ), "Simulation entities may have one manim proxy only"
-        self._registry[entity] = proxy
+        if entity in self._registry:
+            assert (
+                self._registry[entity] == proxy
+            ), "Simulation entities may have one manim proxy only"
+        else:
+            self._registry[entity] = proxy
 
     def get(self, entity: E) -> ProxyEntity[E]:
         return self._registry[entity]

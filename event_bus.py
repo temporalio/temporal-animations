@@ -14,7 +14,7 @@ class StateChangeEvent(Generic[E]):
 class MessageEvent(Generic[E]):
     sender: E
     receiver: E
-    data: Dict[str, Any]
+    entity: E
 
 
 class TerminateSimulation:

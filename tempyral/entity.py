@@ -58,7 +58,9 @@ class Entity:
         await event_bus.publish(StateChangeEvent(self.clone()))
 
     async def publish_message_event(
-        self, sender: "Entity", receiver: "Entity", **kwargs: Hashable
+        self, sender: "Entity", receiver: "Entity", message: "Entity"
     ):
-        log(f"{sender} -> {receiver}, {kwargs}", "S: publish message")
-        await event_bus.publish(MessageEvent(sender.clone(), receiver.clone(), kwargs))
+        log(f"{sender} -> {receiver}: {message}", "S: publish message")
+        await event_bus.publish(
+            MessageEvent(sender.clone(), receiver.clone(), message.clone())
+        )

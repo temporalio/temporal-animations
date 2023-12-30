@@ -1,18 +1,7 @@
 import os
 from asyncio import Queue
 from collections import OrderedDict
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Hashable,
-    List,
-    Optional,
-    Tuple,
-    TypedDict,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Dict, Hashable, List, Tuple, TypedDict
 from uuid import uuid4
 
 from attr import dataclass
@@ -20,9 +9,7 @@ from attr import dataclass
 from log import log
 from manim_renderer.utils import drain
 from tempyral.api import (
-    ApplicationRequest,
     ApplicationRequestType,
-    ApplicationResponse,
     Command,
     CommandType,
     HistoryEventType,
@@ -30,13 +17,11 @@ from tempyral.api import (
     ProtocolInstanceId,
     ProtocolMessage,
     ProtocolMessageType,
-    RespondActivityTaskCompleted,
-    RespondWorkflowTaskCompleted,
     TaskQueueId,
-    WorkerRequest,
     WorkflowId,
 )
 from tempyral.entity import Entity
+from tempyral.message import ApplicationRequest
 
 if TYPE_CHECKING:
     from tempyral.worker import ActivityWorker, WorkflowWorker
@@ -104,6 +89,8 @@ class WorkflowTask(Entity):
         self.events = tuple(events)
         self.pending_updates = tuple(pending_updates)
 
+    __publish__ = {"id", "events", "pending_updates"}
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id}: events={self.events}, updates={self.pending_updates})"
 
@@ -116,6 +103,29 @@ class ActivityTask(Entity):
     def __init__(self, workflow_id: WorkflowId, token: int):
         super().__init__()
         self.workflow_id = workflow_id
+        self.token = token
+
+
+class WorkerRequest(Entity):
+    def __init__(self, workflow_id: WorkflowId):
+        super().__init__()
+        self.workflow_id = workflow_id
+
+
+class WorkflowTaskCompleted(WorkerRequest):
+    __match_args__ = ("workflow_id", "commands")
+
+    def __init__(self, workflow_id: WorkflowId, commands: List[Command]):
+        super().__init__(workflow_id)
+        self.commands = commands
+
+
+class ActivityTaskCompleted(WorkerRequest):
+    __match_args__ = ("workflow_id", "result", "token")
+
+    def __init__(self, workflow_id: WorkflowId, result: Any, token: int):
+        super().__init__(workflow_id)
+        self.result = result
         self.token = token
 
 
@@ -162,26 +172,27 @@ class Server(Entity):
         }
         return f"{type(self).__name__}(id={self.id}: namespace={namespace})"
 
-    async def handle_request(
-        self, request: Union[ApplicationRequest, WorkerRequest]
-    ) -> Optional[ApplicationResponse]:
-        match request:
-            case ApplicationRequest(ApplicationRequestType.StartWorkflow):
+    async def handle_application_request(self, request: ApplicationRequest):
+        match request.request_type:
+            case ApplicationRequestType.StartWorkflow:
                 return await self.start_workflow(request)
-            case ApplicationRequest(ApplicationRequestType.ExecuteWorkflow):
+            case ApplicationRequestType.ExecuteWorkflow:
                 return await self.execute_workflow(request)
-            case ApplicationRequest(ApplicationRequestType.ExecuteUpdate):
+            case ApplicationRequestType.ExecuteUpdate:
                 return await self.execute_update(request)
-            case RespondWorkflowTaskCompleted(workflow_id, commands):
-                if os.path.exists("/tmp/flag"):
-                    self.terminate_simulation()
+            case _:
+                raise ValueError(f"Server does not support request of type: {request}")
+
+    async def handle_worker_request(self, request: WorkerRequest):
+        match request:
+            case WorkflowTaskCompleted(workflow_id, commands):
                 await self.handle_commands(workflow_id, commands)
-            case RespondActivityTaskCompleted(workflow_id, result, token):
+            case ActivityTaskCompleted(workflow_id, result, token):
                 await self.handle_activity_task_completed(workflow_id, result, token)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
-    async def start_workflow(self, request: ApplicationRequest) -> ApplicationResponse:
+    async def start_workflow(self, request: ApplicationRequest):
         # This is a non-blocking request; we don't need to wait for a
         # HistoryEvent to be written, beyond those we write synchronously on
         # handling the request. As a result we do not use
@@ -197,24 +208,22 @@ class Server(Entity):
         )
         del chans[key]
         await self.publish_change_event()
-        return ApplicationResponse(request, wf_started.data.get("payload"))
+        request.response_payload = wf_started.data.get("payload")
 
-    async def execute_workflow(
-        self, request: ApplicationRequest
-    ) -> ApplicationResponse:
+    async def execute_workflow(self, request: ApplicationRequest):
         event = await self._get_application_request_response(
             request, [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED]
         )
-        return ApplicationResponse(request, event.data.get("payload"))
+        request.response_payload = event.data.get("payload")
 
-    async def execute_update(self, request: ApplicationRequest) -> ApplicationResponse:
+    async def execute_update(self, request: ApplicationRequest):
         self.get_workflow_data(request.workflow_id).pending_updates.append(
             UpdateInfo(uuid4().hex, "fake-update-name")
         )
         event = await self._get_application_request_response(
             request, [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED]
         )
-        return ApplicationResponse(request, event.data.get("payload"))
+        request.response_payload = event.data.get("payload")
 
     async def _get_application_request_response(
         self, request: ApplicationRequest, events_to_be_written: List[HistoryEventType]

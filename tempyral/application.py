@@ -1,7 +1,8 @@
 from typing import Coroutine, Iterable
 
-from tempyral.api import ApplicationRequest, ApplicationRequestType
+from tempyral.api import ApplicationRequestType
 from tempyral.code import EntityWithCode
+from tempyral.message import ApplicationRequest
 from tempyral.server import Server
 
 
@@ -35,12 +36,11 @@ class Application(EntityWithCode):
                 if request.token is not None:
                     self.blocked_expressions.add(request.token)
                     await self.publish_change_event()
-                await self.publish_message_event(self, server, entity=request)
-                response = await server.handle_request(request)
-                assert response
-                if response.request.token:
-                    self.blocked_expressions.remove(response.request.token)
-                await self.publish_message_event(server, self, entity=response)
+                await self.publish_message_event(self, server, request)
+                await server.handle_application_request(request)
+                if request.token is not None:
+                    self.blocked_expressions.remove(request.token)
+                await self.publish_message_event(server, self, request)
             server.terminate_simulation()
 
         yield coro()

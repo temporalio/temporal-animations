@@ -5,13 +5,22 @@ from .api import ApplicationRequestType, WorkflowId
 from .application import Application
 from .code import EntityWithCode
 from .entity import Entity
-from .message import ApplicationRequest, ApplicationResponse
-from .server import History, HistoryEvent, Server
+from .message import ApplicationRequest
+from .server import (
+    ActivityTaskCompleted,
+    History,
+    HistoryEvent,
+    Server,
+    WorkerRequest,
+    WorkflowTaskCompleted,
+)
 from .worker import (
     ActivityTask,
+    ActivityTaskCompleted,
     ActivityWorker,
     Worker,
     Workflow,
     WorkflowTask,
+    WorkflowTaskCompleted,
     WorkflowWorker,
 )

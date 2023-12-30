@@ -35,24 +35,6 @@ class ApplicationRequestType(Enum):
     ExecuteUpdate = 3
 
 
-@dataclass(frozen=True)
-class ApplicationRequest:
-    request_type: ApplicationRequestType
-    workflow_id: WorkflowId
-    token: Optional[int]
-
-
-@dataclass(frozen=True)
-class ApplicationResponse:
-    request: ApplicationRequest
-    payload: Any
-
-
-@dataclass(frozen=True)
-class WorkerRequest:
-    workflow_id: WorkflowId
-
-
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/command_type.proto#L35
 class CommandType(Enum):
     SCHEDULE_ACTIVITY_TASK = 1
@@ -89,14 +71,3 @@ class Command:
     command_type: CommandType
     protocol_message: Optional[ProtocolMessage] = None
     token: Optional[int] = None
-
-
-@dataclass(frozen=True)
-class RespondWorkflowTaskCompleted(WorkerRequest):
-    commands: List[Command]
-
-
-@dataclass(frozen=True)
-class RespondActivityTaskCompleted(WorkerRequest):
-    result: Any
-    token: int

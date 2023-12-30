@@ -4,11 +4,7 @@ from manim import Scene
 
 from event_bus import MessageEvent, StateChangeEvent, TerminateSimulation, event_bus
 from log import log
-from manim_renderer.application import (
-    Application,
-    ApplicationRequest,
-    ApplicationResponse,
-)
+from manim_renderer.application import Application, ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
 from manim_renderer.server import Server
 from manim_renderer.worker import (
@@ -33,14 +29,18 @@ async def process_simulation_events():
                 log(f"{entity}", "A: handle change event")
                 proxy_entity = proxy_entity_registry.get(entity)
                 proxy_entity.render_to_scene(entity)
-            case MessageEvent(sender_entity, receiver_entity, data):
+            case MessageEvent(sender_entity, receiver_entity, msg_entity):
                 log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
                 sender, receiver = (
                     proxy_entity_registry.get(sender_entity),
                     proxy_entity_registry.get(receiver_entity),
                 )
-                msg_cls = _get_message_cls_for(sender, receiver)
-                msg = msg_cls(**data)  # TODO: type safety
+                try:
+                    msg = proxy_entity_registry.get(msg_entity)
+                except KeyError:
+                    msg_cls = _get_message_cls_for(sender, receiver)
+                    msg = msg_cls(entity=msg_entity)
+                    proxy_entity_registry.set(msg_entity, msg)
                 sender.render_to_scene(sender_entity)
                 sender.send_message(receiver, msg)
                 receiver.render_to_scene(receiver_entity)
@@ -50,12 +50,12 @@ async def process_simulation_events():
 
 def _get_message_cls_for(
     sender: ProxyEntity, receiver: ProxyEntity
-) -> Type[VisualElement]:
+) -> Type[ProxyEntity]:
     match (type(sender), type(receiver)):
         case sr if sr == (Application, Server):
             return ApplicationRequest
         case sr if sr == (Server, Application):
-            return ApplicationResponse
+            return ApplicationRequest
         case sr if sr == (WorkflowWorker, Server):
             return WorkerRequest
         case sr if sr == (ActivityWorker, Server):

@@ -1,7 +1,6 @@
-import asyncio
 from abc import ABC, abstractmethod
 from asyncio import Queue
-from typing import Generic, List, Set, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Generic, List, Type, TypeVar, Union, cast
 
 from log import log
 from tempyral.api import (
@@ -9,13 +8,17 @@ from tempyral.api import (
     CommandType,
     ProtocolMessage,
     ProtocolMessageType,
-    RespondActivityTaskCompleted,
-    RespondWorkflowTaskCompleted,
     WorkflowId,
 )
 from tempyral.code import EntityWithCode
 from tempyral.entity import Entity
-from tempyral.server import ActivityTask, Server, WorkflowTask
+from tempyral.server import (
+    ActivityTask,
+    ActivityTaskCompleted,
+    Server,
+    WorkflowTask,
+    WorkflowTaskCompleted,
+)
 
 T = TypeVar("T", bound=Union[ActivityTask, WorkflowTask])
 
@@ -27,7 +30,7 @@ class Worker(Entity, ABC, Generic[T]):
         while True:
             task = await self.long_poll_connection.get()
             # TODO: Move this into server.dispatch method?
-            await self.publish_message_event(server, self, entity=task)
+            await self.publish_message_event(server, self, task)
             await self.handle_task(task, server)
 
     @abstractmethod
@@ -43,9 +46,9 @@ class ActivityWorker(Worker[ActivityTask]):
         )
 
     async def handle_task(self, at: ActivityTask, server: Server):
-        await self.publish_message_event(self, server)
-        await server.handle_request(
-            RespondActivityTaskCompleted(at.workflow_id, None, at.token)
+        await self.publish_message_event(self, server, at)
+        await server.handle_worker_request(
+            ActivityTaskCompleted(at.workflow_id, None, at.token)
         )
 
 
@@ -131,9 +134,6 @@ class WorkflowWorker(Worker[WorkflowTask]):
             if c.token is not None:
                 wf.blocked_expressions.add(c.token)
         await self.publish_change_event()
-        await self.publish_message_event(
-            self, server, name="RespondWorkflowTaskCompleted"
-        )
-        await server.handle_request(
-            RespondWorkflowTaskCompleted(wft.workflow_id, commands)
-        )
+        msg = WorkflowTaskCompleted(wft.workflow_id, commands)
+        await self.publish_message_event(self, server, msg)
+        await server.handle_worker_request(msg)
