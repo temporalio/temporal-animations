@@ -184,12 +184,19 @@ class Server(Entity):
     async def start_workflow(self, request: ApplicationRequest) -> ApplicationResponse:
         # This is a non-blocking request; we don't need to wait for a
         # HistoryEvent to be written, beyond those we write synchronously on
-        # handling the request.
+        # handling the request. As a result we do not use
+        # _get_application_request_response.
+        chans = self.in_flight_application_request_channels[DEFAULT_NAMESPACE]
+        key = request.request_type, request.workflow_id
+        chans[key] = Queue(maxsize=1)
+        await self.publish_change_event()
         wf_started, _ = await self.write_history_events(
             request.workflow_id,
             [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED],
             seen_by_sticky_worker=False,
         )
+        del chans[key]
+        await self.publish_change_event()
         return ApplicationResponse(request, wf_started.data.get("payload"))
 
     async def execute_workflow(
@@ -221,6 +228,11 @@ class Server(Entity):
         within it information needed to unblock the corresponding client-side
         awaitable. The handler deletes the channel when it receives the response
         from it.
+
+        Note that the set of in-flight application requests (which is published
+        to the event bus to be visualized) is defined to be the current set of
+        channels. Therefore we publish a change event after creating/deleting a
+        channel.
         """
 
         chans = self.in_flight_application_request_channels[DEFAULT_NAMESPACE]
