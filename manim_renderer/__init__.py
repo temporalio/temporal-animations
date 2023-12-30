@@ -41,7 +41,9 @@ async def process_simulation_events():
                 )
                 msg_cls = _get_message_cls_for(sender, receiver)
                 msg = msg_cls(**data)  # TODO: type safety
+                sender.render_to_scene(sender_entity)
                 sender.send_message(receiver, msg)
+                receiver.render_to_scene(receiver_entity)
             case TerminateSimulation():
                 break
 

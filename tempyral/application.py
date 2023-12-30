@@ -37,11 +37,10 @@ class Application(EntityWithCode):
                     await self.publish_change_event()
                 await self.publish_message_event(self, server, request=request)
                 response = await server.handle_request(request)
-                await self.publish_message_event(server, self, response=response)
                 assert response
                 if response.request.token:
                     self.blocked_expressions.remove(response.request.token)
-                    await self.publish_change_event()
+                await self.publish_message_event(server, self, response=response)
             server.terminate_simulation()
 
         yield coro()
