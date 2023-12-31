@@ -8,7 +8,7 @@ class ExecuteUpdateApplication(Application):
     """
 
     typescript = """
-const wfHandle = await client.start(myWorkflow, {        // tempyral: ApplicationRequestType.StartWorkflow "my-workflow-id"
+const wfHandle = await client.start(myWorkflow, {               // tempyral: ApplicationRequestType.StartWorkflow "my-workflow-id"
     workflowId: 'my-workflow-id',
     taskQueue: 'my-task-queue',
 });
@@ -34,7 +34,7 @@ export async function myWorkflow(): Promise<number> {
     },
     { validator: (arg: number) => arg > 0 }
   );
-  await wf.condition(() => total > 0);
+  await wf.condition(() => total > 0);                          // tempyral: ???
   return total;                                                 // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION
 }
 """

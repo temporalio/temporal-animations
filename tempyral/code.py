@@ -43,11 +43,11 @@ class EntityWithCode(Entity):
         lines: List[str] = []
         directives: List[Tuple[str, int]] = []
         comment_marker = COMMENT_MARKERS[language]
-        code = getattr(self, language)
+        code: str = getattr(self, language)
         line_num = 1
         for line_num, line in enumerate(code.strip().splitlines(), line_num):
             code, _, directive = line.partition(f"{comment_marker} tempyral:")
             if directive:
                 directives.append((directive.strip(), line_num))
-            lines.append(code)
+            lines.append(code.rstrip())
         return "\n".join(lines), directives
