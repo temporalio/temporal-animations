@@ -24,7 +24,8 @@ def set_scene(scene: Scene):
 
 
 async def process_simulation_events():
-    n = 77
+    curr_time = 0
+    animations = []
     while True:
         match await event_bus.bus.get():
             case StateChangeEvent(entity):
@@ -37,7 +38,6 @@ async def process_simulation_events():
                     cast(tempyral.Entity, receiver_entity),
                     cast(tempyral.RequestResponse, msg_entity),
                 )
-
                 log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
                 sender, receiver = (
                     proxy_entity_registry.get(sender_entity),
@@ -49,14 +49,12 @@ async def process_simulation_events():
                     msg_cls = _get_message_cls_for(sender, receiver)
                     msg = msg_cls(entity=msg_entity)
                     proxy_entity_registry.set(msg_entity, msg)
-                sender.render_to_scene(sender_entity)
-                sender.send_message(receiver, msg)
-                if msg_entity.stage == tempyral.RequestResponseStage.Response:
-                    sender.scene.remove(msg.mobj)
-                receiver.render_to_scene(receiver_entity)
-                n -= 1
-                if not n:
-                    break
+                animations.append(sender.send_message(receiver, msg))
+                if msg_entity.time > curr_time:
+                    sender.play_all_send_message_animations(*zip(*animations))
+                    animations.clear()
+                    curr_time = msg_entity.time
+
             case TerminateSimulation():
                 break
 

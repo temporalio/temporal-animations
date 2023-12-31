@@ -3,7 +3,7 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import Enum
-from typing import Any, Dict, Generic, List, Self, Type, TypeVar
+from typing import Any, Dict, Generic, Iterable, List, Self, Tuple, Type, TypeVar, cast
 
 import numpy as np
 from manim import (
@@ -11,6 +11,7 @@ from manim import (
     ORIGIN,
     RIGHT,
     SMALL_BUFF,
+    Animation,
     ApplyMethod,
     Indicate,
     Mobject,
@@ -104,24 +105,30 @@ class ProxyEntity(Generic[E], VisualElement):
     def send_message(
         self,
         receiver: "ProxyEntity",
-        message: "ProxyEntity[tempyral.RequestResponse]",
-    ):
+        message: VisualElement,
+    ) -> Tuple[Animation, Animation]:
         """
-        Animate sending a message.
+        Create (but do not play) animations for sending a message.
         """
-        log(f"{self} -> {receiver}: {message}\n", "A: send_message")
         message.mobj.move_to(self.dock_point())
-        # TODO: Choose the start and end points appropriately given the
-        # locations of self and receiver.
         self.scene.add(message.mobj)
         halfway = tuple(
             np.array(list(message.mobj.get_center() + receiver.dock_point())) / 2.0
         )
-        self.scene.play(notnull(ApplyMethod(message.mobj.move_to, halfway)))
-        self.scene.wait(0.5)
-        self.scene.play(
-            notnull(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
+        return cast(
+            Tuple[Animation, Animation],
+            (
+                ApplyMethod(message.mobj.move_to, halfway),
+                ApplyMethod(message.mobj.move_to, receiver.dock_point()),
+            ),
         )
+
+    def play_all_send_message_animations(
+        self, first_halves: Iterable[Animation], second_halves: Iterable[Animation]
+    ):
+        self.scene.play(*first_halves)
+        self.scene.wait(0.5)
+        self.scene.play(*second_halves)
         self.scene.wait()
 
     def with_time(self, mobj: Mobject, entity: E) -> Mobject:
