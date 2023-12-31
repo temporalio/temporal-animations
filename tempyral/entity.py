@@ -1,7 +1,6 @@
-import asyncio
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Callable, Hashable, Self
+from typing import Any, Callable, Self
 
 from event_bus import MessageEvent, StateChangeEvent, event_bus
 from log import log
@@ -19,10 +18,11 @@ class Entity:
     next_id = defaultdict(int)
     terminate_simulation: Callable
 
-    def __init__(self):
+    def __init__(self, time=0):
         key = type(self).__name__
         self.next_id[key] += 1
         self.id = self.next_id[key]
+        self.time = time
 
     def __hash__(self) -> int:
         return hash((type(self).__name__, self.id))
@@ -37,7 +37,7 @@ class Entity:
     # to the event bus.
     # TODO: publish serialized data to the event bus and make the schema
     # available to consumers (JSON, JSONSchema).
-    __publish__ = {"id"}
+    __publish__ = {"id", "time"}
 
     def clone(self) -> Self:
         cloned = deepcopy(self)

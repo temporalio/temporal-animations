@@ -81,10 +81,11 @@ class WorkflowTask(Entity):
     def __init__(
         self,
         worklow_id: WorkflowId,
+        time: int,
         events: List[HistoryEvent],
         pending_updates: List[UpdateInfo],
     ) -> None:
-        super().__init__()
+        super().__init__(time)
         self.workflow_id = worklow_id
         self.events = tuple(events)
         self.pending_updates = tuple(pending_updates)
@@ -100,31 +101,31 @@ Shard = Dict[NamespaceId, Namespace]
 
 
 class ActivityTask(Entity):
-    def __init__(self, workflow_id: WorkflowId, token: int):
-        super().__init__()
+    def __init__(self, workflow_id: WorkflowId, time: int, token: int):
+        super().__init__(time)
         self.workflow_id = workflow_id
         self.token = token
 
 
 class WorkerRequest(Entity):
-    def __init__(self, workflow_id: WorkflowId):
-        super().__init__()
+    def __init__(self, workflow_id: WorkflowId, time: int):
+        super().__init__(time)
         self.workflow_id = workflow_id
 
 
 class WorkflowTaskCompleted(WorkerRequest):
     __match_args__ = ("workflow_id", "commands")
 
-    def __init__(self, workflow_id: WorkflowId, commands: List[Command]):
-        super().__init__(workflow_id)
+    def __init__(self, workflow_id: WorkflowId, time: int, commands: List[Command]):
+        super().__init__(workflow_id, time)
         self.commands = commands
 
 
 class ActivityTaskCompleted(WorkerRequest):
     __match_args__ = ("workflow_id", "result", "token")
 
-    def __init__(self, workflow_id: WorkflowId, result: Any, token: int):
-        super().__init__(workflow_id)
+    def __init__(self, workflow_id: WorkflowId, time: int, result: Any, token: int):
+        super().__init__(workflow_id, time)
         self.result = result
         self.token = token
 
@@ -173,6 +174,10 @@ class Server(Entity):
         return f"{type(self).__name__}(id={self.id}: namespace={namespace})"
 
     async def handle_application_request(self, request: ApplicationRequest):
+        self.time = max(self.time, request.time) + 1
+        request.time = self.time
+        await self.publish_change_event()
+        await request.publish_change_event()
         match request.request_type:
             case ApplicationRequestType.StartWorkflow:
                 return await self.start_workflow(request)
@@ -184,6 +189,10 @@ class Server(Entity):
                 raise ValueError(f"Server does not support request of type: {request}")
 
     async def handle_worker_request(self, request: WorkerRequest):
+        self.time = max(self.time, request.time) + 1
+        request.time = self.time
+        await self.publish_change_event()
+        await request.publish_change_event()
         match request:
             case WorkflowTaskCompleted(workflow_id, commands):
                 await self.handle_commands(workflow_id, commands)
@@ -408,7 +417,9 @@ class Server(Entity):
             )
             [queue] = self.activity_worker_long_poll_connections.values()
             await queue.put(
-                ActivityTask(workflow_id, token=int(at_scheduled_event.data["token"]))  # type: ignore
+                ActivityTask(
+                    workflow_id, self.time, token=int(at_scheduled_event.data["token"])  # type: ignore
+                )
             )
         elif any(e.event_type == HistoryEventType.WFT_SCHEDULED for e in events):
             for e in events:
@@ -422,7 +433,9 @@ class Server(Entity):
             )
             pending_updates = drain(self.namespace[workflow_id].pending_updates)
             [queue] = self.workflow_worker_long_poll_connections.values()
-            await queue.put(WorkflowTask(workflow_id, events, pending_updates))
+            await queue.put(
+                WorkflowTask(workflow_id, self.time, events, pending_updates)
+            )
 
     @property
     def namespace(self) -> OrderedDict[WorkflowId, WorkflowData]:

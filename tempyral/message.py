@@ -9,6 +9,7 @@ class ApplicationRequest(Entity):
         self,
         request_type: ApplicationRequestType,
         workflow_id: WorkflowId,
+        time: int,
         token: Optional[int] = None,
         response_payload: Any = None,
     ):
@@ -16,6 +17,6 @@ class ApplicationRequest(Entity):
         self.request_type = request_type
         self.token = token
         self.response_payload = response_payload
-        super().__init__()
+        super().__init__(time)
 
     __publish__ = Entity.__publish__ | {"request_type"}

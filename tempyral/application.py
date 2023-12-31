@@ -14,6 +14,7 @@ class Application(EntityWithCode):
     }
 
     def __init__(self):
+        super().__init__()
         if not hasattr(self, "language"):
             self.language = self._get_language()
         self.code, raw_requests = self.parse_code(self.language)
@@ -23,12 +24,13 @@ class Application(EntityWithCode):
                 request_type, workflow_id = map(eval, directive.split())
                 if not isinstance(request_type, ApplicationRequestType):
                     raise ValueError
-                requests.append(ApplicationRequest(request_type, workflow_id, line_num))
+                requests.append(
+                    ApplicationRequest(request_type, workflow_id, self.time, line_num)
+                )
             except ValueError:
                 raise ValueError(f"Unsupported application directive: {directive}")
         self.requests = requests
         self.blocked_expressions = set()
-        super().__init__()
 
     def get_coroutines(self, server: Server) -> Iterable[Coroutine]:
         """
@@ -37,11 +39,12 @@ class Application(EntityWithCode):
 
         async def coro():
             for request in self.requests:
+                request.time = self.time
                 if request.token is not None:
                     self.blocked_expressions.add(request.token)
-                    await self.publish_change_event()
                 await self.publish_message_event(self, server, request)
                 await server.handle_application_request(request)
+                self.time = max(self.time, request.time) + 1
                 if request.token is not None:
                     self.blocked_expressions.remove(request.token)
                 await self.publish_message_event(server, self, request)

@@ -32,10 +32,13 @@ class Worker(Entity, ABC, Generic[T]):
 
     async def poll(self, server: Server):
         while True:
-            await self.publish_message_event(self, server, WorkflowPollRequest())
+            await self.publish_message_event(
+                self, server, WorkflowPollRequest(self.time)
+            )
             task = await self.long_poll_connection.get()
             # TODO: Move this into server.dispatch method?
             await self.publish_message_event(server, self, task)
+            self.time = max(self.time, task.time) + 1
             await self.handle_task(task, server)
 
     @abstractmethod
@@ -53,7 +56,7 @@ class ActivityWorker(Worker[ActivityTask]):
     async def handle_task(self, at: ActivityTask, server: Server):
         await self.publish_message_event(self, server, at)
         await server.handle_worker_request(
-            ActivityTaskCompleted(at.workflow_id, None, at.token)
+            ActivityTaskCompleted(at.workflow_id, self.time, None, at.token)
         )
 
 
@@ -143,6 +146,8 @@ class WorkflowWorker(Worker[WorkflowTask]):
             if c.token is not None:
                 wf.blocked_expressions.add(c.token)
         await self.publish_change_event()
-        msg = WorkflowTaskCompleted(wft.workflow_id, commands)
+        msg = WorkflowTaskCompleted(wft.workflow_id, self.time, commands)
         await self.publish_message_event(self, server, msg)
         await server.handle_worker_request(msg)
+        self.time = max(self.time, msg.time) + 1
+        await self.publish_change_event()
