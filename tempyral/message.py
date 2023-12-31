@@ -18,4 +18,4 @@ class ApplicationRequest(Entity):
         self.response_payload = response_payload
         super().__init__()
 
-    __publish__ = {"id", "request_type"}
+    __publish__ = Entity.__publish__ | {"request_type"}

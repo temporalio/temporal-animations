@@ -41,7 +41,7 @@ class HistoryEvent(Entity):
         self.seen_by_worker = seen_by_sticky_worker
         self.data = kwargs
 
-    __publish__ = {"id", "seen_by_worker", "data", "event_type"}
+    __publish__ = Entity.__publish__ | {"seen_by_worker", "data", "event_type"}
 
     def __repr__(self) -> str:
         star = "*" if self.seen_by_worker else ""
@@ -57,7 +57,7 @@ class History(Entity):
         self.events = events
         super().__init__()
 
-    __publish__ = {"id", "events", "workflow_id"}
+    __publish__ = Entity.__publish__ | {"events", "workflow_id"}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(workflow_id={self.workflow_id},id={self.id}: events={self.events})"
@@ -89,7 +89,7 @@ class WorkflowTask(Entity):
         self.events = tuple(events)
         self.pending_updates = tuple(pending_updates)
 
-    __publish__ = {"id", "events", "pending_updates"}
+    __publish__ = Entity.__publish__ | {"events", "pending_updates"}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id}: events={self.events}, updates={self.pending_updates})"
@@ -150,7 +150,7 @@ class Server(Entity):
             OrderedDict[Tuple[ApplicationRequestType, WorkflowId], Queue[HistoryEvent]],
         ] = {DEFAULT_NAMESPACE: OrderedDict()}
 
-    __publish__ = {"id", "shards", "in_flight_application_request_types"}
+    __publish__ = Entity.__publish__ | {"shards", "in_flight_application_request_types"}
 
     # Computed property published to event bus without the underscore prefix.
     in_flight_application_request_types: List[str]

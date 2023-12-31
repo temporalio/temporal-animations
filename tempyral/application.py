@@ -7,7 +7,11 @@ from tempyral.server import Server
 
 
 class Application(EntityWithCode):
-    __publish__ = {"id", "code", "language", "blocked_expressions"}
+    __publish__ = EntityWithCode.__publish__ | {
+        "code",
+        "language",
+        "blocked_expressions",
+    }
 
     def __init__(self):
         if not hasattr(self, "language"):
