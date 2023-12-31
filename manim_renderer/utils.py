@@ -1,7 +1,11 @@
 import asyncio
 import sys
 import traceback
-from typing import Coroutine, Iterable, List
+from typing import Coroutine, Iterable, List, cast
+
+
+def notnull[T](t: T | None) -> T:
+    return cast(T, t)
 
 
 def only[T](it: Iterable[T], msg="") -> T:

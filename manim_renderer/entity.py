@@ -20,6 +20,7 @@ from manim.typing import Point3D, Vector3
 
 import tempyral
 from log import log
+from manim_renderer.utils import notnull
 
 E = TypeVar("E", bound=tempyral.Entity)
 
@@ -92,7 +93,7 @@ class ProxyEntity(Generic[E], VisualElement):
         """
         mobj = self.render(entity).move_to(self.mobj)
         if animate:
-            self.scene.play(Transform(self.mobj, mobj))
+            self.scene.play(notnull(Transform(self.mobj, mobj)))
         else:
             self.mobj.become(mobj)
 
@@ -112,9 +113,11 @@ class ProxyEntity(Generic[E], VisualElement):
         halfway = tuple(
             np.array(list(message.mobj.get_center() + receiver.dock_point())) / 2.0
         )
-        self.scene.play(ApplyMethod(message.mobj.move_to, halfway))
+        self.scene.play(notnull(ApplyMethod(message.mobj.move_to, halfway)))
         self.scene.wait(0.5)
-        self.scene.play(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
+        self.scene.play(
+            notnull(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
+        )
         self.scene.wait()
 
 
@@ -162,7 +165,7 @@ class ProxyEntityWithChildren(
             prev = child
 
         for new in self.children[n:]:
-            self.scene.play(Indicate(new.mobj))
+            self.scene.play(notnull(Indicate(new.mobj)))
 
         super().render_to_scene(entity)
 
