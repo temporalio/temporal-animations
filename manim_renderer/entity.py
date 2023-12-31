@@ -77,7 +77,9 @@ class ProxyEntity(Generic[E], VisualElement):
         return self
 
     def dock_point(self) -> Point3D:
-        return self.mobj.get_edge_center(self.dock_direction)
+        return (
+            self.mobj.get_edge_center(self.dock_direction) + 0.5 * self.dock_direction
+        )
 
     @abstractmethod
     def render(self, entity: E) -> Mobject:
@@ -103,7 +105,7 @@ class ProxyEntity(Generic[E], VisualElement):
         Animate sending a message.
         """
         log(f"{self} -> {receiver}: {message}\n", "A: send_message")
-        message.mobj.next_to(self.dock_point())
+        message.mobj.move_to(self.dock_point())
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.
         self.scene.add(message.mobj)
@@ -113,7 +115,6 @@ class ProxyEntity(Generic[E], VisualElement):
         self.scene.play(ApplyMethod(message.mobj.move_to, halfway))
         self.scene.wait(0.5)
         self.scene.play(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
-        self.scene.remove(message.mobj)
         self.scene.wait()
 
 
