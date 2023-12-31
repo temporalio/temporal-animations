@@ -54,6 +54,12 @@ class CommandType(Enum):
     MODIFY_WORKFLOW_PROPERTIES = 16
 
 
+@dataclass
+class UpdateInfo:
+    update_id: ProtocolInstanceId
+    update_name: str
+
+
 class ProtocolMessageType(Enum):
     UPDATE_ACCEPTED = 1
     UPDATE_REJECTED = 2

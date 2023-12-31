@@ -1,7 +1,8 @@
-from typing import Type
+from typing import Type, cast
 
 from manim import Scene
 
+import tempyral
 from event_bus import MessageEvent, StateChangeEvent, TerminateSimulation, event_bus
 from log import log
 from manim_renderer.application import Application, ApplicationRequest
@@ -31,6 +32,12 @@ async def process_simulation_events():
                 proxy_entity = proxy_entity_registry.get(entity)
                 proxy_entity.render_to_scene(entity)
             case MessageEvent(sender_entity, receiver_entity, msg_entity):
+                sender_entity, receiver_entity, msg_entity = (
+                    cast(tempyral.Entity, sender_entity),
+                    cast(tempyral.Entity, receiver_entity),
+                    cast(tempyral.RequestResponse, msg_entity),
+                )
+
                 log(f"{sender_entity} -> {receiver_entity}", "A: handle message event")
                 sender, receiver = (
                     proxy_entity_registry.get(sender_entity),
@@ -44,6 +51,8 @@ async def process_simulation_events():
                     proxy_entity_registry.set(msg_entity, msg)
                 sender.render_to_scene(sender_entity)
                 sender.send_message(receiver, msg)
+                if msg_entity.stage == tempyral.RequestResponseStage.Response:
+                    sender.scene.remove(msg.mobj)
                 receiver.render_to_scene(receiver_entity)
                 n -= 1
                 if not n:

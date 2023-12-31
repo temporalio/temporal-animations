@@ -104,7 +104,7 @@ class ProxyEntity(Generic[E], VisualElement):
     def send_message(
         self,
         receiver: "ProxyEntity",
-        message: VisualElement,
+        message: "ProxyEntity[tempyral.RequestResponse]",
     ):
         """
         Animate sending a message.

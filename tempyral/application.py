@@ -2,7 +2,7 @@ from typing import Coroutine, Iterable
 
 from tempyral.api import ApplicationRequestType
 from tempyral.code import EntityWithCode
-from tempyral.message import ApplicationRequest
+from tempyral.request_response import ApplicationRequest
 from tempyral.server import Server
 
 

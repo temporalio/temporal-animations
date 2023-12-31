@@ -6,7 +6,7 @@ from .api import ApplicationRequestType, WorkflowId
 from .application import Application
 from .code import EntityWithCode
 from .entity import Entity
-from .message import ApplicationRequest
+from .request_response import ApplicationRequest, RequestResponse, RequestResponseStage
 from .server import (
     ActivityTaskCompleted,
     History,

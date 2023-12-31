@@ -12,14 +12,22 @@ from tempyral.api import (
     CommandType,
     HistoryEventType,
     NamespaceId,
-    ProtocolInstanceId,
     ProtocolMessage,
     ProtocolMessageType,
     TaskQueueId,
+    UpdateInfo,
     WorkflowId,
 )
 from tempyral.entity import Entity
-from tempyral.message import ApplicationRequest
+from tempyral.request_response import (
+    ActivityTask,
+    ActivityTaskCompleted,
+    ApplicationRequest,
+    RequestResponseStage,
+    WorkerRequest,
+    WorkflowTask,
+    WorkflowTaskCompleted,
+)
 
 if TYPE_CHECKING:
     from tempyral.worker import ActivityWorker, WorkflowWorker
@@ -62,70 +70,13 @@ class History(Entity):
 
 
 @dataclass
-class UpdateInfo:
-    update_id: ProtocolInstanceId
-    update_name: str
-
-
-@dataclass
 class WorkflowData:
     history: History
     pending_updates: List[UpdateInfo]
 
 
-class WorkflowTask(Entity):
-    """A slice of history events"""
-
-    def __init__(
-        self,
-        worklow_id: WorkflowId,
-        time: int,
-        events: List[HistoryEvent],
-        pending_updates: List[UpdateInfo],
-    ) -> None:
-        super().__init__(time)
-        self.workflow_id = worklow_id
-        self.events = tuple(events)
-        self.pending_updates = tuple(pending_updates)
-
-    __publish__ = Entity.__publish__ | {"events", "pending_updates"}
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(id={self.id}: events={self.events}, updates={self.pending_updates})"
-
-
 Namespace = OrderedDict[WorkflowId, WorkflowData]
 Shard = Dict[NamespaceId, Namespace]
-
-
-class ActivityTask(Entity):
-    def __init__(self, workflow_id: WorkflowId, time: int, token: int):
-        super().__init__(time)
-        self.workflow_id = workflow_id
-        self.token = token
-
-
-class WorkerRequest(Entity):
-    def __init__(self, workflow_id: WorkflowId, time: int):
-        super().__init__(time)
-        self.workflow_id = workflow_id
-
-
-class WorkflowTaskCompleted(WorkerRequest):
-    __match_args__ = ("workflow_id", "commands")
-
-    def __init__(self, workflow_id: WorkflowId, time: int, commands: List[Command]):
-        super().__init__(workflow_id, time)
-        self.commands = commands
-
-
-class ActivityTaskCompleted(WorkerRequest):
-    __match_args__ = ("workflow_id", "result", "token")
-
-    def __init__(self, workflow_id: WorkflowId, time: int, result: Any, token: int):
-        super().__init__(workflow_id, time)
-        self.result = result
-        self.token = token
 
 
 class TaskQueue(TypedDict):
@@ -173,6 +124,7 @@ class Server(Entity):
 
     async def handle_application_request(self, request: ApplicationRequest):
         self.time = max(self.time, request.time) + 1
+        request.stage = RequestResponseStage.Response
         request.time = self.time
         await self.publish_change_event()
         await request.publish_change_event()
@@ -188,6 +140,7 @@ class Server(Entity):
 
     async def handle_worker_request(self, request: WorkerRequest):
         self.time = max(self.time, request.time) + 1
+        request.stage = RequestResponseStage.Response
         request.time = self.time
         await self.publish_change_event()
         await request.publish_change_event()
