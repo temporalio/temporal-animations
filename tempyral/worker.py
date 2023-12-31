@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from asyncio import Queue
-from typing import Generic, List, Type, TypeVar, Union, cast
+from enum import Enum
+from typing import Generic, List, Tuple, Type, TypeVar, Union, cast
 
-from log import log
 from tempyral.api import (
     Command,
     CommandType,
@@ -21,6 +21,10 @@ from tempyral.server import (
 )
 
 T = TypeVar("T", bound=Union[ActivityTask, WorkflowTask])
+
+
+class DirectiveType(Enum):
+    WAIT_FOR_UPDATE = 1
 
 
 class Worker(Entity, ABC, Generic[T]):
@@ -64,41 +68,59 @@ class Workflow(EntityWithCode, ABC):
         if not hasattr(self, "language"):
             self.language = self._get_language()
         self.code, directives = self.parse_code(self.language)
-        self.commands = (
-            Command(eval(code), None, line_num) for code, line_num in directives
+
+        self.iter_commands_and_fake_sdk_directives = (
+            self._iter_commands_and_fake_sdk_directives(directives)
         )
-        self.blocked_futures = set()
+        self.blocked_lines = set()
+        self.waiting_for_update_lines = set()
         super().__init__()
 
     __publish__ = EntityWithCode.__publish__ | {
         "code",
         "language",
-        "blocked_futures",
+        "blocked_lines",
     }
 
+    def _iter_commands_and_fake_sdk_directives(
+        self, raw_directives: List[Tuple[str, int]]
+    ):
+        """
+        Lazily honor each command or directive annotation in the workflow code.
+        """
+        for raw, line_num in raw_directives:
+            # Each command or directive causes the workflow to block at that line
+            self.blocked_lines.add(line_num)
+            match cmd := eval(raw):
+                case DirectiveType.WAIT_FOR_UPDATE:
+                    # This line will be unblocked on acceptance of any update
+                    # TODO: support multiple updates
+                    self.waiting_for_update_lines.add(line_num)
+                case CommandType():
+                    # This line will be unblocked when a WFT is received
+                    # containing an event with the line_num token.
+                    yield Command(cmd, None, line_num)
+
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.blocked_futures})"
+        return f"{type(self).__name__}({self.blocked_lines})"
 
     def handle_wft(self, wft: WorkflowTask) -> List[Command]:
+        # If the WFT contains history events that unblock futures, then unblock them.
         for e in wft.events:
             if (token := e.data.get("token")) != None:
-                self.blocked_futures.remove(cast(int, token))
-        commands = self._get_commands(wft)
-        for c in commands:
-            if c.token is not None:
-                self.blocked_futures.add(c.token)
-        return commands
+                self.blocked_lines.remove(cast(int, token))
 
-    def _get_commands(self, wft: WorkflowTask) -> List[Command]:
-        """
-        Currently, we assume that each WFT is handled by emitting a single command.
-        """
         commands = []
-        command = next(self.commands, None)
-        if command and command.token is not None:
-            self.blocked_futures.add(command.token)
-            commands.append(command)
+
+        # Obtain the next command or directive emitted by this workflow
+        if not self.blocked_lines:
+            match cmd := next(self.iter_commands_and_fake_sdk_directives, None):
+                case Command():
+                    commands.append(cmd)
         for u in wft.pending_updates:
+            # TODO: Currently, any update unblocks all `waiting_for_update_lines`.
+            while self.waiting_for_update_lines:
+                self.blocked_lines.remove(self.waiting_for_update_lines.pop())
             commands.extend(
                 Command(
                     CommandType.PROTOCOL_MESSAGE,

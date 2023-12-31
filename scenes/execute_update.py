@@ -34,7 +34,7 @@ export async function myWorkflow(): Promise<number> {
     },
     { validator: (arg: number) => arg > 0 }
   );
-  await wf.condition(() => total > 0);                          // tempyral: ???
+  await wf.condition(() => total > 0);                          // tempyral: DirectiveType.WAIT_FOR_UPDATE
   return total;                                                 // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION
 }
 """

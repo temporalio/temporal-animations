@@ -44,6 +44,6 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
                 for line in lines
             )
         )
-        for line_num in entity.blocked_futures:
+        for line_num in entity.blocked_lines:
             arrows[line_num - 1].set_color(PINK).set_opacity(1)
         return VGroup(code, arrows)
