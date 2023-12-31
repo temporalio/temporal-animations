@@ -23,11 +23,16 @@ from tempyral.server import (
 T = TypeVar("T", bound=Union[ActivityTask, WorkflowTask])
 
 
+class WorkflowPollRequest(Entity):
+    pass
+
+
 class Worker(Entity, ABC, Generic[T]):
     long_poll_connection: Queue[T]
 
     async def poll(self, server: Server):
         while True:
+            await self.publish_message_event(self, server, WorkflowPollRequest())
             task = await self.long_poll_connection.get()
             # TODO: Move this into server.dispatch method?
             await self.publish_message_event(server, self, task)
