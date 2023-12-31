@@ -1,11 +1,11 @@
 from typing import Iterable, List
 
-from manim import LEFT, WHITE, Mobject, SurroundingRectangle, Text, VGroup
+from manim import LEFT, WHITE, Mobject, SurroundingRectangle, VGroup
 
 import tempyral
 from manim_renderer import mobject
 from manim_renderer.code import ProxyEntityWithCode
-from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren, VisualElement
+from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren
 from manim_renderer.history import HistoryEvents
 
 

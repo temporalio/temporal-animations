@@ -1,10 +1,8 @@
-import os
 from asyncio import Queue
 from collections import OrderedDict
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, Hashable, List, Tuple, TypedDict
 from uuid import uuid4
-
-from attr import dataclass
 
 from log import log
 from manim_renderer.utils import drain
