@@ -23,6 +23,7 @@ def set_scene(scene: Scene):
 
 
 async def process_simulation_events():
+    n = 77
     while True:
         match await event_bus.bus.get():
             case StateChangeEvent(entity):
@@ -44,6 +45,9 @@ async def process_simulation_events():
                 sender.render_to_scene(sender_entity)
                 sender.send_message(receiver, msg)
                 receiver.render_to_scene(receiver_entity)
+                n -= 1
+                if not n:
+                    break
             case TerminateSimulation():
                 break
 
