@@ -3,7 +3,7 @@ from typing import Iterable, List
 from manim import LEFT, WHITE, Mobject, SurroundingRectangle, VGroup
 
 import tempyral
-from manim_renderer import mobject
+from manim_renderer import style
 from manim_renderer.code import ProxyEntityWithCode
 from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren
 from manim_renderer.history import HistoryEvents
@@ -11,17 +11,17 @@ from manim_renderer.history import HistoryEvents
 
 class ActivityTask(ProxyEntity[tempyral.ActivityTask]):
     def render(self, _: tempyral.ActivityTask) -> Mobject:
-        return mobject.message("Activity Task")
+        return style.message("Activity Task")
 
 
 class ActivityTaskCompleted(ProxyEntity[tempyral.ActivityTaskCompleted]):
     def render(self, _: tempyral.ActivityTaskCompleted) -> Mobject:
-        return mobject.message("ActivityTaskCompleted")
+        return style.message("ActivityTaskCompleted")
 
 
 class ActivityWorker(ProxyEntity[tempyral.ActivityWorker]):
     def render(self, entity: tempyral.ActivityWorker) -> Mobject:
-        return self.with_time(mobject.actor("Activity Worker"), entity)
+        return self.with_time(style.actor("Activity Worker"), entity)
 
 
 class BoxedHistoryEvents(HistoryEvents):
@@ -39,13 +39,13 @@ class BoxedHistoryEvents(HistoryEvents):
 class WorkflowTask(ProxyEntity[tempyral.WorkflowTask]):
     def render(self, entity: tempyral.WorkflowTask) -> Mobject:
         eventsm = BoxedHistoryEvents.render(entity.events)
-        task = self.with_time(mobject.message("WFT"), entity)
+        task = self.with_time(style.message("WFT"), entity)
         return VGroup(task, eventsm).arrange()
 
 
 class WorkerRequest(ProxyEntity[tempyral.WorkerRequest]):
     def render(self, entity: tempyral.WorkerRequest) -> Mobject:
-        return mobject.message(entity.__class__.__name__)
+        return style.message(entity.__class__.__name__)
 
 
 class Workflow(ProxyEntityWithCode[tempyral.Workflow]):
@@ -59,7 +59,7 @@ class WorkflowWorker(
     child_align_direction = LEFT
 
     def render(self, entity: tempyral.WorkflowWorker) -> Mobject:
-        return self.with_time(mobject.actor("Workflow Worker"), entity)
+        return self.with_time(style.actor("Workflow Worker"), entity)
 
     @staticmethod
     def get_child_entities(

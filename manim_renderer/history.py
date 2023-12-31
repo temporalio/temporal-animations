@@ -7,14 +7,14 @@ from manim import RED_D as RED
 from manim import SMALL_BUFF, Mobject, Point, VGroup
 
 import tempyral
-from manim_renderer import mobject
+from manim_renderer import style
 from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren, VisualElement
 
 
 class HistoryEvent(ProxyEntity[tempyral.HistoryEvent]):
     @staticmethod
     def render(event: tempyral.HistoryEvent) -> Mobject:
-        return mobject.history_event(
+        return style.history_event(
             event.event_type.name,
             color=GREEN if event.seen_by_worker else RED,
         )

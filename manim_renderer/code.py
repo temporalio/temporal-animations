@@ -4,7 +4,7 @@ from manim import DOWN, LEFT, PINK, Arrow, Code, Mobject, VGroup
 
 import tempyral
 from manim_renderer.entity import ProxyEntity
-from manim_renderer.mobject import FONT_CODE, FONT_SIZE_CODE
+from manim_renderer.style import FONT_CODE, FONT_SIZE_CODE
 
 E = TypeVar("E", bound=tempyral.EntityWithCode)
 

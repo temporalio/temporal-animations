@@ -23,7 +23,7 @@ from manim.typing import Point3D, Vector3
 
 import tempyral
 from log import log
-from manim_renderer import mobject
+from manim_renderer import style
 from manim_renderer.utils import notnull
 
 E = TypeVar("E", bound=tempyral.Entity)
@@ -130,7 +130,7 @@ class ProxyEntity(Generic[E], VisualElement):
             Text(
                 f"[{entity.time}]",
                 font_size=8,
-                font=mobject.FONT_CODE,
+                font=style.FONT_CODE,
             ),
         ).arrange(RIGHT, buff=0.05, aligned_edge=DOWN)
 
