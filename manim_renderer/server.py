@@ -12,8 +12,8 @@ class Server(ProxyEntityWithChildren[tempyral.Server, tempyral.History, History]
     child_cls = History
     child_align_direction = LEFT
 
-    def render(self, _: tempyral.Server) -> Mobject:
-        return mobject.actor("Temporal Server")
+    def render(self, entity: tempyral.Server) -> Mobject:
+        return self.with_time(mobject.actor("Temporal Server"), entity)
 
     @staticmethod
     def get_child_entities(entity: tempyral.Server) -> List[tempyral.History]:

@@ -8,11 +8,11 @@ from manim_renderer.message import ProxyEntityRequestMessage
 
 class ApplicationRequest(ProxyEntityRequestMessage[tempyral.ApplicationRequest]):
     def render(self, entity: tempyral.ApplicationRequest) -> Mobject:
-        return mobject.message(entity.request_type.name)
+        return self.with_time(mobject.message(entity.request_type.name), entity)
 
 
 class Application(ProxyEntityWithCode[tempyral.Application]):
     def render(self, entity: tempyral.Application) -> Mobject:
         code = super().render(entity)
-        text = mobject.actor("Your Application")
+        text = self.with_time(mobject.actor("Your Application"), entity)
         return VGroup(text, code).arrange(DOWN, buff=SMALL_BUFF, aligned_edge=LEFT)

@@ -20,8 +20,8 @@ class ActivityTaskCompleted(ProxyEntity[tempyral.ActivityTaskCompleted]):
 
 
 class ActivityWorker(ProxyEntity[tempyral.ActivityWorker]):
-    def render(self, _: tempyral.ActivityWorker) -> Mobject:
-        return mobject.actor("Activity Worker")
+    def render(self, entity: tempyral.ActivityWorker) -> Mobject:
+        return self.with_time(mobject.actor("Activity Worker"), entity)
 
 
 class BoxedHistoryEvents(HistoryEvents):
@@ -39,7 +39,7 @@ class BoxedHistoryEvents(HistoryEvents):
 class WorkflowTask(ProxyEntity[tempyral.WorkflowTask]):
     def render(self, entity: tempyral.WorkflowTask) -> Mobject:
         eventsm = BoxedHistoryEvents.render(entity.events)
-        task = mobject.message("WFT")
+        task = self.with_time(mobject.message("WFT"), entity)
         return VGroup(task, eventsm).arrange()
 
 
@@ -58,8 +58,8 @@ class WorkflowWorker(
     child_cls = Workflow
     child_align_direction = LEFT
 
-    def render(self, _: tempyral.WorkflowWorker) -> Mobject:
-        return mobject.actor("Workflow Worker")
+    def render(self, entity: tempyral.WorkflowWorker) -> Mobject:
+        return self.with_time(mobject.actor("Workflow Worker"), entity)
 
     @staticmethod
     def get_child_entities(
