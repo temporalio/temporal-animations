@@ -3,13 +3,14 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import Enum
-from typing import Any, Dict, Generic, List, Self, Type, TypeVar
+from typing import Any, Dict, Generic, Iterable, List, Self, Tuple, Type, TypeVar, cast
 
 import numpy as np
 from manim import (
     DOWN,
     ORIGIN,
     SMALL_BUFF,
+    Animation,
     ApplyMethod,
     Indicate,
     Mobject,
@@ -100,7 +101,7 @@ class ProxyEntity(Generic[E], VisualElement):
         self,
         receiver: "ProxyEntity",
         message: VisualElement,
-    ):
+    ) -> Tuple[Animation, Animation]:
         """
         Animate sending a message.
         """
@@ -112,9 +113,20 @@ class ProxyEntity(Generic[E], VisualElement):
         halfway = tuple(
             np.array(list(message.mobj.get_center() + receiver.dock_point())) / 2.0
         )
-        self.scene.play(ApplyMethod(message.mobj.move_to, halfway))
+        return cast(
+            Tuple[Animation, Animation],
+            (
+                ApplyMethod(message.mobj.move_to, halfway),
+                ApplyMethod(message.mobj.move_to, receiver.dock_point()),
+            ),
+        )
+
+    def play_all_send_message_animations(
+        self, first_halves: Iterable[Animation], second_halves: Iterable[Animation]
+    ):
+        self.scene.play(*first_halves)
         self.scene.wait(0.5)
-        self.scene.play(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
+        self.scene.play(*second_halves)
         self.scene.wait()
 
 
