@@ -1,12 +1,23 @@
 from typing import Generic, TypeVar
 
-from manim import DOWN, LEFT, PINK, Arrow, Code, Mobject, VGroup
+import manim
+from manim import DOWN, LEFT, PINK, Arrow, Mobject, VGroup
 
 import tempyral
 from manim_renderer.entity import ProxyEntity
-from manim_renderer.style import FONT_CODE, FONT_SIZE_CODE
+from manim_renderer.style import COLOR_SCENE_BACKGROUND, FONT_CODE, FONT_SIZE_CODE
 
 E = TypeVar("E", bound=tempyral.EntityWithCode)
+
+
+class Code(manim.Code):
+    @property
+    def background_color(self):
+        return COLOR_SCENE_BACKGROUND
+
+    @background_color.setter
+    def background_color(self, _):
+        pass
 
 
 class ProxyEntityWithCode(ProxyEntity, Generic[E]):

@@ -5,9 +5,22 @@ import traceback
 from datetime import datetime
 from typing import Coroutine, List, Tuple, Type
 
-from manim import DL, DOWN, LEFT, RIGHT, SMALL_BUFF, UP, Dot, Scene, Text, config
+from manim import (
+    DL,
+    DOWN,
+    LEFT,
+    RIGHT,
+    SMALL_BUFF,
+    UP,
+    Camera,
+    Dot,
+    Scene,
+    Text,
+    config,
+)
 
 import manim_renderer as renderer
+from manim_renderer.style import COLOR_SCENE_BACKGROUND
 from manim_renderer.utils import debug
 from tempyral import (
     ActivityWorker,
@@ -33,6 +46,10 @@ class TemporalScene(Scene):
 
     application_classes: List[Type[Application]]
     workflow_classes: List[Type[Workflow]]
+
+    def setup(self):
+        assert isinstance(self.camera, Camera)
+        self.camera.background_color = COLOR_SCENE_BACKGROUND
 
     def construct(self):
         self.add_timestamp()
