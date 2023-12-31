@@ -1,6 +1,7 @@
 """
 A pure python simulation of Temporal without any visualization.
 """
+# pyright: reportUnusedImport=false
 from .api import ApplicationRequestType, WorkflowId
 from .application import Application
 from .code import EntityWithCode

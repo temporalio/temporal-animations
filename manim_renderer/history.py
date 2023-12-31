@@ -4,7 +4,7 @@ from manim import BLACK, DOWN
 from manim import GREEN_D as GREEN
 from manim import LEFT
 from manim import RED_D as RED
-from manim import SMALL_BUFF, Mobject, Point, Text, VGroup
+from manim import SMALL_BUFF, Mobject, Point, VGroup
 
 import tempyral
 from manim_renderer import mobject

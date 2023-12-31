@@ -5,21 +5,7 @@ import traceback
 from datetime import datetime
 from typing import Coroutine, List, Tuple, Type
 
-from manim import (
-    DL,
-    DOWN,
-    LEFT,
-    ORIGIN,
-    RIGHT,
-    SMALL_BUFF,
-    UL,
-    UP,
-    UR,
-    Dot,
-    Scene,
-    Text,
-    config,
-)
+from manim import DL, DOWN, LEFT, RIGHT, SMALL_BUFF, UP, Dot, Scene, Text, config
 
 import manim_renderer as renderer
 from manim_renderer.utils import debug
@@ -28,7 +14,6 @@ from tempyral import (
     Application,
     Entity,
     Server,
-    Worker,
     Workflow,
     WorkflowWorker,
 )
