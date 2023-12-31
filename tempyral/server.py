@@ -122,7 +122,43 @@ class Server(Entity):
         }
         return f"{type(self).__name__}(id={self.id}: namespace={namespace})"
 
+    def should_schedule_wft(self, workflow_id: WorkflowId) -> bool:
+        """
+        A WFT should be scheduled if there is not one already pending, and any
+        of the following are true:
+
+        - There are unseen history events that could advance workflow history
+        - There are pending updates
+        """
+        wf_data = self.get_workflow_data(workflow_id)
+
+        events_might_advance_workflow_execution = False
+        for e in wf_data.history.events:
+            if e.seen_by_worker:
+                continue
+            if e.event_type == HistoryEventType.WFT_SCHEDULED:
+                return False
+            if e.event_type in [
+                HistoryEventType.WF_STARTED,
+                HistoryEventType.ACTIVITY_TASK_COMPLETED,
+                HistoryEventType.TIMER_FIRED,
+                HistoryEventType.WF_SIGNALED,
+            ]:
+                events_might_advance_workflow_execution = True
+
+        return events_might_advance_workflow_execution or bool(wf_data.pending_updates)
+
     async def handle_application_request(self, request: ApplicationRequest):
+        """
+        In general, an application request is handled as follows:
+
+        1. Mutate the received RequestResponse object so that it is now marked as a Response
+        2. Create a new channel representing the request being handled
+        3. Append some history events or pending updates/queries etc
+        4. Append a WFT_SCHEDULED event if there is not one already
+        5. Block until a value is written to the channel
+        6. Return the same RequestResponse object that was received
+        """
         self.time = max(self.time, request.time) + 1
         request.stage = RequestResponseStage.Response
         request.time = self.time
@@ -161,9 +197,9 @@ class Server(Entity):
         key = request.request_type, request.workflow_id
         chans[key] = Queue(maxsize=1)
         await self.publish_change_event()
-        wf_started, _ = await self.write_history_events(
+        [wf_started] = await self.write_history_events(
             request.workflow_id,
-            [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED],
+            [HistoryEventType.WF_STARTED],
             seen_by_sticky_worker=False,
         )
         del chans[key]
@@ -171,8 +207,8 @@ class Server(Entity):
         request.response_payload = wf_started.data.get("payload")
 
     async def execute_workflow(self, request: ApplicationRequest):
-        event = await self._get_application_request_response(
-            request, [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED]
+        event = await self._get_response_to_application_request(
+            request, [HistoryEventType.WF_STARTED]
         )
         request.response_payload = event.data.get("payload")
 
@@ -180,12 +216,10 @@ class Server(Entity):
         self.get_workflow_data(request.workflow_id).pending_updates.append(
             UpdateInfo(uuid4().hex, "fake-update-name")
         )
-        event = await self._get_application_request_response(
-            request, [HistoryEventType.WF_STARTED, HistoryEventType.WFT_SCHEDULED]
-        )
+        event = await self._get_response_to_application_request(request, [])
         request.response_payload = event.data.get("payload")
 
-    async def _get_application_request_response(
+    async def _get_response_to_application_request(
         self, request: ApplicationRequest, events_to_be_written: List[HistoryEventType]
     ) -> HistoryEvent:
         """
@@ -213,11 +247,18 @@ class Server(Entity):
         chans[key] = chan
         await self.publish_change_event()
 
-        await self.write_history_events(
-            request.workflow_id,
-            events_to_be_written,
-            seen_by_sticky_worker=False,
-        )
+        if events_to_be_written:
+            await self.write_history_events(
+                request.workflow_id,
+                events_to_be_written,
+                seen_by_sticky_worker=False,
+            )
+        if self.should_schedule_wft(request.workflow_id):
+            await self.write_history_events(
+                request.workflow_id,
+                [HistoryEventType.WFT_SCHEDULED],
+                seen_by_sticky_worker=False,
+            )
 
         event = await chan.get()
         del chans[key]
@@ -303,11 +344,12 @@ class Server(Entity):
             result=result,
             token=token,
         )
-        await self.write_history_events(
-            workflow_id,
-            [HistoryEventType.WFT_SCHEDULED],
-            seen_by_sticky_worker=False,
-        )
+        if self.should_schedule_wft(workflow_id):
+            await self.write_history_events(
+                workflow_id,
+                [HistoryEventType.WFT_SCHEDULED],
+                seen_by_sticky_worker=False,
+            )
 
     async def write_history_events(
         self,
