@@ -10,7 +10,7 @@ class Application(EntityWithCode):
     __publish__ = EntityWithCode.__publish__ | {
         "code",
         "language",
-        "blocked_expressions",
+        "blocked_futures",
     }
 
     def __init__(self):
@@ -30,7 +30,7 @@ class Application(EntityWithCode):
             except ValueError:
                 raise ValueError(f"Unsupported application directive: {directive}")
         self.requests = requests
-        self.blocked_expressions = set()
+        self.blocked_futures = set()
 
     def get_coroutines(self, server: Server) -> Iterable[Coroutine]:
         """
@@ -41,12 +41,12 @@ class Application(EntityWithCode):
             for request in self.requests:
                 request.time = self.time
                 if request.token is not None:
-                    self.blocked_expressions.add(request.token)
+                    self.blocked_futures.add(request.token)
                 await self.publish_message_event(self, server, request)
                 await server.handle_application_request(request)
                 self.time = max(self.time, request.time) + 1
                 if request.token is not None:
-                    self.blocked_expressions.remove(request.token)
+                    self.blocked_futures.remove(request.token)
                 await self.publish_message_event(server, self, request)
             server.terminate_simulation()
 

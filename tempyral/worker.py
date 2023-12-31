@@ -67,26 +67,36 @@ class Workflow(EntityWithCode, ABC):
         self.commands = (
             Command(eval(code), None, line_num) for code, line_num in directives
         )
-        self.blocked_expressions = set()
+        self.blocked_futures = set()
         super().__init__()
 
     __publish__ = EntityWithCode.__publish__ | {
         "code",
         "language",
-        "blocked_expressions",
+        "blocked_futures",
     }
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.blocked_expressions})"
+        return f"{type(self).__name__}({self.blocked_futures})"
 
     def handle_wft(self, wft: WorkflowTask) -> List[Command]:
+        for e in wft.events:
+            if (token := e.data.get("token")) != None:
+                self.blocked_futures.remove(cast(int, token))
+        commands = self._get_commands(wft)
+        for c in commands:
+            if c.token is not None:
+                self.blocked_futures.add(c.token)
+        return commands
+
+    def _get_commands(self, wft: WorkflowTask) -> List[Command]:
         """
         Currently, we assume that each WFT is handled by emitting a single command.
         """
         commands = []
         command = next(self.commands, None)
         if command and command.token is not None:
-            self.blocked_expressions.add(command.token)
+            self.blocked_futures.add(command.token)
             commands.append(command)
         for u in wft.pending_updates:
             commands.extend(
@@ -122,22 +132,7 @@ class WorkflowWorker(Worker[WorkflowTask]):
         return workflow
 
     async def handle_task(self, wft: WorkflowTask, server: Server):
-        wf = self.workflow
-        log(f"wf={wf} wft={wft}", "S: handle_wft")
-        for e in wft.events:
-            if (token := e.data.get("token")) != None:
-                token = cast(int, token)
-                if token in wf.blocked_expressions:
-                    wf.blocked_expressions.remove(token)
-                else:
-                    log(
-                        f"ERROR: expected {token} in {wf.blocked_expressions}",
-                        "S: handle_wft",
-                    )
-        commands = wf.handle_wft(wft)
-        for c in commands:
-            if c.token is not None:
-                wf.blocked_expressions.add(c.token)
+        commands = self.workflow.handle_wft(wft)
         await self.publish_change_event()
         msg = WorkflowTaskCompleted(wft.workflow_id, self.time, commands)
         await self.publish_message_event(self, server, msg)

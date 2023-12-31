@@ -19,7 +19,7 @@ class EntityWithCode(Entity):
     go: str
     typescript: str
     code: str
-    blocked_expressions: Set[int]
+    blocked_futures: Set[int]
 
     def _get_language(self) -> Language:
         available_languages = list(COMMENT_MARKERS)
