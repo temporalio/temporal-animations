@@ -1,6 +1,6 @@
 from manim import ORANGE, Mobject, Text
 
-FONT_MONOSPACE = "Monaco"  # Menlo PT Mono
+FONT_MONOSPACE = "Monaco"  # Monaco, Menlo, PT Mono
 FONT_SANS = "Noto Sans Kannada"
 FONT_MESSAGE = FONT_MONOSPACE
 FONT_ACTOR = FONT_SANS

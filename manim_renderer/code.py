@@ -18,7 +18,7 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
             background_stroke_width=1,
             font_size=FONT_SIZE_CODE,
             font=FONT_CODE,
-            line_spacing=0.7,
+            line_spacing=0.5,
         ).to_edge(LEFT, buff=0.1)
         lines = code[2]
         arrows = VGroup(
