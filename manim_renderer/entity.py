@@ -3,7 +3,7 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import Enum
-from typing import Any, Dict, Generic, Iterable, List, Self, Tuple, Type, TypeVar, cast
+from typing import Any, Dict, Generic, Iterable, List, Self, Type, TypeVar
 
 import numpy as np
 from manim import (
@@ -23,7 +23,6 @@ from manim import (
 from manim.typing import Point3D, Vector3
 
 import tempyral
-from logger import log
 from manim_renderer import style
 from manim_renderer.utils import notnull
 

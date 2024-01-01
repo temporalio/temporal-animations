@@ -49,6 +49,9 @@ class ApplicationRequest(RequestResponse):
         self.response_payload = response_payload
         super().__init__(time)
 
+    def __repr__(self) -> str:
+        return f"{self.request_type.name}[{self.time}]"
+
     __publish__ = RequestResponse.__publish__ | {"request_type"}
 
 
@@ -70,7 +73,7 @@ class WorkflowTask(Response):
     __publish__ = RequestResponse.__publish__ | {"events", "pending_updates"}
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(id={self.id}: events={self.events}, updates={self.pending_updates})"
+        return f"{type(self).__name__}[{self.time}](id={self.id}: events={self.events}, updates={self.pending_updates})"
 
 
 class ActivityTask(RequestResponse):

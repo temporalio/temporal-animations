@@ -120,7 +120,9 @@ class Server(Entity):
             for w, wd in self.namespace.items()
             if wd.history.events
         }
-        return f"{type(self).__name__}(id={self.id}: namespace={namespace})"
+        return (
+            f"{type(self).__name__}[{self.time}](id={self.id}: namespace={namespace})"
+        )
 
     def should_schedule_wft(self, workflow_id: WorkflowId) -> bool:
         """

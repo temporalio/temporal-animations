@@ -54,13 +54,12 @@ class Entity:
         }
 
     async def publish_change_event(self):
-        log(f"{self}", "S: publish change")
         await event_bus.publish(StateChangeEvent(self.clone()))
 
     async def publish_message_event(
         self, sender: "Entity", receiver: "Entity", message: "Entity"
     ):
-        log(f"{sender} -> {receiver}: {message}", "S: publish message")
+        log(f"{message.id}: {sender} -> {receiver}: {message}", "S: publish message")
         await event_bus.publish(
             MessageEvent(sender.clone(), receiver.clone(), message.clone())
         )

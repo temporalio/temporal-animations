@@ -32,6 +32,9 @@ class Application(EntityWithCode):
         self.requests = requests
         self.blocked_lines = set()
 
+    def __repr__(self) -> str:
+        return f"App[{self.time}]"
+
     def get_coroutines(self, server: Server) -> Iterable[Coroutine]:
         """
         Return a coroutine that issues each application requests, waiting for its reponse.
