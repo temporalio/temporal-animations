@@ -159,9 +159,8 @@ class Server(Entity):
         5. Block until a value is written to the channel
         6. Return the same RequestResponse object that was received
         """
-        self.time = max(self.time, request.time) + 1
+        self.tick(request)
         request.stage = RequestResponseStage.Response
-        request.time = self.time
         await self.publish_change_event()
         await request.publish_change_event()
         match request.request_type:
@@ -175,9 +174,8 @@ class Server(Entity):
                 raise ValueError(f"Server does not support request of type: {request}")
 
     async def handle_worker_request(self, request: WorkerRequest):
-        self.time = max(self.time, request.time) + 1
+        self.tick(request)
         request.stage = RequestResponseStage.Response
-        request.time = self.time
         await self.publish_change_event()
         await request.publish_change_event()
         match request:

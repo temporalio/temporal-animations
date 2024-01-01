@@ -37,7 +37,7 @@ class Worker(Entity, ABC, Generic[T]):
             log(f"got task: {task} {task.__dict__}", "W:")
             # TODO: Move this into server.dispatch method?
             await self.publish_message_event(server, self, task)
-            self.time = max(self.time, task.time) + 1
+            self.tick(task)
             await self.handle_task(task, server)
 
     @abstractmethod
@@ -190,5 +190,5 @@ class WorkflowWorker(Worker[WorkflowTask]):
         msg = WorkflowTaskCompleted(wft.workflow_id, self.time, commands)
         await self.publish_message_event(self, server, msg)
         await server.handle_worker_request(msg)
-        self.time = max(self.time, msg.time) + 1
+        self.tick(msg)
         await self.publish_change_event()

@@ -64,3 +64,6 @@ class Entity:
         await event_bus.publish(
             MessageEvent(sender.clone(), receiver.clone(), message.clone())
         )
+
+    def tick(self, message: "Entity"):
+        message.time = self.time = max(self.time, message.time) + 1
