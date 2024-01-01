@@ -18,7 +18,7 @@ class Application(EntityWithCode):
         if not hasattr(self, "language"):
             self.language = self._get_language()
         self.code, raw_requests = self.parse_code(self.language)
-        requests = []
+        requests: list[ApplicationRequest] = []
         for directive, line_num in raw_requests:
             try:
                 request_type, workflow_id = map(eval, directive.split())

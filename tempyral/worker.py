@@ -13,6 +13,7 @@ from tempyral.api import (
 )
 from tempyral.code import EntityWithCode
 from tempyral.entity import Entity
+from tempyral.request_response import WorkerRequest
 from tempyral.server import (
     ActivityTask,
     ActivityTaskCompleted,
@@ -44,6 +45,13 @@ class Worker(Entity, ABC, Generic[T]):
     async def handle_task(self, task: T, server: Server):
         ...
 
+    async def send_request(self, request: WorkerRequest, server: Server):
+        await self.publish_message_event(self, server, request)
+        await server.handle_worker_request(request)
+        request.time = server.time
+        self.tick(request)
+        await self.publish_change_event()
+
 
 class ActivityWorker(Worker[ActivityTask]):
     def __init__(self, server: Server):
@@ -54,9 +62,9 @@ class ActivityWorker(Worker[ActivityTask]):
 
     async def handle_task(self, at: ActivityTask, server: Server):
         await self.publish_message_event(self, server, at)
-        request = ActivityTaskCompleted(at.workflow_id, self.time, None, at.token)
-        await server.handle_worker_request(request)
-        request.time = server.time
+        await self.send_request(
+            ActivityTaskCompleted(at.workflow_id, self.time, None, at.token), server
+        )
 
 
 class Workflow(EntityWithCode, ABC):
@@ -187,9 +195,6 @@ class WorkflowWorker(Worker[WorkflowTask]):
             f"{self.workflow.blocked_lines} {self.workflow.blocked_lines_waiting_for_update}",
             "W: handled wft",
         )
-        msg = WorkflowTaskCompleted(wft.workflow_id, self.time, commands)
-        await self.publish_message_event(self, server, msg)
-        await server.handle_worker_request(msg)
-        msg.time = server.time
-        self.tick(msg)
-        await self.publish_change_event()
+        await self.send_request(
+            WorkflowTaskCompleted(wft.workflow_id, self.time, commands), server
+        )
