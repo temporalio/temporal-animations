@@ -111,7 +111,6 @@ class ProxyEntity(Generic[E], VisualElement):
         """
         Create (but do not play) animations for sending a message.
         """
-        message.mobj.move_to(self.dock_point())
         self.scene.add(message.mobj)
         halfway = tuple(
             np.array(list(message.mobj.get_center() + receiver.dock_point())) / 2.0

@@ -83,6 +83,7 @@ def _get_proxy_entities(
     except KeyError:
         msg_cls = _get_message_cls_for(sender, receiver)
         msg = msg_cls(entity=message_entity)
+        msg.mobj.move_to(sender.dock_point())
         proxy_entity_registry.set(message_entity, msg)
     return sender, receiver, msg
 
