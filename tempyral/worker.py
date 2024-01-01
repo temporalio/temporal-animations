@@ -3,6 +3,7 @@ from asyncio import Queue
 from enum import Enum
 from typing import Generic, List, Tuple, Type, TypeVar, Union, cast
 
+from logger import log
 from tempyral.api import (
     Command,
     CommandType,
@@ -33,6 +34,7 @@ class Worker(Entity, ABC, Generic[T]):
     async def poll(self, server: Server):
         while True:
             task = await self.long_poll_connection.get()
+            log(f"got task: {task} {task.__dict__}", "W:")
             # TODO: Move this into server.dispatch method?
             await self.publish_message_event(server, self, task)
             self.time = max(self.time, task.time) + 1
@@ -89,6 +91,7 @@ class Workflow(EntityWithCode, ABC):
         Lazily honor each command or directive annotation in the workflow code.
         """
         for raw, line_num in raw_directives:
+            log(f"{line_num}:{raw}", "W: _iter_commands_and_fake_sdk_directives")
             # Each command or directive causes the workflow to block at that line
             self.blocked_lines.add(line_num)
             match cmd := eval(raw):
@@ -96,15 +99,26 @@ class Workflow(EntityWithCode, ABC):
                     # This line will be unblocked on acceptance of any update
                     # TODO: support multiple updates
                     self.waiting_for_update_lines.add(line_num)
-                case CommandType():
+                    log(
+                        f"{line_num} WAIT_FOR_UPDATE: {self.blocked_lines} {self.waiting_for_update_lines}",
+                        "W: process directive",
+                    )
+                case _ if isinstance(cmd, CommandType):
                     # This line will be unblocked when a WFT is received
                     # containing an event with the line_num token.
+                    log(
+                        f"{line_num} {cmd}: {self.blocked_lines} {self.waiting_for_update_lines}",
+                        "W: process directive",
+                    )
                     yield Command(cmd, None, line_num)
+                case _:
+                    raise ValueError(f"{cmd}")
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.blocked_lines})"
 
     def handle_wft(self, wft: WorkflowTask) -> List[Command]:
+        log(f"{self.blocked_lines}", "W: handle_wft")
         # If the WFT contains history events that unblock futures, then unblock them.
         for e in wft.events:
             if (token := e.data.get("token")) != None:
@@ -155,6 +169,10 @@ class WorkflowWorker(Worker[WorkflowTask]):
 
     async def handle_task(self, wft: WorkflowTask, server: Server):
         commands = self.workflow.handle_wft(wft)
+        log(
+            f"{self.workflow.blocked_lines} {self.workflow.waiting_for_update_lines}",
+            "W: handled wft",
+        )
         await self.publish_change_event()
         msg = WorkflowTaskCompleted(wft.workflow_id, self.time, commands)
         await self.publish_message_event(self, server, msg)
