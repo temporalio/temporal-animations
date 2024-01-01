@@ -164,7 +164,6 @@ class Server(Entity):
         self.tick(request)
         request.stage = RequestResponseStage.Response
         await self.publish_change_event()
-        await request.publish_change_event()
         match request.request_type:
             case ApplicationRequestType.StartWorkflow:
                 return await self.start_workflow(request)
@@ -179,7 +178,6 @@ class Server(Entity):
         self.tick(request)
         request.stage = RequestResponseStage.Response
         await self.publish_change_event()
-        await request.publish_change_event()
         match request:
             case WorkflowTaskCompleted(workflow_id, commands):
                 await self.handle_commands(workflow_id, commands)
