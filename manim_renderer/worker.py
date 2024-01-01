@@ -61,6 +61,10 @@ class WorkflowWorker(
     def render(self, entity: tempyral.WorkflowWorker) -> Mobject:
         return self.with_time(style.actor("Workflow Worker"), entity)
 
+    def render_to_scene(self, entity: tempyral.WorkflowWorker):
+        super().render_to_scene(entity)
+        self.scene.wait(0.5)
+
     @staticmethod
     def get_child_entities(
         entity: tempyral.WorkflowWorker,
