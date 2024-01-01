@@ -10,17 +10,12 @@ FONT_SIZE_HISTORY_EVENT = 12
 FONT_SIZE_ACTOR = 20
 FONT_SIZE_MESSAGE = 16
 FONT_SIZE_CODE = 10
-COLOR_MESSAGE = ORANGE
 COLOR_SCENE_BACKGROUND = "#1D1D1D"  # GRAY_E is #222222
 
 
 def message(name: str, **kwargs) -> Mobject:
     return Text(
-        name,
-        font=FONT_MESSAGE,
-        font_size=FONT_SIZE_MESSAGE,
-        color=COLOR_MESSAGE,
-        **kwargs
+        name, font=FONT_MESSAGE, font_size=FONT_SIZE_MESSAGE, color=ORANGE, **kwargs
     )
 
 
