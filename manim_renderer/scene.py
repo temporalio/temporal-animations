@@ -119,19 +119,27 @@ class TemporalScene(Scene):
         ]
 
         app.set_dock_direction(RIGHT).mobj.align_on_border(
-            UP, buff=SMALL_BUFF
+            UP, buff=0.25
         ).align_on_border(LEFT, buff=SMALL_BUFF)
-        aworker.set_dock_direction(RIGHT).mobj.next_to(app.mobj, DOWN).align_to(
+        wworker.set_dock_direction(RIGHT).mobj.next_to(app.mobj, DOWN).align_to(
             app.mobj, LEFT
-        ).shift(DOWN)
-        wworker.set_dock_direction(RIGHT).mobj.next_to(aworker.mobj, DOWN).align_to(
-            aworker.mobj, LEFT
-        ).shift(DOWN)
+        ).shift(DOWN * 0.5)
+        aworker.set_dock_direction(RIGHT).mobj.next_to(
+            wworker.children[-1].mobj, DOWN
+        ).align_to(wworker.mobj, LEFT).shift(DOWN)
         server.set_dock_direction(UP).mobj.align_on_border(RIGHT).align_to(
-            aworker.mobj, UP
+            wworker.mobj, UP
         ).shift(1.5 * LEFT)
 
         self.add(app.mobj, server.mobj, wworker.mobj, aworker.mobj)
+
+        if False:
+            self.add(
+                *(
+                    Dot(radius=0.02).move_to(t.dock_point())
+                    for t in [app, server, wworker, aworker]
+                )
+            )
 
         for a, s in zip(
             [server, *[app], *[wworker]],
