@@ -1,6 +1,6 @@
-from typing import Tuple, Type, cast
+from typing import Iterable, Tuple, Type, cast
 
-from manim import Scene
+from manim import Animation, Scene
 
 import tempyral
 from event_bus import MessageEvent, StateChangeEvent, TerminateSimulation, event_bus
@@ -25,7 +25,7 @@ def set_scene(scene: Scene):
 
 async def process_simulation_events():
     curr_time = 0
-    animations = []
+    animations: list[Iterable[Animation | None]] = []
     serial = True
     while True:
         match await event_bus.bus.get():
@@ -47,7 +47,7 @@ async def process_simulation_events():
                     "A: render  message",
                 )
 
-                animations.append(sender.send_message(receiver, msg))
+                animations.append(sender.send_message(receiver, msg, msg_entity.stage))
 
                 if serial or msg_entity.time > curr_time:
                     sender.play_all_send_message_animations(*zip(*animations))

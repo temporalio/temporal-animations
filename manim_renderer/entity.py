@@ -13,6 +13,7 @@ from manim import (
     SMALL_BUFF,
     Animation,
     ApplyMethod,
+    FadeOut,
     Indicate,
     Mobject,
     Scene,
@@ -104,8 +105,9 @@ class ProxyEntity(Generic[E], VisualElement):
     def send_message(
         self,
         receiver: "ProxyEntity",
-        message: VisualElement,
-    ) -> Tuple[Animation, Animation]:
+        message: "ProxyEntity",
+        stage: tempyral.RequestResponseStage,
+    ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending a message.
         """
@@ -114,20 +116,30 @@ class ProxyEntity(Generic[E], VisualElement):
         halfway = tuple(
             np.array(list(message.mobj.get_center() + receiver.dock_point())) / 2.0
         )
-        return cast(
-            Tuple[Animation, Animation],
+        return (
+            notnull(ApplyMethod(message.mobj.move_to, halfway)),
+            notnull(ApplyMethod(message.mobj.move_to, receiver.dock_point())),
             (
-                ApplyMethod(message.mobj.move_to, halfway),
-                ApplyMethod(message.mobj.move_to, receiver.dock_point()),
+                FadeOut(message.mobj)
+                if stage == tempyral.RequestResponseStage.Response
+                else None
             ),
         )
 
     def play_all_send_message_animations(
-        self, first_halves: Iterable[Animation], second_halves: Iterable[Animation]
+        self,
+        first_halves: Iterable[Animation],
+        second_halves: Iterable[Animation],
+        fade_outs: Iterable[Animation | None],
     ):
+        """
+        Play concurrent message animations.
+        """
         self.scene.play(*first_halves)
         self.scene.wait(0.5)
         self.scene.play(*second_halves)
+        if fade_outs := list(filter(None, fade_outs)):
+            self.scene.play(*fade_outs)
         self.scene.wait()
 
     def with_time(self, mobj: Mobject, entity: E) -> Mobject:
