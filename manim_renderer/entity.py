@@ -12,7 +12,6 @@ from manim import (
     RIGHT,
     SMALL_BUFF,
     Animation,
-    ApplyMethod,
     FadeOut,
     Indicate,
     Mobject,
@@ -28,6 +27,8 @@ from manim_renderer import style
 from manim_renderer.utils import notnull
 
 E = TypeVar("E", bound=tempyral.Entity)
+
+from manim_renderer.manim_shims import ApplyMethod
 
 
 class MessageStage(Enum):
@@ -115,8 +116,8 @@ class ProxyEntity(Generic[E], VisualElement):
         start, end = message.mobj.get_center(), receiver.dock_point()
         halfway = tuple(np.array(list(start + end)) / 2.0)
         return (
-            notnull(ApplyMethod(message.mobj.move_to, halfway)),
-            notnull(ApplyMethod(message.mobj.move_to, end)),
+            ApplyMethod(message.mobj.move_to, halfway),
+            ApplyMethod(message.mobj.move_to, end),
             (
                 FadeOut(message.mobj)
                 if stage == tempyral.RequestResponseStage.Response
