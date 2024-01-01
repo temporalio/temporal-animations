@@ -105,7 +105,6 @@ class ProxyEntity(Generic[E], VisualElement):
         self,
         receiver: "ProxyEntity",
         message: "ProxyEntity[tempyral.RequestResponse]",
-        outbound: bool,
     ):
         """
         Animate sending a message.
@@ -123,8 +122,6 @@ class ProxyEntity(Generic[E], VisualElement):
         self.scene.play(
             notnull(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
         )
-        if not outbound:
-            self.scene.remove(message.mobj)
         self.scene.wait()
 
     def with_time(self, mobj: Mobject, entity: E) -> Mobject:
