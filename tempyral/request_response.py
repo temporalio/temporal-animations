@@ -76,7 +76,7 @@ class WorkflowTask(Response):
         return f"{type(self).__name__}[{self.time}](id={self.id}: events={self.events}, updates={self.pending_updates})"
 
 
-class ActivityTask(RequestResponse):
+class ActivityTask(Response):
     """An Activity Task dispatched by the server in response to a long-poll request."""
 
     def __init__(self, workflow_id: "WorkflowId", time: int, token: int):

@@ -61,7 +61,6 @@ class ActivityWorker(Worker[ActivityTask]):
         )
 
     async def handle_task(self, at: ActivityTask, server: Server):
-        await self.publish_message_event(self, server, at)
         await self.send_request(
             ActivityTaskCompleted(at.workflow_id, self.time, None, at.token), server
         )
