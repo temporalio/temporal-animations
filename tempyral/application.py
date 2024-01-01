@@ -44,6 +44,7 @@ class Application(EntityWithCode):
                     self.blocked_lines.add(request.token)
                 await self.publish_message_event(self, server, request)
                 await server.handle_application_request(request)
+                request.time = server.time
                 self.tick(request)
                 if request.token is not None:
                     self.blocked_lines.remove(request.token)

@@ -54,9 +54,9 @@ class ActivityWorker(Worker[ActivityTask]):
 
     async def handle_task(self, at: ActivityTask, server: Server):
         await self.publish_message_event(self, server, at)
-        await server.handle_worker_request(
-            ActivityTaskCompleted(at.workflow_id, self.time, None, at.token)
-        )
+        request = ActivityTaskCompleted(at.workflow_id, self.time, None, at.token)
+        await server.handle_worker_request(request)
+        request.time = server.time
 
 
 class Workflow(EntityWithCode, ABC):
@@ -190,5 +190,6 @@ class WorkflowWorker(Worker[WorkflowTask]):
         msg = WorkflowTaskCompleted(wft.workflow_id, self.time, commands)
         await self.publish_message_event(self, server, msg)
         await server.handle_worker_request(msg)
+        msg.time = server.time
         self.tick(msg)
         await self.publish_change_event()
