@@ -50,9 +50,11 @@ async def process_simulation_events():
                     msg = msg_cls(entity=msg_entity)
                     proxy_entity_registry.set(msg_entity, msg)
                 sender.render_to_scene(sender_entity)
-                sender.send_message(receiver, msg)
-                if msg_entity.stage == tempyral.RequestResponseStage.Response:
-                    sender.scene.remove(msg.mobj)
+                sender.send_message(
+                    receiver,
+                    msg,
+                    msg_entity.stage == tempyral.RequestResponseStage.Request,
+                )
                 receiver.render_to_scene(receiver_entity)
                 n -= 1
                 if not n:
