@@ -11,7 +11,9 @@ from manim import (
     ORIGIN,
     RIGHT,
     SMALL_BUFF,
+    Animation,
     ApplyMethod,
+    Arrow,
     Indicate,
     Mobject,
     Scene,
@@ -115,14 +117,31 @@ class ProxyEntity(Generic[E], VisualElement):
         # TODO: Choose the start and end points appropriately given the
         # locations of self and receiver.
         self.scene.add(message.mobj)
-        halfway = tuple(
-            np.array(list(message.mobj.get_center() + receiver.dock_point())) / 2.0
-        )
-        self.scene.play(notnull(ApplyMethod(message.mobj.move_to, halfway)))
+
+        start, end = message.mobj.get_center(), receiver.dock_point()
+        halfway = tuple(np.array(list(start + end)) / 2.0)
+        arrows = [
+            Arrow(
+                start=start,
+                end=end,
+                stroke_color=style.COLOR_MESSAGE,
+            )
+            for end in [start, halfway, end]
+        ]
+
+        anims: List[Animation | None] = [ApplyMethod(message.mobj.move_to, halfway)]
+        if outbound:
+            self.scene.add(arrows[0])
+            anims.append(Transform(arrows[0], arrows[1]))
+        self.scene.play(*map(notnull, anims))
+
         self.scene.wait(0.5)
-        self.scene.play(
-            notnull(ApplyMethod(message.mobj.move_to, receiver.dock_point()))
-        )
+
+        anims: List[Animation | None] = [ApplyMethod(message.mobj.move_to, end)]
+        if outbound:
+            anims.append(Transform(arrows[0], arrows[2]))
+        self.scene.play(*map(notnull, anims))
+
         if not outbound:
             self.scene.remove(message.mobj)
         self.scene.wait()
