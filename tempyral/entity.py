@@ -3,7 +3,7 @@ from copy import deepcopy
 from typing import Any, Callable, Self
 
 from event_bus import MessageEvent, StateChangeEvent, event_bus
-from log import log
+from logger import log
 
 
 class Entity:

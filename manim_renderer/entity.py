@@ -22,7 +22,7 @@ from manim import (
 from manim.typing import Point3D, Vector3
 
 import tempyral
-from log import log
+from logger import log
 from manim_renderer import style
 from manim_renderer.utils import notnull
 

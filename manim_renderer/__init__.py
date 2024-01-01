@@ -4,7 +4,7 @@ from manim import Scene
 
 import tempyral
 from event_bus import MessageEvent, StateChangeEvent, TerminateSimulation, event_bus
-from log import log
+from logger import log
 from manim_renderer.application import Application, ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
 from manim_renderer.server import Server
