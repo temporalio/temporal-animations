@@ -1,9 +1,10 @@
+from asyncio import CancelledError
 from typing import Iterable, Tuple, Type, cast
 
 from manim import Animation, Scene
 
 import tempyral
-from event_bus import MessageEvent, StateChangeEvent, TerminateSimulation, event_bus
+from event_bus import MessageEvent, StateChangeEvent, event_bus
 from logger import log
 from manim_renderer.application import Application, ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
@@ -28,38 +29,45 @@ async def process_simulation_events():
     animations: list[Iterable[Animation | None]] = []
     serial = True
     n = 400
-    while True:
-        match await event_bus.bus.get():
-            case StateChangeEvent(entity):
-                proxy_entity = proxy_entity_registry.get(entity)
-                proxy_entity.render_to_scene(entity)
-            case MessageEvent(sender_entity, receiver_entity, msg_entity):
-                sender_entity, receiver_entity, msg_entity = (
-                    cast(tempyral.Entity, sender_entity),
-                    cast(tempyral.Entity, receiver_entity),
-                    cast(tempyral.RequestResponse, msg_entity),
-                )
-                sender, receiver, msg = _get_proxy_entities(
-                    sender_entity, receiver_entity, msg_entity
-                )
 
-                log(
-                    f"{msg_entity.id}: {sender_entity} -> {receiver_entity}: {msg_entity}",
-                    "A: render  message",
-                )
+    async def process(draining: bool):
+        nonlocal n, curr_time
+        while not (draining and event_bus.empty()):
+            match await event_bus.bus.get():
+                case StateChangeEvent(entity):
+                    proxy_entity = proxy_entity_registry.get(entity)
+                    proxy_entity.render_to_scene(entity)
+                case MessageEvent(sender_entity, receiver_entity, msg_entity):
+                    sender_entity, receiver_entity, msg_entity = (
+                        cast(tempyral.Entity, sender_entity),
+                        cast(tempyral.Entity, receiver_entity),
+                        cast(tempyral.RequestResponse, msg_entity),
+                    )
+                    sender, receiver, msg = _get_proxy_entities(
+                        sender_entity, receiver_entity, msg_entity
+                    )
 
-                animations.append(sender.send_message(receiver, msg, msg_entity.stage))
+                    log(
+                        f"{msg_entity.id}: {sender_entity} -> {receiver_entity}: {msg_entity}",
+                        "A: render  message",
+                    )
 
-                if serial or msg_entity.time > curr_time:
-                    sender.play_all_send_message_animations(*zip(*animations))
-                    animations.clear()
-                    curr_time = msg_entity.time
+                    animations.append(
+                        sender.send_message(receiver, msg, msg_entity.stage)
+                    )
 
-                if not (n := n - 1):
-                    break
+                    if serial or msg_entity.time > curr_time:
+                        sender.play_all_send_message_animations(*zip(*animations))
+                        animations.clear()
+                        curr_time = msg_entity.time
 
-            case TerminateSimulation():
-                break
+                    if not (n := n - 1):
+                        break
+
+    try:
+        await process(draining=False)
+    except CancelledError:
+        await process(draining=True)
 
 
 def _get_proxy_entities(

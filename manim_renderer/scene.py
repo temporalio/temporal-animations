@@ -19,7 +19,7 @@ from manim import (
     config,
 )
 
-import manim_renderer as renderer
+import manim_renderer.event_processor as renderer
 from manim_renderer.style import COLOR_SCENE_BACKGROUND
 from manim_renderer.utils import debug
 from tempyral import (
