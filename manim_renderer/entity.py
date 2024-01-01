@@ -112,12 +112,11 @@ class ProxyEntity(Generic[E], VisualElement):
         Create (but do not play) animations for sending a message.
         """
         self.scene.add(message.mobj)
-        halfway = tuple(
-            np.array(list(message.mobj.get_center() + receiver.dock_point())) / 2.0
-        )
+        start, end = message.mobj.get_center(), receiver.dock_point()
+        halfway = tuple(np.array(list(start + end)) / 2.0)
         return (
             notnull(ApplyMethod(message.mobj.move_to, halfway)),
-            notnull(ApplyMethod(message.mobj.move_to, receiver.dock_point())),
+            notnull(ApplyMethod(message.mobj.move_to, end)),
             (
                 FadeOut(message.mobj)
                 if stage == tempyral.RequestResponseStage.Response
