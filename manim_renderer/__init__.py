@@ -27,6 +27,7 @@ async def process_simulation_events():
     curr_time = 0
     animations: list[Iterable[Animation | None]] = []
     serial = True
+    n = 400
     while True:
         match await event_bus.bus.get():
             case StateChangeEvent(entity):
@@ -53,6 +54,9 @@ async def process_simulation_events():
                     sender.play_all_send_message_animations(*zip(*animations))
                     animations.clear()
                     curr_time = msg_entity.time
+
+                if not (n := n - 1):
+                    break
 
             case TerminateSimulation():
                 break
