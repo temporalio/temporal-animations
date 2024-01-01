@@ -12,12 +12,12 @@ from manim import (
     RIGHT,
     SMALL_BUFF,
     Animation,
+    Arrow,
     FadeOut,
     Indicate,
     Mobject,
     Scene,
     Text,
-    Transform,
     VGroup,
 )
 from manim.typing import Point3D, Vector3
@@ -28,7 +28,7 @@ from manim_renderer.utils import notnull
 
 E = TypeVar("E", bound=tempyral.Entity)
 
-from manim_renderer.manim_shims import ApplyMethod
+from manim_renderer.manim_shims import AnimationGroup, ApplyMethod, Transform
 
 
 class MessageStage(Enum):
@@ -112,18 +112,85 @@ class ProxyEntity(Generic[E], VisualElement):
         """
         Create (but do not play) animations for sending a message.
         """
+        match stage:
+            case tempyral.RequestResponseStage.Request:
+                return self.send_request(receiver, message)
+            case tempyral.RequestResponseStage.Response:
+                return self.send_response(receiver, message)
+
+    def send_request(
+        self, receiver: "ProxyEntity", message: "ProxyEntity"
+    ) -> tuple[Animation, Animation, Animation | None]:
+        """
+        Create (but do not play) animations for sending the request stage of a message.
+        """
         self.scene.add(message.mobj)
         start, end = message.mobj.get_center(), receiver.dock_point()
         halfway = tuple(np.array(list(start + end)) / 2.0)
+        self.arrow, halfway_arrow, full_arrow = [
+            Arrow(
+                start=start,
+                end=end,
+                stroke_color=style.COLOR_MESSAGE,
+                stroke_width=style.STROKE_WIDTH_MESSAGE_ARROW,
+                max_tip_length_to_length_ratio=style.MAX_TIP_LENGTH_TO_LENGTH_RATIO_MESSAGE_ARROW,
+                buff=style.BUFF_MESSAGE_ARROW,
+            )
+            for end in [start, halfway, end]
+        ]
+
         return (
-            ApplyMethod(message.mobj.move_to, halfway),
-            ApplyMethod(message.mobj.move_to, end),
-            (
-                FadeOut(message.mobj)
-                if stage == tempyral.RequestResponseStage.Response
-                else None
+            AnimationGroup(
+                ApplyMethod(message.mobj.move_to, halfway),
+                Transform(self.arrow, halfway_arrow),
             ),
+            AnimationGroup(
+                ApplyMethod(message.mobj.move_to, end),
+                Transform(self.arrow, full_arrow),
+            ),
+            None,
         )
+
+    def send_response(
+        self, receiver: "ProxyEntity", message: "ProxyEntity"
+    ) -> tuple[Animation, Animation, Animation | None]:
+        """
+        Create (but do not play) animations for sending the response stage of a message.
+        """
+        msg_start, msg_end = message.mobj.get_center(), receiver.dock_point()
+        halfway = tuple(np.array(list(msg_start + msg_end)) / 2.0)
+
+        # TODO: Make `arrow` part of the type and use for all messages
+        if hasattr(receiver, "arrow"):
+            halfway_arrow, zero_arrow = [
+                Arrow(
+                    start=msg_end,
+                    end=end,
+                    stroke_color=style.COLOR_MESSAGE,
+                    stroke_width=style.STROKE_WIDTH_MESSAGE_ARROW,
+                    max_tip_length_to_length_ratio=style.MAX_TIP_LENGTH_TO_LENGTH_RATIO_MESSAGE_ARROW,
+                    buff=style.BUFF_MESSAGE_ARROW,
+                )
+                for end in [halfway, msg_end]
+            ]
+
+            return (
+                AnimationGroup(
+                    ApplyMethod(message.mobj.move_to, halfway),
+                    Transform(receiver.arrow, halfway_arrow),
+                ),
+                AnimationGroup(
+                    ApplyMethod(message.mobj.move_to, msg_end),
+                    Transform(receiver.arrow, zero_arrow),
+                ),
+                FadeOut(message.mobj),
+            )
+        else:
+            return (
+                ApplyMethod(message.mobj.move_to, halfway),
+                ApplyMethod(message.mobj.move_to, msg_end),
+                FadeOut(message.mobj),
+            )
 
     def play_all_send_message_animations(
         self,
