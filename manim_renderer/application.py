@@ -4,10 +4,10 @@ from manim.typing import Point3D
 import tempyral
 from manim_renderer import style
 from manim_renderer.code import ProxyEntityWithCode
-from manim_renderer.message import ProxyEntityRequestMessage
+from manim_renderer.entity import ProxyEntity
 
 
-class ApplicationRequest(ProxyEntityRequestMessage[tempyral.ApplicationRequest]):
+class ApplicationRequest(ProxyEntity[tempyral.ApplicationRequest]):
     def render(self, entity: tempyral.ApplicationRequest) -> Mobject:
         return self.with_time(style.message(entity.request_type.name), entity)
 
