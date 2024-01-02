@@ -20,7 +20,7 @@ class ActivityTaskRequest(ProxyEntity[tempyral.WorkerPollRequest]):
 
 class ActivityTaskCompleted(ProxyEntity[tempyral.ActivityTaskCompleted]):
     def render(self, _: tempyral.ActivityTaskCompleted) -> Mobject:
-        return style.message("ActivityTaskCompleted")
+        return style.message("Activity Task Completed")
 
 
 class ActivityWorker(ProxyEntity[tempyral.ActivityWorker]):
@@ -50,9 +50,14 @@ class WorkflowTaskRequest(ProxyEntity[tempyral.WorkerPollRequest]):
             return VGroup(request, eventsm).arrange()
 
 
+class WorkflowTaskCompleted(ProxyEntity[tempyral.WorkflowTaskCompleted]):
+    def render(self, _: tempyral.WorkflowTaskCompleted) -> Mobject:
+        return style.message("WFT Completed")
+
+
 class WorkerRequest(ProxyEntity[tempyral.WorkerRequest]):
     def render(self, entity: tempyral.WorkerRequest) -> Mobject:
-        return style.message(entity.__class__.__name__)
+        return style.message(f"WorkerRequest[{entity.__class__.__name__}]")
 
 
 class Workflow(ProxyEntityWithCode[tempyral.Workflow]):

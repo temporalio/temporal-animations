@@ -6,21 +6,17 @@ from manim import Animation, Scene
 import tempyral
 from event_bus import MessageEvent, StateChangeEvent, event_bus
 from logger import log
-from manim_renderer.application import Application, ApplicationRequest
+from manim_renderer.application import ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
-from manim_renderer.server import Server
 from manim_renderer.worker import (
     ActivityTaskCompleted,
     ActivityTaskRequest,
-    ActivityWorker,
-    WorkerRequest,
+    WorkflowTaskCompleted,
     WorkflowTaskRequest,
-    WorkflowWorker,
 )
 
 
 def set_scene(scene: Scene):
-    log("\n" * 50, "")
     VisualElement.scene = scene
 
 
@@ -87,7 +83,7 @@ def _get_proxy_entities(
     try:
         msg = proxy_entity_registry.get(message_entity)
     except KeyError:
-        msg_cls = _get_message_cls_for(sender, receiver)
+        msg_cls = _get_message_cls_for(sender_entity, message_entity)
         msg = msg_cls(entity=message_entity)
         msg.mobj.move_to(sender.get_message_start(message_entity))
         proxy_entity_registry.set(message_entity, msg)
@@ -95,22 +91,21 @@ def _get_proxy_entities(
 
 
 def _get_message_cls_for(
-    sender: ProxyEntity, receiver: ProxyEntity
+    sender_entity: tempyral.Entity,
+    message_entity: tempyral.RequestResponse,
 ) -> Type[ProxyEntity]:
-    match (type(sender), type(receiver)):
-        case sr if sr == (Application, Server):
+    match message_entity, sender_entity:
+        case (tempyral.ApplicationRequest(), _):
             return ApplicationRequest
-        case sr if sr == (Server, Application):
-            return ApplicationRequest
-        case sr if sr == (WorkflowWorker, Server):
-            return WorkerRequest
-        case sr if sr == (ActivityWorker, Server):
-            return ActivityTaskCompleted
-        case sr if sr == (Server, WorkflowWorker):
+        case (tempyral.WorkerPollRequest(), tempyral.WorkflowWorker()):
             return WorkflowTaskRequest
-        case sr if sr == (Server, ActivityWorker):
+        case (tempyral.WorkerRequest(), tempyral.WorkflowWorker()):
+            return WorkflowTaskCompleted
+        case (tempyral.WorkerPollRequest(), tempyral.ActivityWorker()):
             return ActivityTaskRequest
+        case (tempyral.WorkerRequest(), tempyral.ActivityWorker()):
+            return ActivityTaskCompleted
         case _:
             raise ValueError(
-                f"Unsupported (sender, receiver) types: {(type(sender).__name__, type(receiver).__name__)}"
+                f"Unsupported (message, sender) types: {(type(message_entity).__name__, type(sender_entity).__name__)}"
             )
