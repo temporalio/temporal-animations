@@ -26,6 +26,10 @@ def message(name: str, **kwargs) -> Mobject:
     )
 
 
+def invisible_message() -> Mobject:
+    return Text(".").set_opacity(0)
+
+
 def actor(name: str, **kwargs) -> Mobject:
     return Text(name, font=FONT_ACTOR, font_size=FONT_SIZE_ACTOR, **kwargs)
 

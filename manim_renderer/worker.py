@@ -13,7 +13,7 @@ from tempyral.request_response import RequestResponseStage
 class ActivityTaskRequest(ProxyEntity[tempyral.WorkerPollRequest]):
     def render(self, entity: tempyral.WorkerPollRequest) -> Mobject:
         if entity.stage == RequestResponseStage.Request:
-            return style.message("")
+            return style.invisible_message()
         else:
             return style.message("Activity Task")
 
@@ -43,7 +43,7 @@ class BoxedHistoryEvents(HistoryEvents):
 class WorkflowTaskRequest(ProxyEntity[tempyral.WorkerPollRequest]):
     def render(self, entity: tempyral.WorkerPollRequest) -> Mobject:
         if entity.stage == RequestResponseStage.Request:
-            return style.message("")
+            return style.invisible_message()
         else:
             request = self.with_time(style.message("WFT"), entity)
             eventsm = BoxedHistoryEvents.render(entity.task.events)
