@@ -122,9 +122,9 @@ class Workflow(EntityWithCode, ABC):
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.blocked_lines})"
 
-    async def handle_wft(self, wft: WorkflowTaskRequest) -> List[Command]:
+    async def handle_wft_request(self, request: WorkflowTaskRequest) -> List[Command]:
         log(
-            f"blocked={self.blocked_lines} blocked_updates={self.blocked_lines_waiting_for_update} incoming_updates={wft.pending_updates}",
+            f"blocked={self.blocked_lines} blocked_updates={self.blocked_lines_waiting_for_update} incoming_updates={request.task.pending_updates}",
             "W: handle_wft",
         )
         commands = []
@@ -133,13 +133,13 @@ class Workflow(EntityWithCode, ABC):
             commands.extend([cmd async for cmd in self.advance()])
 
         # If the WFT contains history events that unblock futures, then unblock them.
-        for e in wft.events:
+        for e in request.task.events:
             if (token := e.data.get("token")) != None:
                 self.blocked_lines.remove(cast(int, token))
                 await self.worker.publish_change_event()
 
         update_commands = []
-        for u in wft.pending_updates:
+        for u in request.task.pending_updates:
             # TODO: Currently, any update unblocks all `waiting_for_update_lines`.
             while self.blocked_lines_waiting_for_update:
                 self.blocked_lines.remove(self.blocked_lines_waiting_for_update.pop())
@@ -189,7 +189,7 @@ class WorkflowWorker(Worker[WorkflowTaskRequest]):
         return workflow
 
     async def handle_task(self, wft: WorkflowTaskRequest, server: Server):
-        commands = await self.workflow.handle_wft(wft)
+        commands = await self.workflow.handle_wft_request(wft)
         log(
             f"{self.workflow.blocked_lines} {self.workflow.blocked_lines_waiting_for_update}",
             "W: handled wft",

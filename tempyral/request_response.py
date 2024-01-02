@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, List, Optional
 
@@ -56,34 +57,50 @@ class ApplicationRequest(RequestResponse):
     __publish__ = RequestResponse.__publish__ | {"request_type"}
 
 
+@dataclass
+class WorkflowTask:
+    events: list["HistoryEvent"]
+    pending_updates: list["UpdateInfo"]
+
+    def __repr__(self) -> str:
+        return f"WFT(events={self.events}, updates={self.pending_updates})"
+
+
 class WorkflowTaskRequest(Response):
     """A Workflow Task dispatched by the server in response to a long-poll request."""
 
-    def __init__(
-        self,
-        worklow_id: "WorkflowId",
-        time: int,
-        events: List["HistoryEvent"],
-        pending_updates: List["UpdateInfo"],
-    ) -> None:
+    def __init__(self, worklow_id: "WorkflowId", time: int, task: WorkflowTask) -> None:
         super().__init__(time)
         self.workflow_id = worklow_id
-        self.events = tuple(events)
-        self.pending_updates = tuple(pending_updates)
+        self.task = task
 
-    __publish__ = Response.__publish__ | {"events", "pending_updates"}
+    __publish__ = Response.__publish__ | {"task"}
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}[{self.time}](id={self.id}: events={self.events}, updates={self.pending_updates})"
+        return f"{type(self).__name__}[{self.time}](id={self.id}: {self.task})"
+
+
+@dataclass
+class ActivityTask:
+    pass
 
 
 class ActivityTaskRequest(Response):
     """An Activity Task dispatched by the server in response to a long-poll request."""
 
-    def __init__(self, workflow_id: "WorkflowId", time: int, token: int):
+    def __init__(
+        self,
+        workflow_id: "WorkflowId",
+        time: int,
+        token: int,
+        task: ActivityTask,
+    ):
         super().__init__(time)
         self.workflow_id = workflow_id
         self.token = token
+        self.task = task
+
+    __publish__ = Response.__publish__ | {"task"}
 
 
 class WorkerRequest(Response):

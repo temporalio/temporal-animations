@@ -7,11 +7,15 @@ from manim_renderer import style
 from manim_renderer.code import ProxyEntityWithCode
 from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren
 from manim_renderer.history import HistoryEvents
+from tempyral.request_response import RequestResponseStage
 
 
 class ActivityTaskRequest(ProxyEntity[tempyral.ActivityTaskRequest]):
-    def render(self, _: tempyral.ActivityTaskRequest) -> Mobject:
-        return style.message("Activity Task")
+    def render(self, entity: tempyral.ActivityTaskRequest) -> Mobject:
+        if entity.stage == RequestResponseStage.Request:
+            return style.message("")
+        else:
+            return style.message("Activity Task")
 
 
 class ActivityTaskCompleted(ProxyEntity[tempyral.ActivityTaskCompleted]):
@@ -38,9 +42,12 @@ class BoxedHistoryEvents(HistoryEvents):
 
 class WorkflowTaskRequest(ProxyEntity[tempyral.WorkflowTaskRequest]):
     def render(self, entity: tempyral.WorkflowTaskRequest) -> Mobject:
-        eventsm = BoxedHistoryEvents.render(entity.events)
-        task = self.with_time(style.message("WFT"), entity)
-        return VGroup(task, eventsm).arrange()
+        if entity.stage == RequestResponseStage.Request:
+            return style.message("")
+        else:
+            request = self.with_time(style.message("WFT"), entity)
+            eventsm = BoxedHistoryEvents.render(entity.task.events)
+            return VGroup(request, eventsm).arrange()
 
 
 class WorkerRequest(ProxyEntity[tempyral.WorkerRequest]):

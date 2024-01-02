@@ -25,6 +25,7 @@ from tempyral.request_response import (
     ApplicationRequest,
     RequestResponseStage,
     WorkerRequest,
+    WorkflowTask,
     WorkflowTaskCompleted,
     WorkflowTaskRequest,
 )
@@ -407,7 +408,9 @@ class Server(Entity):
             pending_updates = drain(self.namespace[workflow_id].pending_updates)
             [queue] = self.workflow_worker_long_poll_connections.values()
             await queue.put(
-                WorkflowTaskRequest(workflow_id, self.time, events, pending_updates)
+                WorkflowTaskRequest(
+                    workflow_id, self.time, WorkflowTask(events, pending_updates)
+                )
             )
 
     @property
