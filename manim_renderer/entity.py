@@ -108,12 +108,12 @@ class ProxyEntity(Generic[E], VisualElement):
         self,
         receiver: "ProxyEntity",
         message: "ProxyEntity",
-        stage: tempyral.RequestResponseStage,
+        message_entity: tempyral.RequestResponse,
     ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending a message.
         """
-        match stage:
+        match message_entity.stage:
             case tempyral.RequestResponseStage.Request:
                 return self.send_request(receiver, message)
             case tempyral.RequestResponseStage.Response:

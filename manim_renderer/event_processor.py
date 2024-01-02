@@ -52,9 +52,7 @@ async def process_simulation_events():
                         "A: render  message",
                     )
 
-                    animations.append(
-                        sender.send_message(receiver, msg, msg_entity.stage)
-                    )
+                    animations.append(sender.send_message(receiver, msg, msg_entity))
 
                     if serial or msg_entity.time > curr_time:
                         sender.play_all_send_message_animations(*zip(*animations))
