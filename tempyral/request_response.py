@@ -17,8 +17,9 @@ class RequestResponse(Entity):
     def __init__(self, time=0):
         super().__init__(time)
         self.stage = RequestResponseStage.Request
+        self.token: Optional[int] = None
 
-    __publish__ = Entity.__publish__ | {"stage"}
+    __publish__ = Entity.__publish__ | {"stage", "token"}
 
 
 class Response(Entity):
@@ -40,14 +41,14 @@ class ApplicationRequest(RequestResponse):
         request_type: "ApplicationRequestType",
         workflow_id: "WorkflowId",
         time: int,
-        token: Optional[int] = None,
+        token: Optional[int],
         response_payload: Any = None,
     ):
+        super().__init__(time)
         self.workflow_id = workflow_id
         self.request_type = request_type
         self.token = token
         self.response_payload = response_payload
-        super().__init__(time)
 
     def __repr__(self) -> str:
         return f"{self.request_type.name}[{self.time}]"
@@ -70,7 +71,7 @@ class WorkflowTask(Response):
         self.events = tuple(events)
         self.pending_updates = tuple(pending_updates)
 
-    __publish__ = RequestResponse.__publish__ | {"events", "pending_updates"}
+    __publish__ = Response.__publish__ | {"events", "pending_updates"}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}[{self.time}](id={self.id}: events={self.events}, updates={self.pending_updates})"

@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar
 
-from manim import DOWN, LEFT, PINK, Arrow, Mobject, VGroup
+from manim import DOWN, LEFT, PINK, Arrow, VDict, VGroup, VMobject
 
 import tempyral
 from manim_renderer.entity import ProxyEntity
@@ -11,7 +11,9 @@ E = TypeVar("E", bound=tempyral.EntityWithCode)
 
 
 class ProxyEntityWithCode(ProxyEntity, Generic[E]):
-    def render(self, entity: E) -> Mobject:
+    CODE_LINES_INDEX = 2
+
+    def render(self, entity: E) -> VMobject:
         code = Code(
             code=entity.code,
             language=entity.language,
@@ -21,7 +23,7 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
             font=FONT_CODE,
             line_spacing=0.5,
         ).to_edge(LEFT, buff=0.1)
-        lines = code[2]
+        lines = code[self.CODE_LINES_INDEX]
         arrows = VGroup(
             *(
                 Arrow(
@@ -36,4 +38,4 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
         )
         for line_num in entity.blocked_lines:
             arrows[line_num - 1].set_color(PINK).set_opacity(1)
-        return VGroup(code, arrows)
+        return VDict({"code": code, "arrows": arrows})

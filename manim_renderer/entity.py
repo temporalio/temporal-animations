@@ -19,6 +19,7 @@ from manim import (
     Scene,
     Text,
     VGroup,
+    VMobject,
 )
 from manim.typing import Point3D
 from manim.typing import Vector3D as Vector3
@@ -89,6 +90,9 @@ class ProxyEntity(Generic[E], VisualElement):
             self.mobj.get_edge_center(self.dock_direction) + 0.5 * self.dock_direction
         )
 
+    def get_message_start(self, _: tempyral.RequestResponse) -> Point3D:
+        return self.mobj.get_center()
+
     @abstractmethod
     def render(self, entity: E) -> Mobject:
         """Compute new visual representation given entity state."""
@@ -115,29 +119,35 @@ class ProxyEntity(Generic[E], VisualElement):
         """
         match message_entity.stage:
             case tempyral.RequestResponseStage.Request:
-                return self.send_request(receiver, message)
+                return self.send_request(receiver, message, message_entity)
             case tempyral.RequestResponseStage.Response:
-                return self.send_response(receiver, message)
+                return self.send_response(receiver, message, message_entity)
 
     def send_request(
-        self, receiver: "ProxyEntity", message: "ProxyEntity[tempyral.RequestResponse]"
+        self,
+        receiver: "ProxyEntity",
+        message: "ProxyEntity[tempyral.RequestResponse]",
+        message_entity: tempyral.RequestResponse,
     ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending the request stage of a message.
         """
         self.scene.add(message.mobj)
-        start, end = message.mobj.get_center(), receiver.dock_point()
-        halfway = tuple(np.array(list(start + end)) / 2.0)
+        msg_start, msg_end = (
+            self.get_message_start(message_entity),
+            receiver.dock_point(),
+        )
+        halfway = tuple(np.array(list(msg_start + msg_end)) / 2.0)
         self.arrow, halfway_arrow, full_arrow = [
             Arrow(
-                start=start,
+                start=msg_start,
                 end=end,
                 stroke_color=style.COLOR_MESSAGE,
                 stroke_width=style.STROKE_WIDTH_MESSAGE_ARROW,
                 max_tip_length_to_length_ratio=style.MAX_TIP_LENGTH_TO_LENGTH_RATIO_MESSAGE_ARROW,
                 buff=style.BUFF_MESSAGE_ARROW,
             )
-            for end in [start, halfway, end]
+            for end in [msg_start, halfway, msg_end]
         ]
 
         return (
@@ -146,52 +156,58 @@ class ProxyEntity(Generic[E], VisualElement):
                 Transform(self.arrow, halfway_arrow),
             ),
             AnimationGroup(
-                ApplyMethod(message.mobj.move_to, end),
+                ApplyMethod(message.mobj.move_to, msg_end),
                 Transform(self.arrow, full_arrow),
             ),
             None,
         )
 
     def send_response(
-        self, receiver: "ProxyEntity", message: "ProxyEntity"
+        self,
+        receiver: "ProxyEntity",
+        message: "ProxyEntity",
+        message_entity: tempyral.RequestResponse,
     ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending the response stage of a message.
         """
-        msg_start, msg_end = message.mobj.get_center(), receiver.dock_point()
+        msg_start, msg_end = (
+            message.mobj.get_center(),
+            receiver.get_message_start(message_entity),
+        )
         halfway = tuple(np.array(list(msg_start + msg_end)) / 2.0)
 
         # TODO: Make `arrow` part of the type and use for all messages
-        if hasattr(receiver, "arrow"):
-            halfway_arrow, zero_arrow = [
-                Arrow(
-                    start=msg_end,
-                    end=end,
-                    stroke_color=style.COLOR_MESSAGE,
-                    stroke_width=style.STROKE_WIDTH_MESSAGE_ARROW,
-                    max_tip_length_to_length_ratio=style.MAX_TIP_LENGTH_TO_LENGTH_RATIO_MESSAGE_ARROW,
-                    buff=style.BUFF_MESSAGE_ARROW,
-                )
-                for end in [halfway, msg_end]
-            ]
-
-            return (
-                AnimationGroup(
-                    ApplyMethod(message.mobj.move_to, halfway),
-                    Transform(receiver.arrow, halfway_arrow),
-                ),
-                AnimationGroup(
-                    ApplyMethod(message.mobj.move_to, msg_end),
-                    Transform(receiver.arrow, zero_arrow),
-                ),
-                FadeOut(message.mobj),
-            )
-        else:
+        if not hasattr(receiver, "arrow"):
             return (
                 ApplyMethod(message.mobj.move_to, halfway),
                 ApplyMethod(message.mobj.move_to, msg_end),
                 FadeOut(message.mobj),
             )
+
+        halfway_arrow, zero_arrow = [
+            Arrow(
+                start=msg_end,
+                end=end,
+                stroke_color=style.COLOR_MESSAGE,
+                stroke_width=style.STROKE_WIDTH_MESSAGE_ARROW,
+                max_tip_length_to_length_ratio=style.MAX_TIP_LENGTH_TO_LENGTH_RATIO_MESSAGE_ARROW,
+                buff=style.BUFF_MESSAGE_ARROW,
+            )
+            for end in [halfway, msg_end]
+        ]
+
+        return (
+            AnimationGroup(
+                ApplyMethod(message.mobj.move_to, halfway),
+                Transform(receiver.arrow, halfway_arrow),
+            ),
+            AnimationGroup(
+                ApplyMethod(message.mobj.move_to, msg_end),
+                Transform(receiver.arrow, zero_arrow),
+            ),
+            FadeOut(message.mobj),
+        )
 
     def play_all_send_message_animations(
         self,
@@ -209,7 +225,7 @@ class ProxyEntity(Generic[E], VisualElement):
             self.scene.play(*fade_outs)
         self.scene.wait()
 
-    def with_time(self, mobj: Mobject, entity: E) -> Mobject:
+    def with_time(self, mobj: Mobject, entity: E) -> VMobject:
         return VGroup(
             mobj,
             Text(
