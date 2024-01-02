@@ -72,7 +72,7 @@ def _get_proxy_entities(
     sender_entity: tempyral.Entity,
     receiver_entity: tempyral.Entity,
     message_entity: tempyral.RequestResponse,
-) -> Tuple[ProxyEntity, ProxyEntity, ProxyEntity]:
+) -> Tuple[ProxyEntity, ProxyEntity, ProxyEntity[tempyral.RequestResponse]]:
     """
     Obtain renderer proxies for the simulation entities. The two
     actors will be in the registry already (all actors are created

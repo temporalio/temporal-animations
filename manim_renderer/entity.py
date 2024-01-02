@@ -120,7 +120,7 @@ class ProxyEntity(Generic[E], VisualElement):
                 return self.send_response(receiver, message)
 
     def send_request(
-        self, receiver: "ProxyEntity", message: "ProxyEntity"
+        self, receiver: "ProxyEntity", message: "ProxyEntity[tempyral.RequestResponse]"
     ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending the request stage of a message.
