@@ -12,7 +12,6 @@ from manim import (
     RIGHT,
     SMALL_BUFF,
     Animation,
-    FadeIn,
     FadeOut,
     Indicate,
     Line,
@@ -113,7 +112,7 @@ class ProxyEntity(Generic[E], VisualElement):
         receiver: "ProxyEntity",
         message: "ProxyEntity",
         message_entity: tempyral.RequestResponse,
-    ) -> tuple[Animation | None, Animation, Animation, Animation | None]:
+    ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending a message.
         """
@@ -128,7 +127,7 @@ class ProxyEntity(Generic[E], VisualElement):
         receiver: "ProxyEntity",
         message: "ProxyEntity[tempyral.RequestResponse]",
         message_entity: tempyral.RequestResponse,
-    ) -> tuple[Animation | None, Animation, Animation, Animation | None]:
+    ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending the request stage of a message.
         """
@@ -150,7 +149,6 @@ class ProxyEntity(Generic[E], VisualElement):
         ]
 
         return (
-            FadeIn(message.mobj),
             AnimationGroup(
                 ApplyMethod(message.mobj.move_to, halfway),
                 Transform(self.arrow, halfway_arrow),
@@ -167,7 +165,7 @@ class ProxyEntity(Generic[E], VisualElement):
         receiver: "ProxyEntity",
         message: "ProxyEntity",
         message_entity: tempyral.RequestResponse,
-    ) -> tuple[Animation, Animation, Animation, Animation | None]:
+    ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending the response stage of a message.
         """
@@ -180,7 +178,6 @@ class ProxyEntity(Generic[E], VisualElement):
         # TODO: Make `arrow` part of the type and use for all messages
         if not hasattr(receiver, "arrow"):
             return (
-                FadeIn(message.mobj),
                 ApplyMethod(message.mobj.move_to, halfway),
                 ApplyMethod(message.mobj.move_to, msg_end),
                 FadeOut(message.mobj),
@@ -198,7 +195,6 @@ class ProxyEntity(Generic[E], VisualElement):
         ]
 
         return (
-            FadeIn(message.mobj),
             AnimationGroup(
                 ApplyMethod(message.mobj.move_to, halfway),
                 Transform(receiver.arrow, halfway_arrow),
@@ -212,7 +208,6 @@ class ProxyEntity(Generic[E], VisualElement):
 
     def play_all_send_message_animations(
         self,
-        fade_ins: Iterable[Animation],
         first_halves: Iterable[Animation],
         second_halves: Iterable[Animation],
         fade_outs: Iterable[Animation | None],
@@ -220,7 +215,6 @@ class ProxyEntity(Generic[E], VisualElement):
         """
         Play concurrent message animations.
         """
-        self.scene.play(*fade_ins)
         self.scene.play(*first_halves)
         self.scene.wait(0.5)
         self.scene.play(*second_halves)
