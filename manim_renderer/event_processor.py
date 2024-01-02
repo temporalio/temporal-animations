@@ -10,11 +10,11 @@ from manim_renderer.application import Application, ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
 from manim_renderer.server import Server
 from manim_renderer.worker import (
-    ActivityTask,
     ActivityTaskCompleted,
+    ActivityTaskRequest,
     ActivityWorker,
     WorkerRequest,
-    WorkflowTask,
+    WorkflowTaskRequest,
     WorkflowWorker,
 )
 
@@ -107,9 +107,9 @@ def _get_message_cls_for(
         case sr if sr == (ActivityWorker, Server):
             return ActivityTaskCompleted
         case sr if sr == (Server, WorkflowWorker):
-            return WorkflowTask
+            return WorkflowTaskRequest
         case sr if sr == (Server, ActivityWorker):
-            return ActivityTask
+            return ActivityTaskRequest
         case _:
             raise ValueError(
                 f"Unsupported (sender, receiver) types: {(type(sender).__name__, type(receiver).__name__)}"

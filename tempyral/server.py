@@ -20,13 +20,13 @@ from tempyral.api import (
 )
 from tempyral.entity import Entity
 from tempyral.request_response import (
-    ActivityTask,
     ActivityTaskCompleted,
+    ActivityTaskRequest,
     ApplicationRequest,
     RequestResponseStage,
     WorkerRequest,
-    WorkflowTask,
     WorkflowTaskCompleted,
+    WorkflowTaskRequest,
 )
 
 if TYPE_CHECKING:
@@ -80,8 +80,8 @@ Shard = Dict[NamespaceId, Namespace]
 
 
 class TaskQueue(TypedDict):
-    workflow_task_queue: List[WorkflowTask]
-    activity_task_queue: List[ActivityTask]
+    workflow_task_queue: List[WorkflowTaskRequest]
+    activity_task_queue: List[ActivityTaskRequest]
 
 
 class Server(Entity):
@@ -90,10 +90,10 @@ class Server(Entity):
         self.shards: List[Shard] = [{DEFAULT_NAMESPACE: OrderedDict()}]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
         self.workflow_worker_long_poll_connections: Dict[
-            WorkflowWorker, Queue[WorkflowTask]
+            WorkflowWorker, Queue[WorkflowTaskRequest]
         ] = {}
         self.activity_worker_long_poll_connections: Dict[
-            ActivityWorker, Queue[ActivityTask]
+            ActivityWorker, Queue[ActivityTaskRequest]
         ] = {}
         self.pending_application_requests: Dict[
             NamespaceId,
@@ -351,14 +351,14 @@ class Server(Entity):
 
     def establish_workflow_worker_long_poll_connection(
         self, worker: "WorkflowWorker"
-    ) -> Queue[WorkflowTask]:
+    ) -> Queue[WorkflowTaskRequest]:
         connection = Queue()
         self.workflow_worker_long_poll_connections[worker] = connection
         return connection
 
     def establish_activity_worker_long_poll_connection(
         self, worker: "ActivityWorker"
-    ) -> Queue[ActivityTask]:
+    ) -> Queue[ActivityTaskRequest]:
         connection = Queue()
         self.activity_worker_long_poll_connections[worker] = connection
         return connection
@@ -390,7 +390,7 @@ class Server(Entity):
             )
             [queue] = self.activity_worker_long_poll_connections.values()
             await queue.put(
-                ActivityTask(
+                ActivityTaskRequest(
                     workflow_id, self.time, token=int(at_scheduled_event.data["token"])  # type: ignore
                 )
             )
@@ -407,7 +407,7 @@ class Server(Entity):
             pending_updates = drain(self.namespace[workflow_id].pending_updates)
             [queue] = self.workflow_worker_long_poll_connections.values()
             await queue.put(
-                WorkflowTask(workflow_id, self.time, events, pending_updates)
+                WorkflowTaskRequest(workflow_id, self.time, events, pending_updates)
             )
 
     @property

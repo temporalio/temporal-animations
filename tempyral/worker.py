@@ -15,14 +15,14 @@ from tempyral.code import EntityWithCode
 from tempyral.entity import Entity
 from tempyral.request_response import WorkerRequest
 from tempyral.server import (
-    ActivityTask,
     ActivityTaskCompleted,
+    ActivityTaskRequest,
     Server,
-    WorkflowTask,
     WorkflowTaskCompleted,
+    WorkflowTaskRequest,
 )
 
-T = TypeVar("T", bound=Union[ActivityTask, WorkflowTask])
+T = TypeVar("T", bound=Union[ActivityTaskRequest, WorkflowTaskRequest])
 
 
 class DirectiveType(Enum):
@@ -53,14 +53,14 @@ class Worker(Entity, ABC, Generic[T]):
         await self.publish_change_event()
 
 
-class ActivityWorker(Worker[ActivityTask]):
+class ActivityWorker(Worker[ActivityTaskRequest]):
     def __init__(self, server: Server):
         super().__init__()
         self.long_poll_connection = (
             server.establish_activity_worker_long_poll_connection(self)
         )
 
-    async def handle_task(self, at: ActivityTask, server: Server):
+    async def handle_task(self, at: ActivityTaskRequest, server: Server):
         await self.send_request(
             ActivityTaskCompleted(at.workflow_id, self.time, None, at.token), server
         )
@@ -122,7 +122,7 @@ class Workflow(EntityWithCode, ABC):
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.blocked_lines})"
 
-    async def handle_wft(self, wft: WorkflowTask) -> List[Command]:
+    async def handle_wft(self, wft: WorkflowTaskRequest) -> List[Command]:
         log(
             f"blocked={self.blocked_lines} blocked_updates={self.blocked_lines_waiting_for_update} incoming_updates={wft.pending_updates}",
             "W: handle_wft",
@@ -170,7 +170,7 @@ class Workflow(EntityWithCode, ABC):
         await self.worker.publish_change_event()
 
 
-class WorkflowWorker(Worker[WorkflowTask]):
+class WorkflowWorker(Worker[WorkflowTaskRequest]):
     def __init__(self, workflow_classes: List[Type[Workflow]], server: Server):
         super().__init__()
         self.workflows = [cls(self) for cls in workflow_classes]
@@ -188,7 +188,7 @@ class WorkflowWorker(Worker[WorkflowTask]):
         [workflow] = self.workflows
         return workflow
 
-    async def handle_task(self, wft: WorkflowTask, server: Server):
+    async def handle_task(self, wft: WorkflowTaskRequest, server: Server):
         commands = await self.workflow.handle_wft(wft)
         log(
             f"{self.workflow.blocked_lines} {self.workflow.blocked_lines_waiting_for_update}",

@@ -16,12 +16,12 @@ from .server import (
     WorkflowTaskCompleted,
 )
 from .worker import (
-    ActivityTask,
     ActivityTaskCompleted,
+    ActivityTaskRequest,
     ActivityWorker,
     Worker,
     Workflow,
-    WorkflowTask,
     WorkflowTaskCompleted,
+    WorkflowTaskRequest,
     WorkflowWorker,
 )

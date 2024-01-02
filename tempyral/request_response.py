@@ -56,7 +56,7 @@ class ApplicationRequest(RequestResponse):
     __publish__ = RequestResponse.__publish__ | {"request_type"}
 
 
-class WorkflowTask(Response):
+class WorkflowTaskRequest(Response):
     """A Workflow Task dispatched by the server in response to a long-poll request."""
 
     def __init__(
@@ -77,7 +77,7 @@ class WorkflowTask(Response):
         return f"{type(self).__name__}[{self.time}](id={self.id}: events={self.events}, updates={self.pending_updates})"
 
 
-class ActivityTask(Response):
+class ActivityTaskRequest(Response):
     """An Activity Task dispatched by the server in response to a long-poll request."""
 
     def __init__(self, workflow_id: "WorkflowId", time: int, token: int):

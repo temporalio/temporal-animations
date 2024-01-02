@@ -9,8 +9,8 @@ from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren
 from manim_renderer.history import HistoryEvents
 
 
-class ActivityTask(ProxyEntity[tempyral.ActivityTask]):
-    def render(self, _: tempyral.ActivityTask) -> Mobject:
+class ActivityTaskRequest(ProxyEntity[tempyral.ActivityTaskRequest]):
+    def render(self, _: tempyral.ActivityTaskRequest) -> Mobject:
         return style.message("Activity Task")
 
 
@@ -36,8 +36,8 @@ class BoxedHistoryEvents(HistoryEvents):
         return VGroup(rect, eventsm)
 
 
-class WorkflowTask(ProxyEntity[tempyral.WorkflowTask]):
-    def render(self, entity: tempyral.WorkflowTask) -> Mobject:
+class WorkflowTaskRequest(ProxyEntity[tempyral.WorkflowTaskRequest]):
+    def render(self, entity: tempyral.WorkflowTaskRequest) -> Mobject:
         eventsm = BoxedHistoryEvents.render(entity.events)
         task = self.with_time(style.message("WFT"), entity)
         return VGroup(task, eventsm).arrange()
