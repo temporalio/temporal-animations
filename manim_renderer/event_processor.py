@@ -25,7 +25,7 @@ def set_scene(scene: Scene):
 
 
 async def process_simulation_events():
-    curr_time = 0
+    curr_time = -1
     animations: list[Iterable[Animation | None]] = []
     serial = True
     n = 400
