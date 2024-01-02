@@ -101,15 +101,11 @@ class ProxyEntity(Generic[E], VisualElement):
         """Compute new visual representation given entity state."""
         ...
 
-    def render_to_scene(self, entity: E, animate=False):
+    def render_to_scene(self, entity: E):
         """
         Mutate `self.mobj` so that it represents the current state of `entity` and update the scene.
         """
-        mobj = self.render(entity).move_to(self.mobj)
-        if animate:
-            self.scene.play(notnull(Transform(self.mobj, mobj)))
-        else:
-            self.mobj.become(mobj)
+        self.mobj.become(self.render(entity).move_to(self.mobj))
 
     def send_message(
         self,
