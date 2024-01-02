@@ -20,8 +20,7 @@ from manim import (
     VGroup,
     VMobject,
 )
-from manim.typing import Point3D
-from manim.typing import Vector3D as Vector3
+from manim.typing import Point3D, Vector3
 
 import tempyral
 from manim_renderer import style
@@ -29,7 +28,7 @@ from manim_renderer.utils import notnull
 
 E = TypeVar("E", bound=tempyral.Entity)
 
-from manim import AnimationGroup, ApplyMethod, Transform
+from manim_renderer.manim_shims import AnimationGroup, ApplyMethod, Transform
 
 
 class MessageStage(Enum):
