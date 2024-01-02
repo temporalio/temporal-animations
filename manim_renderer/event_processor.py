@@ -28,7 +28,7 @@ async def process_simulation_events():
     curr_time = 0
     animations: list[Iterable[Animation | None]] = []
     serial = True
-    n = 400
+    n = 2
 
     async def process(draining: bool):
         nonlocal n, curr_time

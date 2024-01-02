@@ -2,6 +2,7 @@ from manim import DOWN, LEFT, SMALL_BUFF, Mobject, VDict
 from manim.typing import Point3D
 
 import tempyral
+from logger import log
 from manim_renderer import style
 from manim_renderer.code import ProxyEntityWithCode
 from manim_renderer.entity import ProxyEntity
@@ -20,6 +21,7 @@ class Application(ProxyEntityWithCode[tempyral.Application]):
     """
 
     def render(self, entity: tempyral.Application) -> Mobject:
+        log(f"{entity.blocked_lines}", "A: App rendering")
         code = super().render(entity)
         text = self.with_time(style.actor("Your Application"), entity)
         return VDict({"text": text, "code": code}).arrange(

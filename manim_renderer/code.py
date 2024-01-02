@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar
 
-from manim import DOWN, LEFT, PINK, Arrow, VDict, VGroup, VMobject
+from manim import DOWN, GREEN_D, LEFT, PINK, Arrow, VDict, VGroup, VMobject
 
 import tempyral
 from manim_renderer.entity import ProxyEntity
@@ -22,17 +22,16 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
             font_size=FONT_SIZE_CODE,
             font=FONT_CODE,
             line_spacing=0.5,
-        ).to_edge(LEFT, buff=0.1)
+        ).to_edge(LEFT)
         lines = code[self.CODE_LINES_INDEX]
         arrows = VGroup(
             *(
                 Arrow(
                     start=line.get_edge_center(LEFT) + LEFT,
                     end=line.get_edge_center(LEFT),
-                )
-                .set_opacity(0)
-                .next_to(line, LEFT, buff=0.1)
-                .shift(DOWN * 0.025)
+                ).set_color(GREEN_D)
+                # .set_opacity(0)
+                .next_to(line, LEFT, buff=0.1).shift(DOWN * 0.025)
                 for line in lines
             )
         )
