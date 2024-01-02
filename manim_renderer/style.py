@@ -14,6 +14,7 @@ FONT_SIZE_CODE = 10
 COLOR_MESSAGE = ORANGE
 COLOR_SCENE_BACKGROUND = "#1D1D1D"  # GRAY_E is #222222
 STROKE_WIDTH_PENDING_REQUEST_RAY = 1
+STROKE_OPACITY_PENDING_REQUEST_RAY = 0.7
 BUFF_PENDING_REQUEST = 0.5
 
 
@@ -34,6 +35,7 @@ def pending_request_ray(start: Point3D, end: Point3D) -> Mobject:
         stroke_color=COLOR_MESSAGE,
         stroke_width=STROKE_WIDTH_PENDING_REQUEST_RAY,
         buff=BUFF_PENDING_REQUEST,
+        stroke_opacity=STROKE_OPACITY_PENDING_REQUEST_RAY,
     )
 
 
