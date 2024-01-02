@@ -1,4 +1,5 @@
-from manim import ORANGE, Mobject, Text
+from manim import ORANGE, Line, Mobject, Text
+from manim.typing import Point3D
 
 FONT_MONOSPACE = "Monaco"  # Monaco, Menlo, PT Mono
 FONT_SANS = "Noto Sans Kannada"
@@ -12,8 +13,8 @@ FONT_SIZE_MESSAGE = 16
 FONT_SIZE_CODE = 10
 COLOR_MESSAGE = ORANGE
 COLOR_SCENE_BACKGROUND = "#1D1D1D"  # GRAY_E is #222222
-STROKE_WIDTH_MESSAGE_ARROW = 1
-BUFF_MESSAGE_ARROW = 0.5
+STROKE_WIDTH_PENDING_REQUEST_RAY = 1
+BUFF_PENDING_REQUEST = 0.5
 
 
 def message(name: str, **kwargs) -> Mobject:
@@ -23,6 +24,16 @@ def message(name: str, **kwargs) -> Mobject:
         font_size=FONT_SIZE_MESSAGE,
         color=COLOR_MESSAGE,
         **kwargs
+    )
+
+
+def pending_request_ray(start: Point3D, end: Point3D) -> Mobject:
+    return Line(
+        start=start,
+        end=end,
+        stroke_color=COLOR_MESSAGE,
+        stroke_width=STROKE_WIDTH_PENDING_REQUEST_RAY,
+        buff=BUFF_PENDING_REQUEST,
     )
 
 

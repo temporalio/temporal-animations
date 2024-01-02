@@ -14,7 +14,6 @@ from manim import (
     Animation,
     FadeOut,
     Indicate,
-    Line,
     Mobject,
     Scene,
     Text,
@@ -137,13 +136,10 @@ class ProxyEntity(Generic[E], VisualElement):
             receiver.get_message_end(message_entity),
         )
         halfway = tuple(np.array(list(msg_start + msg_end)) / 2.0)
-        self.arrow, halfway_arrow, full_arrow = [
-            Line(
+        self.pending_request, halfway_ray, full_ray = [
+            style.pending_request_ray(
                 start=msg_start,
                 end=end,
-                stroke_color=style.COLOR_MESSAGE,
-                stroke_width=style.STROKE_WIDTH_MESSAGE_ARROW,
-                buff=style.BUFF_MESSAGE_ARROW,
             )
             for end in [msg_start, halfway, msg_end]
         ]
@@ -151,11 +147,11 @@ class ProxyEntity(Generic[E], VisualElement):
         return (
             AnimationGroup(
                 ApplyMethod(message.mobj.move_to, halfway),
-                Transform(self.arrow, halfway_arrow),
+                Transform(self.pending_request, halfway_ray),
             ),
             AnimationGroup(
                 ApplyMethod(message.mobj.move_to, msg_end),
-                Transform(self.arrow, full_arrow),
+                Transform(self.pending_request, full_ray),
             ),
             None,
         )
@@ -175,33 +171,27 @@ class ProxyEntity(Generic[E], VisualElement):
         )
         halfway = tuple(np.array(list(msg_start + msg_end)) / 2.0)
 
-        # TODO: Make `arrow` part of the type and use for all messages
-        if not hasattr(receiver, "arrow"):
+        # TODO: Make `pending_request` part of the type and use for all messages
+        if not hasattr(receiver, "pending_request"):
             return (
                 ApplyMethod(message.mobj.move_to, halfway),
                 ApplyMethod(message.mobj.move_to, msg_end),
                 FadeOut(message.mobj),
             )
 
-        halfway_arrow, zero_arrow = [
-            Line(
-                start=msg_end,
-                end=end,
-                stroke_color=style.COLOR_MESSAGE,
-                stroke_width=style.STROKE_WIDTH_MESSAGE_ARROW,
-                buff=style.BUFF_MESSAGE_ARROW,
-            )
+        halfway_ray, zero_ray = [
+            style.pending_request_ray(start=msg_end, end=end)
             for end in [halfway, msg_end]
         ]
 
         return (
             AnimationGroup(
                 ApplyMethod(message.mobj.move_to, halfway),
-                Transform(receiver.arrow, halfway_arrow),
+                Transform(receiver.pending_request, halfway_ray),
             ),
             AnimationGroup(
                 ApplyMethod(message.mobj.move_to, msg_end),
-                Transform(receiver.arrow, zero_arrow),
+                Transform(receiver.pending_request, zero_ray),
             ),
             FadeOut(message.mobj),
         )
