@@ -12,9 +12,9 @@ from manim import (
     RIGHT,
     SMALL_BUFF,
     Animation,
-    Arrow,
     FadeOut,
     Indicate,
+    Line,
     Mobject,
     Scene,
     Text,
@@ -139,12 +139,11 @@ class ProxyEntity(Generic[E], VisualElement):
         )
         halfway = tuple(np.array(list(msg_start + msg_end)) / 2.0)
         self.arrow, halfway_arrow, full_arrow = [
-            Arrow(
+            Line(
                 start=msg_start,
                 end=end,
                 stroke_color=style.COLOR_MESSAGE,
                 stroke_width=style.STROKE_WIDTH_MESSAGE_ARROW,
-                max_tip_length_to_length_ratio=style.MAX_TIP_LENGTH_TO_LENGTH_RATIO_MESSAGE_ARROW,
                 buff=style.BUFF_MESSAGE_ARROW,
             )
             for end in [msg_start, halfway, msg_end]
@@ -186,12 +185,11 @@ class ProxyEntity(Generic[E], VisualElement):
             )
 
         halfway_arrow, zero_arrow = [
-            Arrow(
+            Line(
                 start=msg_end,
                 end=end,
                 stroke_color=style.COLOR_MESSAGE,
                 stroke_width=style.STROKE_WIDTH_MESSAGE_ARROW,
-                max_tip_length_to_length_ratio=style.MAX_TIP_LENGTH_TO_LENGTH_RATIO_MESSAGE_ARROW,
                 buff=style.BUFF_MESSAGE_ARROW,
             )
             for end in [halfway, msg_end]
