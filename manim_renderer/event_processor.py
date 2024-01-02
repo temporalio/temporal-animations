@@ -82,6 +82,7 @@ def _get_proxy_entities(
     )
     try:
         msg = proxy_entity_registry.get(message_entity)
+        msg.render_to_scene(message_entity)
     except KeyError:
         msg_cls = _get_message_cls_for(sender_entity, message_entity)
         msg = msg_cls(entity=message_entity)
