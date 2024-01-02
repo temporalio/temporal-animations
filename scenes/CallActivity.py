@@ -1,5 +1,5 @@
 from manim_renderer.scene import TemporalScene, run_simulation
-from scenes.execute_workflow import ExecuteWorkflowApplication
+from scenes.ExecuteWorkflow import ExecuteWorkflowApplication
 from tempyral import Workflow
 
 
