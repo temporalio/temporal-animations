@@ -93,6 +93,9 @@ class ProxyEntity(Generic[E], VisualElement):
     def get_message_start(self, _: tempyral.RequestResponse) -> Point3D:
         return self.mobj.get_center()
 
+    def get_message_end(self, _: tempyral.RequestResponse) -> Point3D:
+        return self.dock_point()
+
     @abstractmethod
     def render(self, entity: E) -> Mobject:
         """Compute new visual representation given entity state."""
@@ -135,7 +138,7 @@ class ProxyEntity(Generic[E], VisualElement):
         self.scene.add(message.mobj)
         msg_start, msg_end = (
             self.get_message_start(message_entity),
-            receiver.dock_point(),
+            receiver.get_message_end(message_entity),
         )
         halfway = tuple(np.array(list(msg_start + msg_end)) / 2.0)
         self.arrow, halfway_arrow, full_arrow = [
@@ -171,7 +174,7 @@ class ProxyEntity(Generic[E], VisualElement):
         Create (but do not play) animations for sending the response stage of a message.
         """
         msg_start, msg_end = (
-            message.mobj.get_center(),
+            self.get_message_end(message_entity),
             receiver.get_message_start(message_entity),
         )
         halfway = tuple(np.array(list(msg_start + msg_end)) / 2.0)
