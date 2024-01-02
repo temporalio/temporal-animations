@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, TypeVar
 
 from tempyral.entity import Entity
 
@@ -81,36 +81,28 @@ class ActivityTask:
         return f"AT(wid={self.workflow_id}, events={self.events})"
 
 
-class WorkflowTaskRequest(Response):
-    """A Workflow Task dispatched by the server in response to a long-poll request."""
+T = TypeVar("T", bound=WorkflowTask | ActivityTask)
 
-    def __init__(self, worklow_id: "WorkflowId", time: int, task: WorkflowTask) -> None:
+
+class WorkerPollRequest(RequestResponse, Generic[T]):
+    """A Workflow or Activity Task dispatched by the server in response to a long-poll request."""
+
+    def __init__(
+        self,
+        workflow_id: "WorkflowId",
+        task: T,
+        time: int,
+        token: int,
+    ):
         super().__init__(time)
-        self.workflow_id = worklow_id
+        self.workflow_id = workflow_id
         self.task = task
+        self.token = token
 
     __publish__ = Response.__publish__ | {"task"}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}[{self.time}](id={self.id}: {self.task})"
-
-
-class ActivityTaskRequest(Response):
-    """An Activity Task dispatched by the server in response to a long-poll request."""
-
-    def __init__(
-        self,
-        workflow_id: "WorkflowId",
-        time: int,
-        token: int,
-        task: ActivityTask,
-    ):
-        super().__init__(time)
-        self.workflow_id = workflow_id
-        self.token = token
-        self.task = task
-
-    __publish__ = Response.__publish__ | {"task"}
 
 
 class WorkerRequest(Response):

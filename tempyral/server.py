@@ -22,13 +22,12 @@ from tempyral.entity import Entity
 from tempyral.request_response import (
     ActivityTask,
     ActivityTaskCompleted,
-    ActivityTaskRequest,
     ApplicationRequest,
     RequestResponseStage,
+    WorkerPollRequest,
     WorkerRequest,
     WorkflowTask,
     WorkflowTaskCompleted,
-    WorkflowTaskRequest,
 )
 
 DEFAULT_NAMESPACE: NamespaceId = "default"
@@ -79,8 +78,8 @@ Shard = Dict[NamespaceId, Namespace]
 
 
 class TaskQueue(TypedDict):
-    workflow_task_queue: List[WorkflowTaskRequest]
-    activity_task_queue: List[ActivityTaskRequest]
+    workflow_task_queue: Queue[WorkflowTask]
+    activity_task_queue: Queue[ActivityTask]
 
 
 class Server(Entity):
@@ -163,17 +162,26 @@ class Server(Entity):
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
-    async def handle_workflow_worker_poll_request(self, request: WorkflowTaskRequest):
-        task = await self.workflow_task_queue[DEFAULT_NAMESPACE].get()
-        request.time = self.time
-        request.task = task
-        return request
+    async def handle_worker_poll_request[
+        T: WorkflowTask | ActivityTask
+    ](self, request: WorkerPollRequest[T]) -> WorkerPollRequest[T]:
+        self.tick(request)
+        request.stage = RequestResponseStage.Response
+        # TODO:
+        queue = cast(
+            Queue[T],
+            (
+                self.workflow_task_queue
+                if isinstance(request.task, WorkflowTask)
+                else self.activity_task_queue
+            )[DEFAULT_NAMESPACE],
+        )
 
-    async def handle_activity_worker_poll_request(self, request: ActivityTaskRequest):
-        task = await self.activity_task_queue[DEFAULT_NAMESPACE].get()
+        task = await queue.get()
         request.time = self.time
         request.task = task
-        request.token = cast(int, task.scheduled_event.data["token"])
+        # TODO: Do not copy tokens to request
+        request.token = cast(int, next(e.data.get("token", 0) for e in task.events))
         return request
 
     async def handle_worker_request(self, request: WorkerRequest):

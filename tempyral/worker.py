@@ -14,10 +14,9 @@ from tempyral.code import EntityWithCode
 from tempyral.entity import Entity
 from tempyral.request_response import (
     ActivityTask,
-    ActivityTaskRequest,
+    WorkerPollRequest,
     WorkerRequest,
     WorkflowTask,
-    WorkflowTaskRequest,
 )
 from tempyral.server import ActivityTaskCompleted, Server, WorkflowTaskCompleted
 
@@ -29,8 +28,24 @@ class DirectiveType(Enum):
 
 
 class Worker(Entity, ABC, Generic[T]):
+    async def poll(self, server: Server):
+        while True:
+            request = WorkerPollRequest("", self.task_factory(), 0, 0)
+            await self.publish_message_event(self, server, request)
+            response = await server.handle_worker_poll_request(request)
+            task = response.task
+            log(f"got task: {task} {task.__dict__}", "W:")
+            await self.publish_message_event(server, self, response)
+            self.tick(request)
+            # TODO: token nullability
+            await self.handle_task(task, response.token or 0, server)
+
     @abstractmethod
-    async def handle_task(self, task: T, server: Server):
+    def task_factory(self) -> T:
+        ...
+
+    @abstractmethod
+    async def handle_task(self, task: T, token: int, server: Server):
         ...
 
     async def send_request(self, request: WorkerRequest, server: Server):
@@ -42,21 +57,8 @@ class Worker(Entity, ABC, Generic[T]):
 
 
 class ActivityWorker(Worker[ActivityTask]):
-    async def poll(self, server: Server):
-        while True:
-            request = ActivityTaskRequest(
-                "",
-                0,
-                0,
-                ActivityTask("", []),
-            )
-            await self.publish_message_event(self, server, request)
-            response = await server.handle_activity_worker_poll_request(request)
-            task = response.task
-            log(f"got task: {task} {task.__dict__}", "AW:")
-            await self.publish_message_event(server, self, response)
-            self.tick(request)
-            await self.handle_task(task, response.token, server)
+    def task_factory(self) -> ActivityTask:
+        return ActivityTask("", [])
 
     async def handle_task(
         self,
@@ -180,20 +182,8 @@ class WorkflowWorker(Worker[WorkflowTask]):
 
     __publish__ = Worker.__publish__ | {"workflows"}
 
-    async def poll(self, server: Server):
-        while True:
-            request = WorkflowTaskRequest(
-                "",
-                0,
-                WorkflowTask("", [], []),
-            )
-            await self.publish_message_event(self, server, request)
-            response = await server.handle_workflow_worker_poll_request(request)
-            task = response.task
-            log(f"got task: {task} {task.__dict__}", "AW:")
-            await self.publish_message_event(server, self, response)
-            self.tick(request)
-            await self.handle_task(task, server)
+    def task_factory(self) -> WorkflowTask:
+        return WorkflowTask("", [], [])
 
     @property
     def workflow(self) -> Workflow:
@@ -203,7 +193,7 @@ class WorkflowWorker(Worker[WorkflowTask]):
         [workflow] = self.workflows
         return workflow
 
-    async def handle_task(self, wft: WorkflowTask, server: Server):
+    async def handle_task(self, wft: WorkflowTask, _: int, server: Server):
         commands = await self.workflow.handle_wft(wft)
         log(
             f"{self.workflow.blocked_lines} {self.workflow.blocked_lines_waiting_for_update}",

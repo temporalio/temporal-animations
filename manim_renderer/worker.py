@@ -10,8 +10,8 @@ from manim_renderer.history import HistoryEvents
 from tempyral.request_response import RequestResponseStage
 
 
-class ActivityTaskRequest(ProxyEntity[tempyral.ActivityTaskRequest]):
-    def render(self, entity: tempyral.ActivityTaskRequest) -> Mobject:
+class ActivityTaskRequest(ProxyEntity[tempyral.WorkerPollRequest]):
+    def render(self, entity: tempyral.WorkerPollRequest) -> Mobject:
         if entity.stage == RequestResponseStage.Request:
             return style.message("")
         else:
@@ -40,8 +40,8 @@ class BoxedHistoryEvents(HistoryEvents):
         return VGroup(rect, eventsm)
 
 
-class WorkflowTaskRequest(ProxyEntity[tempyral.WorkflowTaskRequest]):
-    def render(self, entity: tempyral.WorkflowTaskRequest) -> Mobject:
+class WorkflowTaskRequest(ProxyEntity[tempyral.WorkerPollRequest]):
+    def render(self, entity: tempyral.WorkerPollRequest) -> Mobject:
         if entity.stage == RequestResponseStage.Request:
             return style.message("")
         else:

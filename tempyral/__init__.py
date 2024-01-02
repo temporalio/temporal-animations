@@ -17,11 +17,10 @@ from .server import (
 )
 from .worker import (
     ActivityTaskCompleted,
-    ActivityTaskRequest,
     ActivityWorker,
     Worker,
+    WorkerPollRequest,
     Workflow,
     WorkflowTaskCompleted,
-    WorkflowTaskRequest,
     WorkflowWorker,
 )
