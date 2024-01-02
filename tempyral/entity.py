@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from copy import deepcopy
 from typing import Any, Callable, Self
@@ -23,6 +24,8 @@ class Entity:
         self.next_id[key] += 1
         self.id = self.next_id[key]
         self.time = time
+        self.state_hash = hash("")
+        self.dirty = False
 
     def __hash__(self) -> int:
         return hash((type(self).__name__, self.id))
@@ -43,7 +46,8 @@ class Entity:
         cloned = deepcopy(self)
         # Computed properties to be cloned must be named with a _ prefix.
         for k in self.__publish__ - self.__dict__.keys():
-            setattr(cloned, k, deepcopy(getattr(self, "_" + k)))
+            if val := getattr(self, "_" + k, None):
+                setattr(cloned, k, deepcopy(val))
         return cloned
 
     def __getstate__(self) -> dict:
@@ -52,6 +56,29 @@ class Entity:
             for k, v in self.__dict__.items()
             if k in self.__publish__ & self.__dict__.keys()
         }
+
+    def __getattribute__(self, name: str) -> Any:
+        _getattr = super().__getattribute__
+        _setattr = super().__setattr__
+        __publish__ = _getattr("__publish__")
+        if name in __publish__:
+            state_hash = hash(json.dumps([_getattr(k) for k in __publish__]))
+            if state_hash != _getattr("state_hash"):
+                _setattr("dirty", True)
+                _setattr("state_hash", state_hash)
+        return _getattr(name)
+
+    def __setattr__(self, name: str, value: Any):
+        _getattr = super().__getattribute__
+        _setattr = super().__setattr__
+        __publish__ = _getattr("__publish__")
+        dirty = name in __publish__ and value != __publish__[name]
+        _setattr(name, value)
+        if dirty:
+            state_hash = hash(json.dumps([_getattr(k) for k in __publish__]))
+            assert state_hash != _getattr("state_hash")
+            _setattr("dirty", True)
+            _setattr("state_hash", state_hash)
 
     async def publish_change_event(self):
         await event_bus.publish(StateChangeEvent(self.clone()))
