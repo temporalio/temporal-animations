@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from asyncio import Queue
 from enum import Enum
-from typing import AsyncGenerator, Generic, List, Type, TypeVar, Union, cast
+from typing import AsyncGenerator, Generic, List, Type, TypeVar, cast
 
 from logger import log
 from tempyral.api import (
@@ -13,16 +12,16 @@ from tempyral.api import (
 )
 from tempyral.code import EntityWithCode
 from tempyral.entity import Entity
-from tempyral.request_response import WorkerRequest
-from tempyral.server import (
-    ActivityTaskCompleted,
+from tempyral.request_response import (
+    ActivityTask,
     ActivityTaskRequest,
-    Server,
-    WorkflowTaskCompleted,
+    WorkerRequest,
+    WorkflowTask,
     WorkflowTaskRequest,
 )
+from tempyral.server import ActivityTaskCompleted, Server, WorkflowTaskCompleted
 
-T = TypeVar("T", bound=Union[ActivityTaskRequest, WorkflowTaskRequest])
+T = TypeVar("T", bound=ActivityTask | WorkflowTask)
 
 
 class DirectiveType(Enum):
@@ -30,17 +29,6 @@ class DirectiveType(Enum):
 
 
 class Worker(Entity, ABC, Generic[T]):
-    long_poll_connection: Queue[T]
-
-    async def poll(self, server: Server):
-        while True:
-            task = await self.long_poll_connection.get()
-            log(f"got task: {task} {task.__dict__}", "W:")
-            # TODO: Move this into server.dispatch method?
-            await self.publish_message_event(server, self, task)
-            self.tick(task)
-            await self.handle_task(task, server)
-
     @abstractmethod
     async def handle_task(self, task: T, server: Server):
         ...
@@ -53,16 +41,31 @@ class Worker(Entity, ABC, Generic[T]):
         await self.publish_change_event()
 
 
-class ActivityWorker(Worker[ActivityTaskRequest]):
-    def __init__(self, server: Server):
-        super().__init__()
-        self.long_poll_connection = (
-            server.establish_activity_worker_long_poll_connection(self)
-        )
+class ActivityWorker(Worker[ActivityTask]):
+    async def poll(self, server: Server):
+        while True:
+            request = ActivityTaskRequest(
+                "",
+                0,
+                0,
+                ActivityTask("", []),
+            )
+            await self.publish_message_event(self, server, request)
+            response = await server.handle_activity_worker_poll_request(request)
+            task = response.task
+            log(f"got task: {task} {task.__dict__}", "AW:")
+            await self.publish_message_event(server, self, response)
+            self.tick(request)
+            await self.handle_task(task, response.token, server)
 
-    async def handle_task(self, at: ActivityTaskRequest, server: Server):
+    async def handle_task(
+        self,
+        at: ActivityTask,
+        token: int,
+        server: Server,
+    ):
         await self.send_request(
-            ActivityTaskCompleted(at.workflow_id, self.time, None, at.token), server
+            ActivityTaskCompleted(at.workflow_id, self.time, None, token), server
         )
 
 
@@ -122,9 +125,9 @@ class Workflow(EntityWithCode, ABC):
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.blocked_lines})"
 
-    async def handle_wft_request(self, request: WorkflowTaskRequest) -> List[Command]:
+    async def handle_wft(self, task: WorkflowTask) -> List[Command]:
         log(
-            f"blocked={self.blocked_lines} blocked_updates={self.blocked_lines_waiting_for_update} incoming_updates={request.task.pending_updates}",
+            f"blocked={self.blocked_lines} blocked_updates={self.blocked_lines_waiting_for_update} incoming_updates={task.pending_updates}",
             "W: handle_wft",
         )
         commands = []
@@ -133,13 +136,13 @@ class Workflow(EntityWithCode, ABC):
             commands.extend([cmd async for cmd in self.advance()])
 
         # If the WFT contains history events that unblock futures, then unblock them.
-        for e in request.task.events:
+        for e in task.events:
             if (token := e.data.get("token")) != None:
                 self.blocked_lines.remove(cast(int, token))
                 await self.worker.publish_change_event()
 
         update_commands = []
-        for u in request.task.pending_updates:
+        for u in task.pending_updates:
             # TODO: Currently, any update unblocks all `waiting_for_update_lines`.
             while self.blocked_lines_waiting_for_update:
                 self.blocked_lines.remove(self.blocked_lines_waiting_for_update.pop())
@@ -170,15 +173,27 @@ class Workflow(EntityWithCode, ABC):
         await self.worker.publish_change_event()
 
 
-class WorkflowWorker(Worker[WorkflowTaskRequest]):
-    def __init__(self, workflow_classes: List[Type[Workflow]], server: Server):
+class WorkflowWorker(Worker[WorkflowTask]):
+    def __init__(self, workflow_classes: List[Type[Workflow]]):
         super().__init__()
         self.workflows = [cls(self) for cls in workflow_classes]
-        self.long_poll_connection = (
-            server.establish_workflow_worker_long_poll_connection(self)
-        )
 
     __publish__ = Worker.__publish__ | {"workflows"}
+
+    async def poll(self, server: Server):
+        while True:
+            request = WorkflowTaskRequest(
+                "",
+                0,
+                WorkflowTask("", [], []),
+            )
+            await self.publish_message_event(self, server, request)
+            response = await server.handle_workflow_worker_poll_request(request)
+            task = response.task
+            log(f"got task: {task} {task.__dict__}", "AW:")
+            await self.publish_message_event(server, self, response)
+            self.tick(request)
+            await self.handle_task(task, server)
 
     @property
     def workflow(self) -> Workflow:
@@ -188,8 +203,8 @@ class WorkflowWorker(Worker[WorkflowTaskRequest]):
         [workflow] = self.workflows
         return workflow
 
-    async def handle_task(self, wft: WorkflowTaskRequest, server: Server):
-        commands = await self.workflow.handle_wft_request(wft)
+    async def handle_task(self, wft: WorkflowTask, server: Server):
+        commands = await self.workflow.handle_wft(wft)
         log(
             f"{self.workflow.blocked_lines} {self.workflow.blocked_lines_waiting_for_update}",
             "W: handled wft",

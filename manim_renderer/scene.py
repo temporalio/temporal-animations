@@ -94,8 +94,8 @@ class TemporalScene(Scene):
         return (
             server,
             [cls() for cls in self.application_classes],
-            [WorkflowWorker(self.workflow_classes, server)],
-            [ActivityWorker(server)],
+            [WorkflowWorker(self.workflow_classes)],
+            [ActivityWorker()],
         )
 
     def make_renderer_proxies(

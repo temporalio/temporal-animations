@@ -59,11 +59,26 @@ class ApplicationRequest(RequestResponse):
 
 @dataclass
 class WorkflowTask:
+    workflow_id: "WorkflowId"
     events: list["HistoryEvent"]
     pending_updates: list["UpdateInfo"]
 
     def __repr__(self) -> str:
-        return f"WFT(events={self.events}, updates={self.pending_updates})"
+        return f"WFT(wid={self.workflow_id}, events={self.events}, updates={self.pending_updates})"
+
+
+@dataclass
+class ActivityTask:
+    workflow_id: "WorkflowId"
+    events: list["HistoryEvent"]
+
+    @property
+    def scheduled_event(self) -> "HistoryEvent":
+        [event] = self.events
+        return event
+
+    def __repr__(self) -> str:
+        return f"AT(wid={self.workflow_id}, events={self.events})"
 
 
 class WorkflowTaskRequest(Response):
@@ -78,11 +93,6 @@ class WorkflowTaskRequest(Response):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}[{self.time}](id={self.id}: {self.task})"
-
-
-@dataclass
-class ActivityTask:
-    pass
 
 
 class ActivityTaskRequest(Response):

@@ -1,7 +1,7 @@
 from asyncio import Queue
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, Hashable, List, Tuple, TypedDict
+from typing import Any, Dict, Hashable, List, Tuple, TypedDict, cast
 from uuid import uuid4
 
 from logger import log
@@ -20,6 +20,7 @@ from tempyral.api import (
 )
 from tempyral.entity import Entity
 from tempyral.request_response import (
+    ActivityTask,
     ActivityTaskCompleted,
     ActivityTaskRequest,
     ApplicationRequest,
@@ -29,9 +30,6 @@ from tempyral.request_response import (
     WorkflowTaskCompleted,
     WorkflowTaskRequest,
 )
-
-if TYPE_CHECKING:
-    from tempyral.worker import ActivityWorker, WorkflowWorker
 
 DEFAULT_NAMESPACE: NamespaceId = "default"
 
@@ -90,16 +88,18 @@ class Server(Entity):
         super().__init__()
         self.shards: List[Shard] = [{DEFAULT_NAMESPACE: OrderedDict()}]
         self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
-        self.workflow_worker_long_poll_connections: Dict[
-            WorkflowWorker, Queue[WorkflowTaskRequest]
-        ] = {}
-        self.activity_worker_long_poll_connections: Dict[
-            ActivityWorker, Queue[ActivityTaskRequest]
-        ] = {}
         self.pending_application_requests: Dict[
             NamespaceId,
             OrderedDict[Tuple[ApplicationRequestType, WorkflowId], Queue[HistoryEvent]],
         ] = {DEFAULT_NAMESPACE: OrderedDict()}
+        self.workflow_task_queue: Dict[
+            NamespaceId,
+            Queue[WorkflowTask],
+        ] = {DEFAULT_NAMESPACE: Queue()}
+        self.activity_task_queue: Dict[
+            NamespaceId,
+            Queue[ActivityTask],
+        ] = {DEFAULT_NAMESPACE: Queue()}
 
     __publish__ = Entity.__publish__ | {"shards"}
 
@@ -162,6 +162,19 @@ class Server(Entity):
                 return await self.execute_update(request)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
+
+    async def handle_workflow_worker_poll_request(self, request: WorkflowTaskRequest):
+        task = await self.workflow_task_queue[DEFAULT_NAMESPACE].get()
+        request.time = self.time
+        request.task = task
+        return request
+
+    async def handle_activity_worker_poll_request(self, request: ActivityTaskRequest):
+        task = await self.activity_task_queue[DEFAULT_NAMESPACE].get()
+        request.time = self.time
+        request.task = task
+        request.token = cast(int, task.scheduled_event.data["token"])
+        return request
 
     async def handle_worker_request(self, request: WorkerRequest):
         self.tick(request)
@@ -350,20 +363,6 @@ class Server(Entity):
         await self.dispatch_workflow_or_activity_task(workflow_id)
         return events
 
-    def establish_workflow_worker_long_poll_connection(
-        self, worker: "WorkflowWorker"
-    ) -> Queue[WorkflowTaskRequest]:
-        connection = Queue()
-        self.workflow_worker_long_poll_connections[worker] = connection
-        return connection
-
-    def establish_activity_worker_long_poll_connection(
-        self, worker: "ActivityWorker"
-    ) -> Queue[ActivityTaskRequest]:
-        connection = Queue()
-        self.activity_worker_long_poll_connections[worker] = connection
-        return connection
-
     async def dispatch_workflow_or_activity_task(self, workflow_id: WorkflowId):
         events = iter(self.namespace[workflow_id].history.events)
         event = next((e for e in events if not e.seen_by_worker), None)
@@ -381,7 +380,7 @@ class Server(Entity):
             ), "Expected ACTIVITY_TASK_SCHEDULED event to be sole unseen event"
             for e in events:
                 e.seen_by_worker = True
-            [at_scheduled_event] = events
+            [scheduled_event] = events
             events.extend(
                 await self.write_history_events(
                     workflow_id,
@@ -389,11 +388,8 @@ class Server(Entity):
                     seen_by_sticky_worker=True,
                 )
             )
-            [queue] = self.activity_worker_long_poll_connections.values()
-            await queue.put(
-                ActivityTaskRequest(
-                    workflow_id, self.time, token=int(at_scheduled_event.data["token"])  # type: ignore
-                )
+            await self.activity_task_queue[DEFAULT_NAMESPACE].put(
+                ActivityTask(workflow_id, [scheduled_event])
             )
         elif any(e.event_type == HistoryEventType.WFT_SCHEDULED for e in events):
             for e in events:
@@ -406,11 +402,8 @@ class Server(Entity):
                 )
             )
             pending_updates = drain(self.namespace[workflow_id].pending_updates)
-            [queue] = self.workflow_worker_long_poll_connections.values()
-            await queue.put(
-                WorkflowTaskRequest(
-                    workflow_id, self.time, WorkflowTask(events, pending_updates)
-                )
+            await self.workflow_task_queue[DEFAULT_NAMESPACE].put(
+                WorkflowTask(workflow_id, events, pending_updates)
             )
 
     @property
