@@ -95,24 +95,12 @@ class Server(Entity):
         self.activity_worker_long_poll_connections: Dict[
             ActivityWorker, Queue[ActivityTask]
         ] = {}
-        self.in_flight_application_request_channels: Dict[
+        self.pending_application_requests: Dict[
             NamespaceId,
             OrderedDict[Tuple[ApplicationRequestType, WorkflowId], Queue[HistoryEvent]],
         ] = {DEFAULT_NAMESPACE: OrderedDict()}
 
-    __publish__ = Entity.__publish__ | {"shards", "in_flight_application_request_types"}
-
-    # Computed property published to event bus without the underscore prefix.
-    in_flight_application_request_types: List[str]
-
-    @property
-    def _in_flight_application_request_types(self) -> List[str]:
-        return [
-            req.name
-            for req, _ in self.in_flight_application_request_channels[
-                DEFAULT_NAMESPACE
-            ].keys()
-        ]
+    __publish__ = Entity.__publish__ | {"shards"}
 
     def __repr__(self) -> str:
         namespace = {
@@ -191,7 +179,7 @@ class Server(Entity):
         # HistoryEvent to be written, beyond those we write synchronously on
         # handling the request. As a result we do not use
         # _get_application_request_response.
-        chans = self.in_flight_application_request_channels[DEFAULT_NAMESPACE]
+        chans = self.pending_application_requests[DEFAULT_NAMESPACE]
         key = request.request_type, request.workflow_id
         chans[key] = Queue(maxsize=1)
         await self.publish_change_event()
@@ -227,16 +215,10 @@ class Server(Entity):
         (maxsize=1) and block, waiting for the response to be pushed to the
         channel. The value pushed to the channel is a HistoryEvent that contains
         within it information needed to unblock the corresponding client-side
-        awaitable. The handler deletes the channel when it receives the response
-        from it.
-
-        Note that the set of in-flight application requests (which is published
-        to the event bus to be visualized) is defined to be the current set of
-        channels. Therefore we publish a change event after creating/deleting a
-        channel.
+        awaitable.
         """
 
-        chans = self.in_flight_application_request_channels[DEFAULT_NAMESPACE]
+        chans = self.pending_application_requests[DEFAULT_NAMESPACE]
         key = request.request_type, request.workflow_id
         assert (
             key not in chans
@@ -266,7 +248,7 @@ class Server(Entity):
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler.go#L166
     async def handle_commands(self, workflow_id, commands: List[Command]):
-        chans = self.in_flight_application_request_channels[DEFAULT_NAMESPACE]
+        chans = self.pending_application_requests[DEFAULT_NAMESPACE]
 
         await self.write_history_events(
             workflow_id,
