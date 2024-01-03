@@ -56,7 +56,26 @@ class Worker(Entity, ABC, Generic[T]):
         await self.publish_change_event()
 
 
-class ActivityWorker(Worker[ActivityTask]):
+class ActivityWorker(Worker[ActivityTask], WithCode):
+    typescript = """
+fn myActivity() {
+  return doAnything()
+}
+"""
+
+    def __init__(self):
+        if not hasattr(self, "language"):
+            self.language = self._get_language()
+        self.code, _ = self.parse_code(self.language)
+        self.blocked_lines = set()
+        super().__init__()
+
+    __publish__ = Worker.__publish__ | {
+        "code",
+        "language",
+        "blocked_lines",
+    }
+
     def task_factory(self) -> ActivityTask:
         return ActivityTask("", [])
 

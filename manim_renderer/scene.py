@@ -123,10 +123,10 @@ class TemporalScene(Scene):
         ).align_on_border(LEFT, buff=SMALL_BUFF)
         wworker.set_dock_direction(RIGHT).mobj.next_to(app.mobj, DOWN).align_to(
             app.mobj, LEFT
-        ).shift(DOWN * 0.5)
+        ).shift(DOWN * 0.2)
         aworker.set_dock_direction(RIGHT).mobj.next_to(
             wworker.children[-1].mobj, DOWN
-        ).align_to(wworker.mobj, LEFT).shift(DOWN)
+        ).align_to(wworker.mobj, LEFT).shift(DOWN * 0.5)
         server.set_dock_direction(UP).mobj.align_on_border(RIGHT).align_to(
             wworker.mobj, UP
         ).shift(1.5 * LEFT)

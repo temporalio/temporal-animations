@@ -1,6 +1,15 @@
 from typing import Iterable, List
 
-from manim import LEFT, WHITE, Mobject, SurroundingRectangle, VGroup
+from manim import (
+    DOWN,
+    LEFT,
+    SMALL_BUFF,
+    WHITE,
+    Mobject,
+    SurroundingRectangle,
+    VDict,
+    VGroup,
+)
 
 import tempyral
 from manim_renderer import style
@@ -23,9 +32,13 @@ class ActivityTaskCompleted(ProxyEntity[tempyral.ActivityTaskCompleted]):
         return style.message("Activity Task Completed")
 
 
-class ActivityWorker(ProxyEntity[tempyral.ActivityWorker]):
+class ActivityWorker(ProxyEntityWithCode[tempyral.ActivityWorker]):
     def render(self, entity: tempyral.ActivityWorker) -> Mobject:
-        return self.with_time(style.actor("Activity Worker"), entity)
+        code = super().render(entity)
+        text = self.with_time(style.actor("Activity Worker"), entity)
+        return VDict({"text": text, "code": code}).arrange(
+            DOWN, buff=SMALL_BUFF, aligned_edge=LEFT
+        )
 
 
 class BoxedHistoryEvents(HistoryEvents):
