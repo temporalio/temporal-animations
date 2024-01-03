@@ -4,8 +4,8 @@ from typing import Iterable, Tuple, Type, cast
 from manim import Animation, Scene
 
 import tempyral
-from event_bus import MessageEvent, StateChangeEvent, event_bus
-from logger import log
+from common.event_bus import MessageEvent, StateChangeEvent, event_bus
+from common.logger import log
 from manim_renderer.application import ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
 from manim_renderer.worker import (

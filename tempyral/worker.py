@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import AsyncGenerator, Generic, List, Type, TypeVar, cast
 
-from logger import log
+from common.logger import log
 from tempyral.api import (
     Command,
     CommandType,

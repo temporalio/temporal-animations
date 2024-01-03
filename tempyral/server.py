@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import Any, Dict, Hashable, List, Tuple, TypedDict, cast
 from uuid import uuid4
 
-from logger import log
-from manim_renderer.utils import drain
+from common.logger import log
+from common.utils import drain
 from tempyral.api import (
     ApplicationRequestType,
     Command,

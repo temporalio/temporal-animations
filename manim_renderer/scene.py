@@ -20,8 +20,8 @@ from manim import (
 )
 
 import manim_renderer as renderer
+from common.utils import debug
 from manim_renderer.style import COLOR_SCENE_BACKGROUND
-from manim_renderer.utils import debug
 from tempyral import (
     ActivityWorker,
     Application,
