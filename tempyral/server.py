@@ -159,6 +159,8 @@ class Server(Entity):
                 await self.execute_workflow(request)
             case ApplicationRequestType.ExecuteUpdate:
                 await self.execute_update(request)
+            case ApplicationRequestType.SignalWorkflow:
+                await self.signal_workflow(request)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
@@ -203,6 +205,11 @@ class Server(Entity):
     async def start_workflow(self, request: ApplicationRequest):
         await self._handle_non_blocking_application_request(
             request, HistoryEventType.WF_STARTED
+        )
+
+    async def signal_workflow(self, request: ApplicationRequest):
+        await self._handle_non_blocking_application_request(
+            request, HistoryEventType.WF_SIGNALED
         )
 
     async def _handle_non_blocking_application_request(

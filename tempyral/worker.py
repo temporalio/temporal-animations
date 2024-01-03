@@ -6,6 +6,7 @@ from common.logger import log
 from tempyral.api import (
     Command,
     CommandType,
+    HistoryEventType,
     ProtocolMessage,
     ProtocolMessageType,
     WorkflowId,
@@ -24,6 +25,7 @@ T = TypeVar("T", bound=ActivityTask | WorkflowTask)
 
 
 class DirectiveType(Enum):
+    WAIT_FOR_SIGNAL = 1
     WAIT_FOR_UPDATE = 1
 
 
@@ -104,6 +106,7 @@ class Workflow(Entity, WithCode, ABC):
         self.code, raw_directives = self.parse_code(self.language)
         self.raw_directives = iter(raw_directives)
         self.blocked_lines = set()
+        self.blocked_lines_waiting_for_signal = set()
         self.blocked_lines_waiting_for_update = set()
         super().__init__()
 
@@ -124,6 +127,10 @@ class Workflow(Entity, WithCode, ABC):
         # Each command or directive causes the workflow to block at that line
         self.blocked_lines.add(line_num)
         match cmd := eval(raw):
+            case DirectiveType.WAIT_FOR_SIGNAL:
+                # This line will be unblocked on acceptance of any signal
+                # TODO: support multiple signals
+                self.blocked_lines_waiting_for_signal.add(line_num)
             case DirectiveType.WAIT_FOR_UPDATE:
                 # This line will be unblocked on acceptance of any update
                 # TODO: support multiple updates
@@ -147,8 +154,15 @@ class Workflow(Entity, WithCode, ABC):
         # If the WFT contains history events that unblock futures, then unblock them.
         for e in task.events:
             if (token := e.data.get("token")) != None:
-                self.blocked_lines.remove(cast(int, token))
-                await self.worker.publish_change_event()
+                line_num = cast(int, token)
+                self.blocked_lines.remove(line_num)
+            if e.event_type == HistoryEventType.WF_SIGNALED:
+                # TODO: Currently, any signal unblocks all waiting_for_signal lines.
+                while self.blocked_lines_waiting_for_signal:
+                    self.blocked_lines.remove(
+                        self.blocked_lines_waiting_for_signal.pop()
+                    )
+            await self.worker.publish_change_event()
 
         update_commands = []
         for u in task.pending_updates:
