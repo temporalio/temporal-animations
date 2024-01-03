@@ -128,17 +128,9 @@ class Workflow(Entity, WithCode, ABC):
                 # This line will be unblocked on acceptance of any update
                 # TODO: support multiple updates
                 self.blocked_lines_waiting_for_update.add(line_num)
-                log(
-                    f"{line_num} WAIT_FOR_UPDATE: {self.blocked_lines} {self.blocked_lines_waiting_for_update}",
-                    "W: process directive",
-                )
             case _ if isinstance(cmd, CommandType):
                 # This line will be unblocked when a WFT is received
                 # containing an event with the line_num token.
-                log(
-                    f"{line_num} {cmd}: {self.blocked_lines} {self.blocked_lines_waiting_for_update}",
-                    "W: process directive",
-                )
                 return Command(cmd, None, line_num)
             case _:
                 raise ValueError(f"{cmd}")
@@ -147,10 +139,6 @@ class Workflow(Entity, WithCode, ABC):
         return f"{type(self).__name__}({self.blocked_lines})"
 
     async def handle_wft(self, task: WorkflowTask) -> List[Command]:
-        log(
-            f"blocked={self.blocked_lines} blocked_updates={self.blocked_lines_waiting_for_update} incoming_updates={task.pending_updates}",
-            "W: handle_wft",
-        )
         commands = []
 
         if not self.blocked_lines:
@@ -214,10 +202,6 @@ class WorkflowWorker(Worker[WorkflowTask]):
 
     async def handle_task(self, wft: WorkflowTask, _: int, server: Server):
         commands = await self.workflow.handle_wft(wft)
-        log(
-            f"{self.workflow.blocked_lines} {self.workflow.blocked_lines_waiting_for_update}",
-            "W: handled wft",
-        )
         await self.send_request(
             WorkflowTaskCompleted(wft.workflow_id, self.time, commands), server
         )
