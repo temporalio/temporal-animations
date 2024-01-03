@@ -7,7 +7,7 @@ from manim_renderer.entity import ProxyEntity
 from manim_renderer.manim_shims import Code
 from manim_renderer.style import FONT_CODE, FONT_SIZE_CODE
 
-E = TypeVar("E", bound=tempyral.EntityWithCode)
+E = TypeVar("E", bound=tempyral.WithCode)
 
 
 class ProxyEntityWithCode(ProxyEntity, Generic[E]):

@@ -1,7 +1,5 @@
 from typing import Dict, List, Literal, Set, Tuple
 
-from tempyral.entity import Entity
-
 Language = Literal["go", "python", "typescript", "java", "dotnet"]
 
 
@@ -14,7 +12,7 @@ COMMENT_MARKERS: Dict[Language, str] = {
 }
 
 
-class EntityWithCode(Entity):
+class WithCode:
     language: Language
     go: str
     typescript: str

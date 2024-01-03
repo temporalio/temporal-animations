@@ -1,13 +1,14 @@
 from typing import Coroutine, Iterable
 
 from tempyral.api import ApplicationRequestType
-from tempyral.code import EntityWithCode
+from tempyral.code import WithCode
+from tempyral.entity import Entity
 from tempyral.request_response import ApplicationRequest
 from tempyral.server import Server
 
 
-class Application(EntityWithCode):
-    __publish__ = EntityWithCode.__publish__ | {
+class Application(Entity, WithCode):
+    __publish__ = Entity.__publish__ | {
         "code",
         "language",
         "blocked_lines",

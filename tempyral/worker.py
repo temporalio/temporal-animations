@@ -10,7 +10,7 @@ from tempyral.api import (
     ProtocolMessageType,
     WorkflowId,
 )
-from tempyral.code import EntityWithCode
+from tempyral.code import WithCode
 from tempyral.entity import Entity
 from tempyral.request_response import (
     ActivityTask,
@@ -71,7 +71,7 @@ class ActivityWorker(Worker[ActivityTask]):
         )
 
 
-class Workflow(EntityWithCode, ABC):
+class Workflow(Entity, WithCode, ABC):
     """
     A Workflow Definition, together with fake handling of the workflow by an SDK worker.
     """
@@ -88,7 +88,7 @@ class Workflow(EntityWithCode, ABC):
         self.blocked_lines_waiting_for_update = set()
         super().__init__()
 
-    __publish__ = EntityWithCode.__publish__ | {
+    __publish__ = Entity.__publish__ | {
         "code",
         "language",
         "blocked_lines",
