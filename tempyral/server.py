@@ -154,11 +154,11 @@ class Server(Entity):
         await self.publish_change_event()
         match request.request_type:
             case ApplicationRequestType.StartWorkflow:
-                return await self.start_workflow(request)
+                await self.start_workflow(request)
             case ApplicationRequestType.ExecuteWorkflow:
-                return await self.execute_workflow(request)
+                await self.execute_workflow(request)
             case ApplicationRequestType.ExecuteUpdate:
-                return await self.execute_update(request)
+                await self.execute_update(request)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
@@ -196,27 +196,34 @@ class Server(Entity):
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
+    # The following are non-blocking requests; we don't need to wait for a
+    # HistoryEvent to be written, beyond those we write synchronously on
+    # handling the request.
+
     async def start_workflow(self, request: ApplicationRequest):
-        # This is a non-blocking request; we don't need to wait for a
-        # HistoryEvent to be written, beyond those we write synchronously on
-        # handling the request. As a result we do not use
-        # _get_application_request_response.
-        chans = self.pending_application_requests[DEFAULT_NAMESPACE]
-        key = request.request_type, request.workflow_id
-        chans[key] = Queue(maxsize=1)
-        await self.publish_change_event()
-        [wf_started] = await self.write_history_events(
+        await self._handle_non_blocking_application_request(
+            request, HistoryEventType.WF_STARTED
+        )
+
+    async def _handle_non_blocking_application_request(
+        self, request: ApplicationRequest, event_to_be_written: HistoryEventType
+    ):
+        [event] = await self.write_history_events(
             request.workflow_id,
-            [HistoryEventType.WF_STARTED],
+            [event_to_be_written],
             seen_by_sticky_worker=False,
         )
-        del chans[key]
+        request.response_payload = event.data.get("payload")
         await self.publish_change_event()
-        request.response_payload = wf_started.data.get("payload")
+
+    # The following are blocking requests; they use
+    # _handle_blocking_application_request to wait for a certain
+    # HistoryEvent to be written that indicates that the application request has
+    # been fulfilled.
 
     async def execute_workflow(self, request: ApplicationRequest):
-        event = await self._get_response_to_application_request(
-            request, [HistoryEventType.WF_STARTED]
+        event = await self._handle_blocking_application_request(
+            request, HistoryEventType.WF_STARTED
         )
         request.response_payload = event.data.get("payload")
 
@@ -224,11 +231,11 @@ class Server(Entity):
         self.get_workflow_data(request.workflow_id).pending_updates.append(
             UpdateInfo(uuid4().hex, "fake-update-name")
         )
-        event = await self._get_response_to_application_request(request, [])
+        event = await self._handle_blocking_application_request(request, None)
         request.response_payload = event.data.get("payload")
 
-    async def _get_response_to_application_request(
-        self, request: ApplicationRequest, events_to_be_written: List[HistoryEventType]
+    async def _handle_blocking_application_request(
+        self, request: ApplicationRequest, event_to_be_written: HistoryEventType | None
     ) -> HistoryEvent:
         """
         Handle request by writing history events, and return response.
@@ -249,10 +256,10 @@ class Server(Entity):
         chans[key] = chan
         await self.publish_change_event()
 
-        if events_to_be_written:
+        if event_to_be_written:
             await self.write_history_events(
                 request.workflow_id,
-                events_to_be_written,
+                [event_to_be_written],
                 seen_by_sticky_worker=False,
             )
         if self.should_schedule_wft(request.workflow_id):
