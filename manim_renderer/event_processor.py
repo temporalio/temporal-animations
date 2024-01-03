@@ -4,7 +4,7 @@ from typing import Iterable, Tuple, Type, cast
 from manim import Animation, Scene
 
 import tempyral
-from common.event_bus import MessageEvent, StateChangeEvent, event_bus
+from common.event_bus import EventBus, MessageEvent, StateChangeEvent, event_bus
 from common.logger import log
 from manim_renderer.application import ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
@@ -15,53 +15,66 @@ from manim_renderer.worker import (
     WorkflowTaskRequest,
 )
 
+event_bus: EventBus[tempyral.Entity]
+type Event = StateChangeEvent[tempyral.Entity] | MessageEvent[tempyral.Entity]
+
 
 def set_scene(scene: Scene):
     VisualElement.scene = scene
 
 
 async def process_simulation_events():
+    async def collect(draining: bool):
+        while not (draining and event_bus.empty()):
+            yield await event_bus.bus.get()
+
+    events: list[Event] = []
+    try:
+        async for e in collect(False):
+            events.append(e)
+    except CancelledError:
+        async for e in collect(True):
+            events.append(e)
+
+    _render_simulation_events(events)
+
+
+def _render_simulation_events(
+    events: list[StateChangeEvent[tempyral.Entity] | MessageEvent[tempyral.Entity]],
+):
     curr_time = -1
     animations: list[Iterable[Animation | None]] = []
     serial = True
     n = 400
+    for event in events:
+        match event:
+            case StateChangeEvent(entity):
+                proxy_entity = proxy_entity_registry.get(entity)
+                proxy_entity.render_to_scene(entity)
+            case MessageEvent(sender_entity, receiver_entity, msg_entity):
+                sender_entity, receiver_entity, msg_entity = (
+                    cast(tempyral.Entity, sender_entity),
+                    cast(tempyral.Entity, receiver_entity),
+                    cast(tempyral.RequestResponse, msg_entity),
+                )
+                sender, receiver, msg = _get_proxy_entities(
+                    sender_entity, receiver_entity, msg_entity
+                )
 
-    async def process(draining: bool):
-        nonlocal n, curr_time
-        while not (draining and event_bus.empty()):
-            match await event_bus.bus.get():
-                case StateChangeEvent(entity):
-                    proxy_entity = proxy_entity_registry.get(entity)
-                    proxy_entity.render_to_scene(entity)
-                case MessageEvent(sender_entity, receiver_entity, msg_entity):
-                    sender_entity, receiver_entity, msg_entity = (
-                        cast(tempyral.Entity, sender_entity),
-                        cast(tempyral.Entity, receiver_entity),
-                        cast(tempyral.RequestResponse, msg_entity),
-                    )
-                    sender, receiver, msg = _get_proxy_entities(
-                        sender_entity, receiver_entity, msg_entity
-                    )
+                log(
+                    f"{msg_entity.id}: {sender_entity} -> {receiver_entity}: {msg_entity}",
+                    "A: render  message",
+                )
 
-                    log(
-                        f"{msg_entity.id}: {sender_entity} -> {receiver_entity}: {msg_entity}",
-                        "A: render  message",
-                    )
+                animations.append(sender.send_message(receiver, msg, msg_entity))
 
-                    animations.append(sender.send_message(receiver, msg, msg_entity))
+                if serial or msg_entity.time > curr_time:
+                    sender.play_all_send_message_animations(*zip(*animations))
+                    animations.clear()
+                    curr_time = msg_entity.time
 
-                    if serial or msg_entity.time > curr_time:
-                        sender.play_all_send_message_animations(*zip(*animations))
-                        animations.clear()
-                        curr_time = msg_entity.time
-
-                    if not (n := n - 1):
-                        break
-
-    try:
-        await process(draining=False)
-    except CancelledError:
-        await process(draining=True)
+                if not (n := n - 1):
+                    break
 
 
 def _get_proxy_entities(
