@@ -39,6 +39,14 @@ async def process_simulation_events():
     _render_simulation_events(events)
 
 
+def lamport_time(event: Event) -> int:
+    match event:
+        case StateChangeEvent(entity):
+            return entity.time
+        case MessageEvent(_, _, msg_entity):
+            return msg_entity.time
+
+
 def _render_simulation_events(
     events: list[StateChangeEvent[tempyral.Entity] | MessageEvent[tempyral.Entity]],
 ):
@@ -46,7 +54,7 @@ def _render_simulation_events(
     animations: list[Iterable[Animation | None]] = []
     serial = True
     n = 400
-    for event in events:
+    for event in sorted(events, key=lamport_time):
         match event:
             case StateChangeEvent(entity):
                 proxy_entity = proxy_entity_registry.get(entity)
