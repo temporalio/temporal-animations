@@ -152,7 +152,7 @@ class Workflow(Entity, WithCode, ABC):
 
         update_commands = []
         for u in task.pending_updates:
-            # TODO: Currently, any update unblocks all `waiting_for_update_lines`.
+            # TODO: Currently, any update unblocks all waiting_for_update lines.
             while self.blocked_lines_waiting_for_update:
                 self.blocked_lines.remove(self.blocked_lines_waiting_for_update.pop())
             await self.worker.publish_change_event()
