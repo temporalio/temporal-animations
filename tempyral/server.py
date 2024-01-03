@@ -157,6 +157,8 @@ class Server(Entity):
                 await self.start_workflow(request)
             case ApplicationRequestType.ExecuteWorkflow:
                 await self.execute_workflow(request)
+            case ApplicationRequestType.GetWorkflowResult:
+                await self.get_workflow_result(request)
             case ApplicationRequestType.ExecuteUpdate:
                 await self.execute_update(request)
             case ApplicationRequestType.SignalWorkflow:
@@ -232,6 +234,10 @@ class Server(Entity):
         event = await self._handle_blocking_application_request(
             request, HistoryEventType.WF_STARTED
         )
+        request.response_payload = event.data.get("payload")
+
+    async def get_workflow_result(self, request: ApplicationRequest):
+        event = await self._handle_blocking_application_request(request, None)
         request.response_payload = event.data.get("payload")
 
     async def execute_update(self, request: ApplicationRequest):
@@ -311,9 +317,13 @@ class Server(Entity):
                         [HistoryEventType.WF_COMPLETED],
                         seen_by_sticky_worker=True,
                     )
-                    key = ApplicationRequestType.ExecuteWorkflow, workflow_id
-                    if key in chans:
-                        await chans[key].put(event)
+                    for request_type in [
+                        ApplicationRequestType.ExecuteWorkflow,
+                        ApplicationRequestType.GetWorkflowResult,
+                    ]:
+                        key = request_type, workflow_id
+                        if key in chans:
+                            await chans[key].put(event)
                 case CommandType.PROTOCOL_MESSAGE:
                     assert command.protocol_message
                     match command.protocol_message:

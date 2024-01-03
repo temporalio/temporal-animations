@@ -13,6 +13,7 @@ const wfHandle = await client.start(myWorkflow, {               // tempyral: App
     taskQueue: 'my-task-queue',
 });
 await wfHandle.signal(mySignal)                                 // tempyral: ApplicationRequestType.SignalWorkflow "my-workflow-id"
+await wfHandle.result()                                         // tempyral: ApplicationRequestType.GetWorkflowResult "my-workflow-id"
 """
 
 

@@ -34,6 +34,7 @@ class ApplicationRequestType(Enum):
     ExecuteWorkflow = 2
     ExecuteUpdate = 3
     SignalWorkflow = 4
+    GetWorkflowResult = 5
 
 
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/command_type.proto#L35
