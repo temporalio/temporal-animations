@@ -12,7 +12,7 @@ class CallActivityWorkflow(Workflow):
 func MyWorkflow(ctx workflow.Context) (int, error) {
     var result int
     workflow.ExecuteActivity(MyActivity).Get(ctx, &result) // tempyral: CommandType.SCHEDULE_ACTIVITY_TASK
-    return result, nil                                     // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION
+    return result, nil                                     // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION 0
 }
 """
 

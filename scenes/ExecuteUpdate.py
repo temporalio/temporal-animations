@@ -12,7 +12,7 @@ const wfHandle = await client.start(myWorkflow, {               // tempyral: App
     workflowId: 'my-workflow-id',
     taskQueue: 'my-task-queue',
 });
-const updateResult = await wfHandle.executeUpdate(myUpdate)     // tempyral: ApplicationRequestType.ExecuteUpdate "my-workflow-id"
+const updateResult = await wfHandle.executeUpdate(myUpdate, {args: [1]})     // tempyral: ApplicationRequestType.ExecuteUpdate "my-workflow-id"
 """
 
 
@@ -25,7 +25,7 @@ class UpdateHandlerWorkflow(Workflow):
 const myUpdate = wf.defineUpdate<number, [number]>('myUpdate');
 
 export async function myWorkflow(): Promise<number> {
-  let total = 0;
+  let total = 1;
   wf.setHandler(
     myUpdate,
     async (arg: number) => {
@@ -34,8 +34,8 @@ export async function myWorkflow(): Promise<number> {
     },
     { validator: (arg: number) => arg > 0 }
   );
-  await wf.condition(() => total > 0);                          // tempyral: DirectiveType.WAIT_FOR_UPDATE
-  return total;                                                 // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION
+  await wf.condition(() => total > 1);                          // tempyral: DirectiveType.WAIT_FOR_UPDATE 2
+  return total;                                                 // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION 2
 }
 """
 

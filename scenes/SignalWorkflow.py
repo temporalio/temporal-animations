@@ -12,7 +12,7 @@ const wfHandle = await client.start(myWorkflow, {               // tempyral: App
     workflowId: 'my-workflow-id',
     taskQueue: 'my-task-queue',
 });
-await wfHandle.signal(mySignal)                                 // tempyral: ApplicationRequestType.SignalWorkflow "my-workflow-id"
+await wfHandle.signal(mySignal, 1)                                 // tempyral: ApplicationRequestType.SignalWorkflow "my-workflow-id"
 await wfHandle.result()                                         // tempyral: ApplicationRequestType.GetWorkflowResult "my-workflow-id"
 """
 
@@ -34,7 +34,7 @@ export async function myWorkflow(): Promise<number> {
     },
   );
   await wf.condition(() => total > 0);                          // tempyral: DirectiveType.WAIT_FOR_SIGNAL
-  return total;                                                 // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION
+  return total;                                                 // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION 2
 }
 """
 
