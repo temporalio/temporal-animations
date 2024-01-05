@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from common.logger import log
 from common.utils import drain
+from schema import models
 from tempyral.api import (
     ApplicationRequestType,
     Command,
@@ -63,6 +64,11 @@ class History(Entity):
 
     __publish__ = Entity.__publish__ | {"events", "workflow_id"}
 
+    def as_serializable(self) -> models.Entity:
+        data = self.get_serializable_data()
+        data["events"] = [e.as_serializable() for e in self.events]
+        return self.get_serializable_cls()(**data)
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}(workflow_id={self.workflow_id},id={self.id}: events={self.events})"
 
@@ -71,6 +77,12 @@ class History(Entity):
 class WorkflowData:
     history: History
     pending_updates: List[UpdateInfo]
+
+    def as_serializable(self) -> dict[str, Any]:
+        return {
+            "history": self.history.as_serializable(),
+            "pending_updates": list(self.pending_updates),
+        }
 
 
 Namespace = OrderedDict[WorkflowId, WorkflowData]
@@ -101,6 +113,18 @@ class Server(Entity):
         ] = {DEFAULT_NAMESPACE: Queue()}
 
     __publish__ = Entity.__publish__ | {"shards"}
+
+    def as_serializable(self) -> models.Entity:
+        data = self.get_serializable_data()
+
+        def serialize_namespace(ns: Namespace) -> dict[WorkflowId, dict]:
+            return {wid: wf_data.as_serializable() for wid, wf_data in ns.items()}
+
+        data["shards"] = [
+            {nsid: serialize_namespace(ns) for nsid, ns in shard.items()}
+            for shard in self.shards
+        ]
+        return self.get_serializable_cls()(**data)
 
     def __repr__(self) -> str:
         namespace = {

@@ -1,9 +1,11 @@
 from collections import defaultdict
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, Self
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Callable, Self, Type
 
 from common.event_bus import event_bus, make_message_event, make_state_change_event
 from common.logger import log
+from schema import models
 
 if TYPE_CHECKING:
     from tempyral.request_response import RequestResponse, Response
@@ -36,11 +38,29 @@ class Entity:
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id})"
 
-    # A whitelist of instance attributes to be included in the object published
-    # to the event bus.
-    # TODO: publish serialized data to the event bus and make the schema
-    # available to consumers (JSON, JSONSchema).
     __publish__ = {"id", "time"}
+
+    @classmethod
+    def get_serializable_cls(cls) -> Type[models.Entity]:
+        return next(
+            filter(
+                None,
+                (
+                    getattr(models, parent_cls.__name__, None)
+                    for parent_cls in cls.mro()
+                ),
+            )
+        )
+
+    def get_serializable_data(self) -> dict[str, Any]:
+        return {
+            k: v.value if isinstance(v, Enum) else v
+            for k in self.__publish__
+            for v in [getattr(self, k)]
+        }
+
+    def as_serializable(self) -> models.Entity:
+        return self.get_serializable_cls()(**self.get_serializable_data())
 
     def clone(self) -> Self:
         cloned = deepcopy(self)

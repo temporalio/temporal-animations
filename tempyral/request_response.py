@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Generic, List, Optional, TypeVar
 
+from schema import models
 from tempyral.entity import Entity
 
 if TYPE_CHECKING:
@@ -63,6 +64,11 @@ class WorkflowTask:
     events: list["HistoryEvent"]
     pending_updates: list["UpdateInfo"]
 
+    def get_serializable_data(self) -> dict[str, Any]:
+        data = self.__dict__
+        data["events"] = [e.as_serializable() for e in self.events]
+        return data
+
     def __repr__(self) -> str:
         return f"WFT(wid={self.workflow_id}, events={self.events}, updates={self.pending_updates})"
 
@@ -76,6 +82,11 @@ class ActivityTask:
     def scheduled_event(self) -> "HistoryEvent":
         [event] = self.events
         return event
+
+    def get_serializable_data(self) -> dict[str, Any]:
+        data = self.__dict__
+        data["events"] = [e.as_serializable() for e in self.events]
+        return data
 
     def __repr__(self) -> str:
         return f"AT(wid={self.workflow_id}, events={self.events})"
@@ -99,7 +110,13 @@ class WorkerPollRequest(RequestResponse, Generic[T]):
         self.task = task
         self.token = token
 
-    __publish__ = Response.__publish__ | {"task"}
+    __publish__ = RequestResponse.__publish__ | {"task"}
+
+    def as_serializable(self) -> models.Entity:
+        data = self.get_serializable_data()
+        data["task"] = self.task.get_serializable_data()
+        cls = self.get_serializable_cls()
+        return cls(**data)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}[{self.time}](id={self.id}: {self.task})"
