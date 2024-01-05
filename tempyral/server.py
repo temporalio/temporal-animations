@@ -242,7 +242,7 @@ class Server(Entity):
 
     async def execute_update(self, request: ApplicationRequest):
         self.get_workflow_data(request.workflow_id).pending_updates.append(
-            UpdateInfo(uuid4().hex, "fake-update-name")
+            UpdateInfo(update_id=uuid4().hex, update_name="fake-update-name")
         )
         event = await self._handle_blocking_application_request(request, None)
         request.response_payload = event.data.get("payload")

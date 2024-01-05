@@ -1,27 +1,35 @@
 from asyncio import Queue
-from dataclasses import dataclass
-from typing import Generic, TypeVar, Union
+from typing import TYPE_CHECKING, cast
 
-E = TypeVar("E")
+from schema import models
 
-
-@dataclass
-class StateChangeEvent(Generic[E]):
-    entity: E
+if TYPE_CHECKING:
+    import tempyral
 
 
-@dataclass
-class MessageEvent(Generic[E]):
-    sender: E
-    receiver: E
-    entity: E
+def make_state_change_event(
+    entity: "tempyral.Entity",
+) -> models.StateChangeEvent:
+    return models.StateChangeEvent(entity=entity.as_serializable())
 
 
-class EventBus(Generic[E]):
+def make_message_event(
+    sender: "tempyral.Entity",
+    receiver: "tempyral.Entity",
+    message: "tempyral.RequestResponse | tempyral.Response",
+) -> models.MessageEvent:
+    return models.MessageEvent(
+        sender=sender.as_serializable(),
+        receiver=receiver.as_serializable(),
+        message=cast(models.RequestResponse, message.as_serializable()),
+    )
+
+
+class EventBus:
     def __init__(self):
-        self.bus: Queue[Union[StateChangeEvent[E], MessageEvent[E]]] = Queue()
+        self.bus: Queue[models.StateChangeEvent | models.MessageEvent] = Queue()
 
-    async def publish(self, event: Union[StateChangeEvent[E], MessageEvent[E]]):
+    async def publish(self, event: models.StateChangeEvent | models.MessageEvent):
         await self.bus.put(event)
 
     def empty(self) -> bool:

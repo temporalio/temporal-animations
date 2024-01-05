@@ -1,9 +1,12 @@
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Callable, Self
+from typing import TYPE_CHECKING, Any, Callable, Self
 
-from common.event_bus import MessageEvent, StateChangeEvent, event_bus
+from common.event_bus import event_bus, make_message_event, make_state_change_event
 from common.logger import log
+
+if TYPE_CHECKING:
+    from tempyral.request_response import RequestResponse, Response
 
 
 class Entity:
@@ -54,14 +57,17 @@ class Entity:
         }
 
     async def publish_change_event(self):
-        await event_bus.publish(StateChangeEvent(self.clone()))
+        await event_bus.publish(make_state_change_event(self.clone()))
 
     async def publish_message_event(
-        self, sender: "Entity", receiver: "Entity", message: "Entity"
+        self,
+        sender: "Entity",
+        receiver: "Entity",
+        message: "RequestResponse | Response",
     ):
         log(f"{message.id}: {sender} -> {receiver}: {message}", "S: publish message")
         await event_bus.publish(
-            MessageEvent(sender.clone(), receiver.clone(), message.clone())
+            make_message_event(sender.clone(), receiver.clone(), message.clone())
         )
 
     def tick(self, message: "Entity"):
