@@ -1,25 +1,25 @@
 from manim import DOWN, LEFT, SMALL_BUFF, Mobject, VDict
 from manim.typing import Point3D
 
-import tempyral
 from manim_renderer import style
 from manim_renderer.code import ProxyEntityWithCode
 from manim_renderer.entity import ProxyEntity
+from schema import schema
 
 
-class ApplicationRequest(ProxyEntity[tempyral.ApplicationRequest]):
-    def render(self, entity: tempyral.ApplicationRequest) -> Mobject:
+class ApplicationRequest(ProxyEntity[schema.ApplicationRequest]):
+    def render(self, entity: schema.ApplicationRequest) -> Mobject:
         return self.with_time(style.message(entity.request_type.name), entity)
 
 
-class Application(ProxyEntityWithCode[tempyral.Application]):
+class Application(ProxyEntityWithCode[schema.Application]):
     """
     An Application has code, like a WorkflowWorker. But whereas the code of a
     WorkflowWorker is associated with child Workflows objects, the code of an
     Application is part of the self.mobj VGroup.
     """
 
-    def render(self, entity: tempyral.Application) -> Mobject:
+    def render(self, entity: schema.Application) -> Mobject:
         code = super().render(entity)
         text = self.with_time(style.actor("Your Application"), entity)
         return VDict({"text": text, "code": code}).arrange(
@@ -32,7 +32,7 @@ class Application(ProxyEntityWithCode[tempyral.Application]):
             + 0.5 * self.dock_direction
         )
 
-    def get_message_start(self, message_entity: tempyral.RequestResponse) -> Point3D:
+    def get_message_start(self, message_entity: schema.RequestResponse) -> Point3D:
         if (line_num := message_entity.token) is not None:
             return self.mobj["code"]["code"][self.CODE_LINES_INDEX][
                 line_num - 1

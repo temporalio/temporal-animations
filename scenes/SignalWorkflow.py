@@ -1,5 +1,5 @@
-from manim_renderer.scene import TemporalScene, run_simulation
 from tempyral import Application, Workflow
+from tempyral.simulation import Simulation, run_simulation
 
 
 class SignalWorkflowApplication(Application):
@@ -39,7 +39,7 @@ export async function myWorkflow(): Promise<number> {
 """
 
 
-class SignalWorkflow(TemporalScene):
+class SignalWorkflow(Simulation):
     application_classes = [SignalWorkflowApplication]
     workflow_classes = [SignalHandlerWorkflow]
 

@@ -1,6 +1,6 @@
-from manim_renderer.scene import TemporalScene, run_simulation
 from scenes.ExecuteWorkflow import ExecuteWorkflowApplication
 from tempyral import Workflow
+from tempyral.simulation import Simulation, run_simulation
 
 
 class CallActivityWorkflow(Workflow):
@@ -17,7 +17,7 @@ func MyWorkflow(ctx workflow.Context) (int, error) {
 """
 
 
-class CallActivity(TemporalScene):
+class CallActivity(Simulation):
     application_classes = [ExecuteWorkflowApplication]
     workflow_classes = [CallActivityWorkflow]
 

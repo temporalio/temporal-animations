@@ -13,6 +13,7 @@ from tempyral.api import (
 )
 from tempyral.code import WithCode
 from tempyral.entity import Entity
+from tempyral.event import emit_change_event, emit_message_event
 from tempyral.request_response import (
     ActivityTask,
     WorkerPollRequest,
@@ -33,11 +34,11 @@ class Worker(Entity, ABC, Generic[T]):
     async def poll(self, server: Server):
         while True:
             request = WorkerPollRequest("", self.task_factory(), 0, 0)
-            await self.publish_message_event(self, server, request)
+            emit_message_event(self, server, request)
             response = await server.handle_worker_poll_request(request)
             task = response.task
             log(f"got task: {task} {task.__dict__}", "W:")
-            await self.publish_message_event(server, self, response)
+            emit_message_event(server, self, response)
             self.tick(request)
             # TODO: token nullability
             await self.handle_task(task, response.token or 0, server)
@@ -51,11 +52,11 @@ class Worker(Entity, ABC, Generic[T]):
         ...
 
     async def send_request(self, request: WorkerRequest, server: Server):
-        await self.publish_message_event(self, server, request)
+        emit_message_event(self, server, request)
         await server.handle_worker_request(request)
         request.time = server.time
         self.tick(request)
-        await self.publish_change_event()
+        emit_change_event(self)
 
 
 class ActivityWorker(Worker[ActivityTask], WithCode):
@@ -162,14 +163,14 @@ class Workflow(Entity, WithCode, ABC):
                     self.blocked_lines.remove(
                         self.blocked_lines_waiting_for_signal.pop()
                     )
-            await self.worker.publish_change_event()
+            emit_change_event(self.worker)
 
         update_commands = []
         for u in task.pending_updates:
             # TODO: Currently, any update unblocks all waiting_for_update lines.
             while self.blocked_lines_waiting_for_update:
                 self.blocked_lines.remove(self.blocked_lines_waiting_for_update.pop())
-            await self.worker.publish_change_event()
+            emit_change_event(self.worker)
             update_commands.extend(
                 Command(
                     CommandType.PROTOCOL_MESSAGE,
@@ -193,7 +194,7 @@ class Workflow(Entity, WithCode, ABC):
         # directive emitted by this workflow
         if cmd := self._advance_to_next_command_or_fake_sdk_directive():
             yield cmd
-        await self.worker.publish_change_event()
+        emit_change_event(self.worker)
 
 
 class WorkflowWorker(Worker[WorkflowTask]):

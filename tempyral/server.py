@@ -19,6 +19,7 @@ from tempyral.api import (
     WorkflowId,
 )
 from tempyral.entity import Entity
+from tempyral.event import emit_change_event
 from tempyral.request_response import (
     ActivityTask,
     ActivityTaskCompleted,
@@ -68,9 +69,11 @@ class History(Entity):
 
 
 @dataclass
-class WorkflowData:
+class WorkflowData(Entity):
     history: History
     pending_updates: List[UpdateInfo]
+
+    __publish__ = {"history", "pending_updates"}
 
 
 Namespace = OrderedDict[WorkflowId, WorkflowData]
@@ -151,7 +154,7 @@ class Server(Entity):
         """
         self.tick(request)
         request.stage = RequestResponseStage.Response
-        await self.publish_change_event()
+        emit_change_event(self)
         match request.request_type:
             case ApplicationRequestType.StartWorkflow:
                 await self.start_workflow(request)
@@ -191,7 +194,7 @@ class Server(Entity):
     async def handle_worker_request(self, request: WorkerRequest):
         self.tick(request)
         request.stage = RequestResponseStage.Response
-        await self.publish_change_event()
+        emit_change_event(self)
         match request:
             case WorkflowTaskCompleted(workflow_id, commands):
                 await self.handle_commands(workflow_id, commands)
@@ -223,7 +226,7 @@ class Server(Entity):
             seen_by_sticky_worker=False,
         )
         request.response_payload = event.data.get("payload")
-        await self.publish_change_event()
+        emit_change_event(self)
 
     # The following are blocking requests; they use
     # _handle_blocking_application_request to wait for a certain
@@ -242,7 +245,7 @@ class Server(Entity):
 
     async def execute_update(self, request: ApplicationRequest):
         self.get_workflow_data(request.workflow_id).pending_updates.append(
-            UpdateInfo(uuid4().hex, "fake-update-name")
+            UpdateInfo(update_id=uuid4().hex, update_name="fake-update-name")
         )
         event = await self._handle_blocking_application_request(request, None)
         request.response_payload = event.data.get("payload")
@@ -267,7 +270,7 @@ class Server(Entity):
         ), "Multiple concurrent requests of same type for same workflow ID are not supported"
         chan: Queue[HistoryEvent] = Queue(maxsize=1)
         chans[key] = chan
-        await self.publish_change_event()
+        emit_change_event(self)
 
         if event_to_be_written:
             await self.write_history_events(
@@ -284,7 +287,7 @@ class Server(Entity):
 
         event = await chan.get()
         del chans[key]
-        await self.publish_change_event()
+        emit_change_event(self)
         return event
 
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
@@ -391,7 +394,7 @@ class Server(Entity):
         ]
         self.get_workflow_data(workflow_id).history.events.extend(events)
         if publish:
-            await self.publish_change_event()
+            emit_change_event(self)
         await self.dispatch_workflow_or_activity_task(workflow_id)
         return events
 

@@ -1,10 +1,7 @@
-from asyncio import CancelledError
-from typing import Iterable, Tuple, Type, cast
+from typing import Iterable, Tuple, Type
 
 from manim import Animation, Scene
 
-import tempyral
-from common.event_bus import EventBus, MessageEvent, StateChangeEvent, event_bus
 from common.logger import log
 from manim_renderer.application import ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
@@ -14,74 +11,49 @@ from manim_renderer.worker import (
     WorkflowTaskCompleted,
     WorkflowTaskRequest,
 )
-
-event_bus: EventBus[tempyral.Entity]
-type Event = StateChangeEvent[tempyral.Entity] | MessageEvent[tempyral.Entity]
+from schema import schema
 
 
 def set_scene(scene: Scene):
     VisualElement.scene = scene
 
 
-async def process_simulation_events():
-    async def collect(draining: bool):
-        while not (draining and event_bus.empty()):
-            yield await event_bus.bus.get()
-
-    events: list[Event] = []
-    try:
-        async for e in collect(False):
-            events.append(e)
-    except CancelledError:
-        async for e in collect(True):
-            events.append(e)
-
-    _render_simulation_events(events)
-
-
-def _render_simulation_events(
-    events: list[StateChangeEvent[tempyral.Entity] | MessageEvent[tempyral.Entity]],
-):
+def render_simulation_events(events: Iterable[schema.Event]):
     curr_time = -1
     animations: list[Iterable[Animation | None]] = []
     serial = True
     n = 400
     for event in events:
         match event:
-            case StateChangeEvent(entity):
-                proxy_entity = proxy_entity_registry.get(entity)
-                proxy_entity.render_to_scene(entity)
-            case MessageEvent(sender_entity, receiver_entity, msg_entity):
-                sender_entity, receiver_entity, msg_entity = (
-                    cast(tempyral.Entity, sender_entity),
-                    cast(tempyral.Entity, receiver_entity),
-                    cast(tempyral.RequestResponse, msg_entity),
-                )
-                sender, receiver, msg = _get_proxy_entities(
-                    sender_entity, receiver_entity, msg_entity
+            case schema.StateChangeEvent():
+                proxy_entity = proxy_entity_registry.get(event.entity)
+                proxy_entity.render_to_scene(event.entity)
+            case schema.MessageEvent():
+                sender, receiver, message = _get_proxy_entities(
+                    event.sender, event.receiver, event.message
                 )
 
                 log(
-                    f"{msg_entity.id}: {sender_entity} -> {receiver_entity}: {msg_entity}",
+                    f"{event.message.id}: {sender} -> {receiver}: {message}",
                     "A: render  message",
                 )
 
-                animations.append(sender.send_message(receiver, msg, msg_entity))
+                animations.append(sender.send_message(receiver, message, event.message))
 
-                if serial or msg_entity.time > curr_time:
+                if serial or event.message.time > curr_time:
                     sender.play_all_send_message_animations(*zip(*animations))
                     animations.clear()
-                    curr_time = msg_entity.time
+                    curr_time = event.message.time
 
                 if not (n := n - 1):
                     break
 
 
 def _get_proxy_entities(
-    sender_entity: tempyral.Entity,
-    receiver_entity: tempyral.Entity,
-    message_entity: tempyral.RequestResponse,
-) -> Tuple[ProxyEntity, ProxyEntity, ProxyEntity[tempyral.RequestResponse]]:
+    sender_entity: schema.Entity,
+    receiver_entity: schema.Entity,
+    message_entity: schema.RequestResponse,
+) -> Tuple[ProxyEntity, ProxyEntity, ProxyEntity[schema.RequestResponse]]:
     """
     Obtain renderer proxies for the simulation entities. The two
     actors will be in the registry already (all actors are created
@@ -100,24 +72,24 @@ def _get_proxy_entities(
         msg_cls = _get_message_cls_for(sender_entity, message_entity)
         msg = msg_cls(entity=message_entity)
         msg.mobj.move_to(sender.get_message_start(message_entity))
-        proxy_entity_registry.set(message_entity, msg)
+        proxy_entity_registry.put(message_entity, msg)
     return sender, receiver, msg
 
 
 def _get_message_cls_for(
-    sender_entity: tempyral.Entity,
-    message_entity: tempyral.RequestResponse,
+    sender_entity: schema.Entity,
+    message_entity: schema.RequestResponse,
 ) -> Type[ProxyEntity]:
     match message_entity, sender_entity:
-        case (tempyral.ApplicationRequest(), _):
+        case (schema.ApplicationRequest(), _):
             return ApplicationRequest
-        case (tempyral.WorkerPollRequest(), tempyral.WorkflowWorker()):
+        case (schema.WorkerPollRequest(), schema.WorkflowWorker()):
             return WorkflowTaskRequest
-        case (tempyral.WorkerRequest(), tempyral.WorkflowWorker()):
+        case (schema.WorkerRequest(), schema.WorkflowWorker()):
             return WorkflowTaskCompleted
-        case (tempyral.WorkerPollRequest(), tempyral.ActivityWorker()):
+        case (schema.WorkerPollRequest(), schema.ActivityWorker()):
             return ActivityTaskRequest
-        case (tempyral.WorkerRequest(), tempyral.ActivityWorker()):
+        case (schema.WorkerRequest(), schema.ActivityWorker()):
             return ActivityTaskCompleted
         case _:
             raise ValueError(
