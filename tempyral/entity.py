@@ -1,10 +1,9 @@
 from collections import defaultdict
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Self
+from typing import TYPE_CHECKING, Any, Callable, Self
 
 from common.event_bus import event_bus, make_message_event, make_state_change_event
 from common.logger import log
-from schema import models
 
 if TYPE_CHECKING:
     from tempyral.request_response import RequestResponse, Response
@@ -56,35 +55,6 @@ class Entity:
             for k, v in self.__dict__.items()
             if k in self.__publish__ & self.__dict__.keys()
         }
-
-    def as_serializable(self) -> models.Entity:
-        model = next(
-            filter(
-                None,
-                (getattr(models, cls.__name__, None) for cls in self.__class__.mro()),
-            )
-        )
-        data = {}
-        for key in self.__publish__:
-            val = getattr(self, key)
-            if isinstance(val, Entity):
-                data[key] = val.as_serializable()
-            elif isinstance(val, Mapping):
-                data[key] = {
-                    k: v.as_serializable() if isinstance(v, Entity) else v
-                    for k, v in val.items()
-                }
-            elif isinstance(val, str):
-                data[key] = val
-            elif isinstance(val, Iterable):
-                data[key] = [
-                    v.as_serializable() if isinstance(v, Entity) else v for v in val
-                ]
-            elif val.__class__.__name__ in ("WorkflowTask", "Activitytask"):
-                data[key] = val.__dict__
-            else:
-                data[key] = val
-        return model(**data)
 
     async def publish_change_event(self):
         await event_bus.publish(make_state_change_event(self.clone()))
