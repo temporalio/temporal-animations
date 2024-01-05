@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ExecuteUpdate",
+      "type": "python",
+      "program": "${workspaceFolder}/scenes/ExecuteUpdate.py",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "TemporalScene",
+      "type": "python",
+      "module": "manim",
+      "args": ["-qh", "scenes/scene.py", "TemporalScene"],
+      "request": "launch",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

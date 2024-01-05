@@ -2,12 +2,12 @@ from typing import Generic, TypeVar
 
 from manim import DOWN, LEFT, PINK, Arrow, VDict, VGroup, VMobject
 
-import tempyral
 from manim_renderer.entity import ProxyEntity
 from manim_renderer.manim_shims import Code
 from manim_renderer.style import FONT_CODE, FONT_SIZE_CODE
+from schema import schema
 
-E = TypeVar("E", bound=tempyral.WithCode)
+E = TypeVar("E", bound=schema.EntityWithCode)
 
 
 class ProxyEntityWithCode(ProxyEntity, Generic[E]):

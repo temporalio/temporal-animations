@@ -1,5 +1,5 @@
-from manim_renderer.scene import TemporalScene, run_simulation
 from tempyral import Application, Workflow
+from tempyral.simulation import Simulation, run_simulation
 
 
 class ExecuteWorkflowApplication(Application):
@@ -30,7 +30,7 @@ func MyWorkflow(ctx workflow.Context) error {
 """
 
 
-class ExecuteWorkflow(TemporalScene):
+class ExecuteWorkflow(Simulation):
     application_classes = [ExecuteWorkflowApplication]
     workflow_classes = [NoOpWorkflow]
 

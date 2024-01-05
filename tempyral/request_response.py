@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Generic, List, Optional, TypeVar
 
@@ -23,7 +22,7 @@ class RequestResponse(Entity):
     __publish__ = Entity.__publish__ | {"stage", "token"}
 
 
-class Response(Entity):
+class Response(RequestResponse):
     """
     A communication between two actors which we model as a response only,
     without a corresponding request.
@@ -32,8 +31,6 @@ class Response(Entity):
     def __init__(self, time=0):
         super().__init__(time)
         self.stage = RequestResponseStage.Response
-
-    __publish__ = Entity.__publish__ | {"stage"}
 
 
 class ApplicationRequest(RequestResponse):
@@ -57,20 +54,31 @@ class ApplicationRequest(RequestResponse):
     __publish__ = RequestResponse.__publish__ | {"request_type"}
 
 
-@dataclass
-class WorkflowTask:
-    workflow_id: "WorkflowId"
-    events: list["HistoryEvent"]
-    pending_updates: list["UpdateInfo"]
+class WorkflowTask(Entity):
+    def __init__(
+        self,
+        workflow_id: "WorkflowId",
+        events: list["HistoryEvent"],
+        pending_updates: list["UpdateInfo"],
+    ):
+        super().__init__()
+        self.workflow_id = workflow_id
+        self.events = events
+        self.pending_updates = pending_updates
+
+    __publish__ = {"workflow_id", "events", "pending_updates"}
 
     def __repr__(self) -> str:
         return f"WFT(wid={self.workflow_id}, events={self.events}, updates={self.pending_updates})"
 
 
-@dataclass
-class ActivityTask:
-    workflow_id: "WorkflowId"
-    events: list["HistoryEvent"]
+class ActivityTask(Entity):
+    def __init__(self, workflow_id: "WorkflowId", events: list["HistoryEvent"]):
+        super().__init__()
+        self.workflow_id = workflow_id
+        self.events = events
+
+    __publish__ = {"workflow_id", "events"}
 
     @property
     def scheduled_event(self) -> "HistoryEvent":
@@ -99,7 +107,7 @@ class WorkerPollRequest(RequestResponse, Generic[T]):
         self.task = task
         self.token = token
 
-    __publish__ = Response.__publish__ | {"task"}
+    __publish__ = RequestResponse.__publish__ | {"task"}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}[{self.time}](id={self.id}: {self.task})"
@@ -124,6 +132,7 @@ class WorkflowTaskCompleted(WorkerRequest):
 
 class ActivityTaskCompleted(WorkerRequest):
     __match_args__ = ("workflow_id", "result", "token")
+    token: int
 
     def __init__(self, workflow_id: "WorkflowId", time: int, result: Any, token: int):
         super().__init__(workflow_id, time)

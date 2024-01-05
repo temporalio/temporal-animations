@@ -1,18 +1,14 @@
 from collections import defaultdict
-from copy import deepcopy
-from typing import Any, Callable, Self
+from enum import Enum
+from types import NoneType
+from typing import Any, Callable, Iterable, Mapping
 
-from common.event_bus import MessageEvent, StateChangeEvent, event_bus
-from common.logger import log
+from schema import schema
 
 
 class Entity:
     """
     An entity in the simulation.
-
-    It can publish two types of events to a renderer:
-    - a change to its internal state
-    - a message between two entities
     """
 
     next_id = defaultdict(int)
@@ -24,45 +20,37 @@ class Entity:
         self.id = self.next_id[key]
         self.time = time
 
-    def __hash__(self) -> int:
-        return hash((type(self).__name__, self.id))
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, type(self)) and hash(self) == hash(other)
-
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id})"
 
-    # A whitelist of instance attributes to be included in the object published
-    # to the event bus.
-    # TODO: publish serialized data to the event bus and make the schema
-    # available to consumers (JSON, JSONSchema).
     __publish__ = {"id", "time"}
-
-    def clone(self) -> Self:
-        cloned = deepcopy(self)
-        # Computed properties to be cloned must be named with a _ prefix.
-        for k in self.__publish__ - self.__dict__.keys():
-            setattr(cloned, k, deepcopy(getattr(self, "_" + k)))
-        return cloned
-
-    def __getstate__(self) -> dict:
-        return {
-            k: v
-            for k, v in self.__dict__.items()
-            if k in self.__publish__ & self.__dict__.keys()
-        }
-
-    async def publish_change_event(self):
-        await event_bus.publish(StateChangeEvent(self.clone()))
-
-    async def publish_message_event(
-        self, sender: "Entity", receiver: "Entity", message: "Entity"
-    ):
-        log(f"{message.id}: {sender} -> {receiver}: {message}", "S: publish message")
-        await event_bus.publish(
-            MessageEvent(sender.clone(), receiver.clone(), message.clone())
-        )
 
     def tick(self, message: "Entity"):
         message.time = self.time = max(self.time, message.time) + 1
+
+
+def to_serializable(obj: Any) -> dict | list | int | bool | str | None:
+    if isinstance(obj, Entity):
+        data = {k: to_serializable(getattr(obj, k)) for k in obj.__publish__}
+        schema_cls = next(
+            filter(
+                None,
+                (getattr(schema, cls.__name__, None) for cls in obj.__class__.mro()),
+            )
+        )
+        data["_type"] = schema_cls.__name__
+        return data
+    elif isinstance(obj, Enum):
+        return {"_type": obj.__class__.__name__, "value": obj.value}
+    elif isinstance(obj, Mapping):
+        return {k: to_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, str):
+        return obj
+    elif isinstance(obj, Iterable):
+        return [to_serializable(v) for v in obj]
+    elif hasattr(obj, "__dict__"):
+        return to_serializable(obj.__dict__)
+    elif isinstance(obj, (int, bool, NoneType)):
+        return obj
+    else:
+        raise TypeError(f"Unexpected type: {type(obj)}")
