@@ -1,9 +1,18 @@
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Callable, Self
+from typing import TYPE_CHECKING, Callable, Self, Type, cast
 
-from common.event_bus import MessageEvent, StateChangeEvent, event_bus
+from common.event_bus import (
+    event_bus,
+    get_serializable_data,
+    make_message_event,
+    make_state_change_event,
+)
 from common.logger import log
+from schema import schema
+
+if TYPE_CHECKING:
+    from tempyral.request_response import RequestResponse, Response
 
 
 class Entity:
@@ -24,20 +33,30 @@ class Entity:
         self.id = self.next_id[key]
         self.time = time
 
-    def __hash__(self) -> int:
-        return hash((type(self).__name__, self.id))
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, type(self)) and hash(self) == hash(other)
-
     def __repr__(self) -> str:
         return f"{type(self).__name__}(id={self.id})"
 
-    # A whitelist of instance attributes to be included in the object published
-    # to the event bus.
-    # TODO: publish serialized data to the event bus and make the schema
-    # available to consumers (JSON, JSONSchema).
     __publish__ = {"id", "time"}
+
+    @classmethod
+    def get_serializable_cls(cls) -> Type[schema.Entity]:
+        model = next(
+            filter(
+                None,
+                (
+                    getattr(schema, parent_cls.__name__, None)
+                    for parent_cls in cls.mro()
+                ),
+            )
+        )
+        return model
+
+    def as_serializable(self) -> schema.Entity:
+        cls = self.get_serializable_cls()
+        data = cast(dict, get_serializable_data(self))
+        obj = cls(**data)
+        print(f"{self.__class__.__name__}[{self.id}] => {cls.__name__}[{obj.id}]")
+        return obj
 
     def clone(self) -> Self:
         cloned = deepcopy(self)
@@ -54,14 +73,17 @@ class Entity:
         }
 
     async def publish_change_event(self):
-        await event_bus.publish(StateChangeEvent(self.clone()))
+        await event_bus.publish(make_state_change_event(self.clone()))
 
     async def publish_message_event(
-        self, sender: "Entity", receiver: "Entity", message: "Entity"
+        self,
+        sender: "Entity",
+        receiver: "Entity",
+        message: "RequestResponse | Response",
     ):
         log(f"{message.id}: {sender} -> {receiver}: {message}", "S: publish message")
         await event_bus.publish(
-            MessageEvent(sender.clone(), receiver.clone(), message.clone())
+            make_message_event(sender.clone(), receiver.clone(), message.clone())
         )
 
     def tick(self, message: "Entity"):

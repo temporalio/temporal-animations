@@ -64,8 +64,9 @@ class RequestResponse(Entity):
     token: Optional[int]
 
 
-class Response(Entity):
-    stage: RequestResponseStage
+# TODO: unnecessary
+class Response(RequestResponse):
+    pass
 
 
 class HistoryEvent(Entity):
@@ -95,7 +96,7 @@ class WorkerPollRequest(RequestResponse):
 
 
 class WorkerRequest(Response):
-    workflow_id: WorkflowId
+    pass
 
 
 class Workflow(Entity):

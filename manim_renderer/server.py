@@ -18,7 +18,15 @@ class Server(ProxyEntityWithChildren[tempyral.Server, tempyral.History, History]
 
     @staticmethod
     def get_child_entities(entity: tempyral.Server) -> List[tempyral.History]:
-        return [w.history for w in entity.namespace.values()]
+        try:
+            [shard] = entity.shards
+        except ValueError:
+            raise ValueError("Multiple history shards are not supported")
+        try:
+            [namespace] = shard.values()
+        except ValueError:
+            raise ValueError("Multiple namespaces are not supported")
+        return [w.history for w in namespace.values()]
 
     def get_message_end(self, message_entity: tempyral.RequestResponse) -> Point3D:
         if isinstance(message_entity, tempyral.WorkerPollRequest):

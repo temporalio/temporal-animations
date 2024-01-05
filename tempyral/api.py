@@ -2,39 +2,22 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-NamespaceId = str
-WorkflowId = str
 TaskQueueId = str
-ProtocolInstanceId = str
+
+# pyright: reportUnusedImport=false
+from schema.schema import (
+    ApplicationRequestType,
+    HistoryEventType,
+    NamespaceId,
+    ProtocolInstanceId,
+    WorkflowId,
+)
 
 
-# https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/event_type.proto#L35
-class HistoryEventType(Enum):
-    WF_STARTED = 1
-    WF_COMPLETED = 2
-    WF_FAILED = 3
-    WFT_SCHEDULED = 5
-    WFT_STARTED = 6
-    WFT_COMPLETED = 7
-    WFT_FAILED = 9
-    ACTIVITY_TASK_SCHEDULED = 10
-    ACTIVITY_TASK_STARTED = 11
-    ACTIVITY_TASK_COMPLETED = 12
-    ACTIVITY_TASK_FAILED = 13
-    TIMER_STARTED = 17
-    TIMER_FIRED = 18
-    WF_SIGNALED = 26
-    WF_UPDATE_ACCEPTED = 41
-    WF_UPDATE_REJECTED = 42
-    WF_UPDATE_COMPLETED = 43
-
-
-class ApplicationRequestType(Enum):
-    StartWorkflow = 1
-    ExecuteWorkflow = 2
-    ExecuteUpdate = 3
-    SignalWorkflow = 4
-    GetWorkflowResult = 5
+@dataclass
+class UpdateInfo:
+    update_id: ProtocolInstanceId
+    update_name: str
 
 
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/command_type.proto#L35
@@ -54,12 +37,6 @@ class CommandType(Enum):
     UPSERT_WORKFLOW_SEARCH_ATTRIBUTES = 13
     PROTOCOL_MESSAGE = 14
     MODIFY_WORKFLOW_PROPERTIES = 16
-
-
-@dataclass
-class UpdateInfo:
-    update_id: ProtocolInstanceId
-    update_name: str
 
 
 class ProtocolMessageType(Enum):

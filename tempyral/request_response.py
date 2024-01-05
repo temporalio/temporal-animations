@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, TypeVar, cast
 
+from schema import schema
 from tempyral.entity import Entity
 
 if TYPE_CHECKING:
@@ -20,10 +21,13 @@ class RequestResponse(Entity):
         self.stage = RequestResponseStage.Request
         self.token: Optional[int] = None
 
+    def as_serializable(self) -> schema.RequestResponse:
+        return cast(schema.RequestResponse, super().as_serializable())
+
     __publish__ = Entity.__publish__ | {"stage", "token"}
 
 
-class Response(Entity):
+class Response(RequestResponse):
     """
     A communication between two actors which we model as a response only,
     without a corresponding request.
@@ -32,8 +36,6 @@ class Response(Entity):
     def __init__(self, time=0):
         super().__init__(time)
         self.stage = RequestResponseStage.Response
-
-    __publish__ = Entity.__publish__ | {"stage"}
 
 
 class ApplicationRequest(RequestResponse):
@@ -99,7 +101,7 @@ class WorkerPollRequest(RequestResponse, Generic[T]):
         self.task = task
         self.token = token
 
-    __publish__ = Response.__publish__ | {"task"}
+    __publish__ = RequestResponse.__publish__ | {"task"}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}[{self.time}](id={self.id}: {self.task})"
@@ -124,6 +126,7 @@ class WorkflowTaskCompleted(WorkerRequest):
 
 class ActivityTaskCompleted(WorkerRequest):
     __match_args__ = ("workflow_id", "result", "token")
+    token: int
 
     def __init__(self, workflow_id: "WorkflowId", time: int, result: Any, token: int):
         super().__init__(workflow_id, time)

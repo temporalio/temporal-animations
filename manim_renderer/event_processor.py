@@ -4,7 +4,7 @@ from typing import Iterable, Tuple, Type, cast
 from manim import Animation, Scene
 
 import tempyral
-from common.event_bus import EventBus, MessageEvent, StateChangeEvent, event_bus
+from common.event_bus import EventBus, event_bus
 from common.logger import log
 from manim_renderer.application import ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
@@ -14,9 +14,10 @@ from manim_renderer.worker import (
     WorkflowTaskCompleted,
     WorkflowTaskRequest,
 )
+from schema import schema
 
-event_bus: EventBus[tempyral.Entity]
-type Event = StateChangeEvent[tempyral.Entity] | MessageEvent[tempyral.Entity]
+event_bus: EventBus
+type Event = schema.StateChangeEvent | schema.MessageEvent
 
 
 def set_scene(scene: Scene):
@@ -40,7 +41,7 @@ async def process_simulation_events():
 
 
 def _render_simulation_events(
-    events: list[StateChangeEvent[tempyral.Entity] | MessageEvent[tempyral.Entity]],
+    events: list[Event],
 ):
     curr_time = -1
     animations: list[Iterable[Animation | None]] = []
@@ -48,14 +49,14 @@ def _render_simulation_events(
     n = 400
     for event in events:
         match event:
-            case StateChangeEvent(entity):
-                proxy_entity = proxy_entity_registry.get(entity)
-                proxy_entity.render_to_scene(entity)
-            case MessageEvent(sender_entity, receiver_entity, msg_entity):
+            case schema.StateChangeEvent():
+                proxy_entity = proxy_entity_registry.get(event.entity)
+                proxy_entity.render_to_scene(event.entity)
+            case schema.MessageEvent():
                 sender_entity, receiver_entity, msg_entity = (
-                    cast(tempyral.Entity, sender_entity),
-                    cast(tempyral.Entity, receiver_entity),
-                    cast(tempyral.RequestResponse, msg_entity),
+                    cast(tempyral.Entity, event.sender),
+                    cast(tempyral.Entity, event.receiver),
+                    cast(tempyral.RequestResponse, event.message),
                 )
                 sender, receiver, msg = _get_proxy_entities(
                     sender_entity, receiver_entity, msg_entity
