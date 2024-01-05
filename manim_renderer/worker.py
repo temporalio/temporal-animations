@@ -16,12 +16,11 @@ from manim_renderer import style
 from manim_renderer.code import ProxyEntityWithCode
 from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren
 from manim_renderer.history import HistoryEvents
-from tempyral.request_response import RequestResponseStage
 
 
 class ActivityTaskRequest(ProxyEntity[tempyral.WorkerPollRequest]):
     def render(self, entity: tempyral.WorkerPollRequest) -> Mobject:
-        if entity.stage == RequestResponseStage.Request:
+        if entity.stage == tempyral.RequestResponseStage.Request:
             return style.invisible_message()
         else:
             return style.message("Activity Task")
@@ -55,7 +54,7 @@ class BoxedHistoryEvents(HistoryEvents):
 
 class WorkflowTaskRequest(ProxyEntity[tempyral.WorkerPollRequest]):
     def render(self, entity: tempyral.WorkerPollRequest) -> Mobject:
-        if entity.stage == RequestResponseStage.Request:
+        if entity.stage == tempyral.RequestResponseStage.Request:
             return style.invisible_message()
         else:
             request = self.with_time(style.message("WFT"), entity)
