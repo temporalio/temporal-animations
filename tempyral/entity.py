@@ -53,9 +53,7 @@ class Entity:
     def as_serializable(self) -> schema.Entity:
         cls = self.get_serializable_cls()
         data = cast(dict, get_serializable_data(self))
-        obj = cls(**data)
-        print(f"{self.__class__.__name__}[{self.id}] => {cls.__name__}[{obj.id}]")
-        return obj
+        return cls(**data)
 
     def __getstate__(self) -> dict:
         return {

@@ -1,5 +1,6 @@
-from typing import Coroutine, Iterable
+from typing import Coroutine, Iterable, cast
 
+from schema import schema
 from tempyral.api import ApplicationRequestType
 from tempyral.code import WithCode
 from tempyral.entity import Entity
@@ -32,6 +33,9 @@ class Application(Entity, WithCode):
                 raise ValueError(f"Unsupported application directive: {directive}")
         self.requests = requests
         self.blocked_lines = set()
+
+    def as_serializable(self) -> schema.Application:
+        return cast(schema.Application, super().as_serializable())
 
     def __repr__(self) -> str:
         return f"App[{self.time}]"

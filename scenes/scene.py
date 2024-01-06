@@ -1,124 +1,42 @@
-import asyncio
-import os
+import json
 import sys
-import traceback
 from datetime import datetime
-from typing import Coroutine, List, Tuple, Type
+from typing import Iterator
 
-from manim import (
-    DL,
-    DOWN,
-    LEFT,
-    RIGHT,
-    SMALL_BUFF,
-    UP,
-    Camera,
-    Dot,
-    Scene,
-    Text,
-    config,
-)
+from manim import DL, DOWN, LEFT, RIGHT, SMALL_BUFF, UP, Camera, Dot, Scene, Text
 
 import manim_renderer as renderer
-from common.utils import debug
 from manim_renderer.style import COLOR_SCENE_BACKGROUND
-from tempyral import (
-    ActivityWorker,
-    Application,
-    Entity,
-    Server,
-    Workflow,
-    WorkflowWorker,
-)
-
-if os.getenv("MANIM_DRY_RUN"):
-    config.dry_run = True
+from schema import schema
 
 
 class TemporalScene(Scene):
-    """
-    To create an animation:
-
-    - create a subclass of this class
-    - set the `workflow_classes` class attribute
-    - implement `simulation()`
-    """
-
-    application_classes: List[Type[Application]]
-    workflow_classes: List[Type[Workflow]]
-
-    def setup(self):
-        assert isinstance(self.camera, Camera)
-        self.camera.background_color = COLOR_SCENE_BACKGROUND
-
     def construct(self):
-        self.add_timestamp()
-        server, apps, wworkers, aworkers = self.make_simulation_entities()
-        self.make_renderer_proxies(server, apps, wworkers, aworkers)
-        asyncio.run(self.do_simulation(server, apps, wworkers, aworkers, render=True))
+        events = read_events()
+        match event := next(events):
+            case schema.InitEvent():
+                self.init(event)
+            case _:
+                raise ValueError("The first event must be an InitEvent")
+        renderer.render_simulation_events(events)
         self.wait(2)
 
-    async def do_simulation(
+    def init(
         self,
-        server: Server,
-        apps: List[Application],
-        workflow_workers: List[WorkflowWorker],
-        activity_workers: List[ActivityWorker],
-        render: bool,
-    ):
-        coros: List[Coroutine] = [
-            debug(w.poll(server)) for w in workflow_workers + activity_workers
-        ]
-        for app in apps:
-            coros.extend(map(debug, app.get_coroutines(server)))
-        if render:
-            coros.append(debug(renderer.process_simulation_events()))
-
-        try:
-            async with asyncio.TaskGroup() as tg:
-                tasks = [tg.create_task(coro) for coro in coros]
-                Entity.terminate_simulation = lambda _: [t.cancel() for t in tasks]
-
-        except ExceptionGroup as eg:
-            print(f"Caught ExceptionGroup:", file=sys.stderr)
-            for e in eg.exceptions:
-                print(f"    {e}", file=sys.stderr)
-                traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)
-            sys.exit(1)
-
-    def make_simulation_entities(
-        self,
-    ) -> Tuple[Server, List[Application], List[WorkflowWorker], List[ActivityWorker]]:
-        server = Server()
-
-        return (
-            server,
-            [cls() for cls in self.application_classes],
-            [WorkflowWorker(self.workflow_classes)],
-            [ActivityWorker()],
-        )
-
-    def make_renderer_proxies(
-        self,
-        simulation_server: Server,
-        simulation_apps: List[Application],
-        simulation_workflow_workers: List[WorkflowWorker],
-        simulation_activity_workers: List[ActivityWorker],
+        event: schema.InitEvent,
     ):
         """
-        Create proxy entities and add them to the manim scene.
+        Initialize the manim scene.
         """
         renderer.set_scene(self)
-        server = renderer.Server(simulation_server.as_serializable())
-        [app] = [renderer.Application(a.as_serializable()) for a in simulation_apps]
-        [wworker] = [
-            renderer.WorkflowWorker(w.as_serializable())
-            for w in simulation_workflow_workers
-        ]
-        [aworker] = [
-            renderer.ActivityWorker(w.as_serializable())
-            for w in simulation_activity_workers
-        ]
+        assert isinstance(self.camera, Camera)
+        self.camera.background_color = COLOR_SCENE_BACKGROUND
+        self.add_timestamp()
+
+        server = renderer.Server(event.server)
+        [app] = [renderer.Application(a) for a in event.apps]
+        [wworker] = [renderer.WorkflowWorker(w) for w in event.workflow_workers]
+        [aworker] = [renderer.ActivityWorker(w) for w in event.activity_workers]
 
         app.set_dock_direction(RIGHT).mobj.align_on_border(
             UP, buff=0.25
@@ -135,6 +53,12 @@ class TemporalScene(Scene):
 
         self.add(app.mobj, server.mobj, wworker.mobj, aworker.mobj)
 
+        for a, s in zip(
+            [server, *[app], *[wworker]],
+            [event.server, *event.apps, *event.workflow_workers],
+        ):
+            a.render_to_scene(s)  # type: ignore
+
         if False:
             self.add(
                 *(
@@ -142,14 +66,6 @@ class TemporalScene(Scene):
                     for t in [app, server, wworker, aworker]
                 )
             )
-
-        for a, s in zip(
-            [server, *[app], *[wworker]],
-            [simulation_server, *simulation_apps, *simulation_workflow_workers],
-        ):
-            a.render_to_scene(s)  # type: ignore
-
-        return server, [app], [wworker]
 
     def add_timestamp(self):
         time = Text(datetime.now().strftime("%H:%M:%S"), font_size=8)
@@ -163,7 +79,12 @@ class TemporalScene(Scene):
         wworker: renderer.WorkflowWorker,
     ):
         self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
+        self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
 
 
-def run_simulation(scene: TemporalScene):
-    asyncio.run(scene.do_simulation(*scene.make_simulation_entities(), render=False))
+def read_events(file=sys.stdin) -> Iterator[schema.Event]:
+    for line in file.readlines():
+        data = json.loads(line)
+        cls = getattr(schema, data.pop("type"))
+
+        yield cls(**data)

@@ -1,7 +1,13 @@
 from enum import Enum
 from typing import Any, Hashable, Optional, OrderedDict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
+
+
+class Model(BaseModel):
+    @computed_field
+    def type(self) -> str:
+        return self.__class__.__name__
 
 
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/event_type.proto#L35
@@ -38,7 +44,7 @@ WorkflowId = str
 ProtocolInstanceId = str
 
 
-class UpdateInfo(BaseModel):
+class UpdateInfo(Model):
     update_id: ProtocolInstanceId
     update_name: str
 
@@ -48,7 +54,14 @@ class RequestResponseStage(Enum):
     Response = 2
 
 
-class Entity(BaseModel):
+class Entity(Model):
+    """
+    An entity in the simulation. Instances of the same type with the same id are
+    equal from the point of view of hashing and object equality. This allows a
+    renderer to map entity instances referenced in events to a fixed set of
+    graphical components in the animation.
+    """
+
     id: int
     time: int
 
@@ -80,13 +93,13 @@ class History(Entity):
     events: list[HistoryEvent]
 
 
-class WorkflowTask(BaseModel):
+class WorkflowTask(Model):
     workflow_id: WorkflowId
     events: list[HistoryEvent]
     pending_updates: list[UpdateInfo]
 
 
-class ActivityTask(BaseModel):
+class ActivityTask(Model):
     workflow_id: WorkflowId
     events: list[HistoryEvent]
 
@@ -117,7 +130,7 @@ class ActivityWorker(EntityWithCode):
     pass
 
 
-class WorkflowData(BaseModel):
+class WorkflowData(Model):
     history: History
     pending_updates: list[UpdateInfo]
 
@@ -146,11 +159,42 @@ class ActivityTaskCompleted(WorkerRequest):
     pass
 
 
-class StateChangeEvent(BaseModel):
+class InitEvent(Model):
+    """
+    The first event emitted by a simulation must be of this type. Its purpose is
+    to declare the identities of the actor instances that will be involved in
+    the simulation. A renderer will typically use this event to position the
+    actors in the scene, and establish a mapping between these graphical
+    components and the actor ids, so that actors referenced in subsequent
+    StateChange and Message events can be mapped to their graphical components
+    in the animation.
+    """
+
+    server: Server
+    apps: list[Application]
+    workflow_workers: list[WorkflowWorker]
+    activity_workers: list[ActivityWorker]
+
+
+class StateChangeEvent(Model):
+    """
+    An event indicating that the internal state of `entity` has changed. A
+    renderer will typically re-render the graphical component corresponding to
+    the entity.
+    """
+
     entity: Entity
 
 
-class MessageEvent(BaseModel):
+class MessageEvent(Model):
+    """
+    An event indicating that `sender` has sent `message` to `receiver`. A
+    renderer will typically display an animation of the message.
+    """
+
     sender: Entity
     receiver: Entity
     message: RequestResponse
+
+
+type Event = StateChangeEvent | MessageEvent | InitEvent

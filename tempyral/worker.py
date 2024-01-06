@@ -3,6 +3,7 @@ from enum import Enum
 from typing import AsyncGenerator, Generic, List, Type, TypeVar, cast
 
 from common.logger import log
+from schema import schema
 from tempyral.api import (
     Command,
     CommandType,
@@ -77,6 +78,9 @@ fn myActivity() {
         "language",
         "blocked_lines",
     }
+
+    def as_serializable(self) -> schema.ActivityWorker:
+        return cast(schema.ActivityWorker, super().as_serializable())
 
     def task_factory(self) -> ActivityTask:
         return ActivityTask("", [])
@@ -202,6 +206,9 @@ class WorkflowWorker(Worker[WorkflowTask]):
         self.workflows = [cls(self) for cls in workflow_classes]
 
     __publish__ = Worker.__publish__ | {"workflows"}
+
+    def as_serializable(self) -> schema.WorkflowWorker:
+        return cast(schema.WorkflowWorker, super().as_serializable())
 
     def task_factory(self) -> WorkflowTask:
         return WorkflowTask("", [], [])

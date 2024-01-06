@@ -1,9 +1,7 @@
-from asyncio import CancelledError
 from typing import Iterable, Tuple, Type
 
 from manim import Animation, Scene
 
-from common.event_bus import EventBus, event_bus
 from common.logger import log
 from manim_renderer.application import ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
@@ -15,33 +13,12 @@ from manim_renderer.worker import (
 )
 from schema import schema
 
-event_bus: EventBus
-type Event = schema.StateChangeEvent | schema.MessageEvent
-
 
 def set_scene(scene: Scene):
     VisualElement.scene = scene
 
 
-async def process_simulation_events():
-    async def collect(draining: bool):
-        while not (draining and event_bus.empty()):
-            yield await event_bus.bus.get()
-
-    events: list[Event] = []
-    try:
-        async for e in collect(False):
-            events.append(e)
-    except CancelledError:
-        async for e in collect(True):
-            events.append(e)
-
-    _render_simulation_events(events)
-
-
-def _render_simulation_events(
-    events: list[Event],
-):
+def render_simulation_events(events: Iterable[schema.Event]):
     curr_time = -1
     animations: list[Iterable[Animation | None]] = []
     serial = True

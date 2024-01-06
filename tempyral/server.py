@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from common.logger import log
 from common.utils import drain
+from schema import schema
 from tempyral.api import (
     ApplicationRequestType,
     Command,
@@ -99,6 +100,9 @@ class Server(Entity):
             NamespaceId,
             Queue[ActivityTask],
         ] = {DEFAULT_NAMESPACE: Queue()}
+
+    def as_serializable(self) -> schema.Server:
+        return cast(schema.Server, super().as_serializable())
 
     __publish__ = Entity.__publish__ | {"shards"}
 

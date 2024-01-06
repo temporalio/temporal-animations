@@ -1,4 +1,3 @@
-from asyncio import Queue
 from enum import Enum
 from types import NoneType
 from typing import TYPE_CHECKING, Any, Iterable, Mapping
@@ -28,6 +27,20 @@ def get_serializable_data(obj: Any) -> dict | list | int | bool | str | None:
         raise TypeError(f"Unexpected type: {type(obj)}")
 
 
+def make_init_event(
+    server: "tempyral.Server",
+    apps: list["tempyral.Application"],
+    workflow_workers: list["tempyral.WorkflowWorker"],
+    activity_workers: list["tempyral.ActivityWorker"],
+) -> schema.InitEvent:
+    return schema.InitEvent(
+        server=server.as_serializable(),
+        apps=[a.as_serializable() for a in apps],
+        workflow_workers=[w.as_serializable() for w in workflow_workers],
+        activity_workers=[w.as_serializable() for w in activity_workers],
+    )
+
+
 def make_state_change_event(
     entity: "tempyral.Entity",
 ) -> schema.StateChangeEvent:
@@ -47,14 +60,8 @@ def make_message_event(
 
 
 class EventBus:
-    def __init__(self):
-        self.bus: Queue[schema.StateChangeEvent | schema.MessageEvent] = Queue()
-
-    async def publish(self, event: schema.StateChangeEvent | schema.MessageEvent):
-        await self.bus.put(event)
-
-    def empty(self) -> bool:
-        return self.bus.empty()
+    async def publish(self, event: schema.Event):
+        print(event.model_dump_json())
 
 
 event_bus = EventBus()

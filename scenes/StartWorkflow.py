@@ -1,6 +1,6 @@
 from scenes.ExecuteWorkflow import NoOpWorkflow
-from scenes.scene import TemporalScene, run_simulation
 from tempyral import Application
+from tempyral.simulation import Simulation, run_simulation
 
 
 class StartWorkflowApplication(Application):
@@ -16,7 +16,7 @@ const wfHandle = await handle.client.start(myWorkflow, {        // tempyral: App
 """
 
 
-class StartWorkflow(TemporalScene):
+class StartWorkflow(Simulation):
     application_classes = [StartWorkflowApplication]
     workflow_classes = [NoOpWorkflow]
 
