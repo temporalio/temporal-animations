@@ -12,7 +12,7 @@ from schema import schema
 
 class TemporalScene(Scene):
     def construct(self):
-        events = read_events()
+        events = read_events(open("events.json"))
         match event := next(events):
             case schema.InitEvent():
                 self.init(event)
