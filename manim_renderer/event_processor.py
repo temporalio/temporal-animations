@@ -1,9 +1,8 @@
 from asyncio import CancelledError
-from typing import Iterable, Tuple, Type, cast
+from typing import Iterable, Tuple, Type
 
 from manim import Animation, Scene
 
-import tempyral
 from common.event_bus import EventBus, event_bus
 from common.logger import log
 from manim_renderer.application import ApplicationRequest
@@ -53,36 +52,31 @@ def _render_simulation_events(
                 proxy_entity = proxy_entity_registry.get(event.entity)
                 proxy_entity.render_to_scene(event.entity)
             case schema.MessageEvent():
-                sender_entity, receiver_entity, msg_entity = (
-                    cast(tempyral.Entity, event.sender),
-                    cast(tempyral.Entity, event.receiver),
-                    cast(tempyral.RequestResponse, event.message),
-                )
-                sender, receiver, msg = _get_proxy_entities(
-                    sender_entity, receiver_entity, msg_entity
+                sender, receiver, message = _get_proxy_entities(
+                    event.sender, event.receiver, event.message
                 )
 
                 log(
-                    f"{msg_entity.id}: {sender_entity} -> {receiver_entity}: {msg_entity}",
+                    f"{event.message.id}: {sender} -> {receiver}: {message}",
                     "A: render  message",
                 )
 
-                animations.append(sender.send_message(receiver, msg, msg_entity))
+                animations.append(sender.send_message(receiver, message, event.message))
 
-                if serial or msg_entity.time > curr_time:
+                if serial or event.message.time > curr_time:
                     sender.play_all_send_message_animations(*zip(*animations))
                     animations.clear()
-                    curr_time = msg_entity.time
+                    curr_time = event.message.time
 
                 if not (n := n - 1):
                     break
 
 
 def _get_proxy_entities(
-    sender_entity: tempyral.Entity,
-    receiver_entity: tempyral.Entity,
-    message_entity: tempyral.RequestResponse,
-) -> Tuple[ProxyEntity, ProxyEntity, ProxyEntity[tempyral.RequestResponse]]:
+    sender_entity: schema.Entity,
+    receiver_entity: schema.Entity,
+    message_entity: schema.RequestResponse,
+) -> Tuple[ProxyEntity, ProxyEntity, ProxyEntity[schema.RequestResponse]]:
     """
     Obtain renderer proxies for the simulation entities. The two
     actors will be in the registry already (all actors are created
@@ -106,19 +100,19 @@ def _get_proxy_entities(
 
 
 def _get_message_cls_for(
-    sender_entity: tempyral.Entity,
-    message_entity: tempyral.RequestResponse,
+    sender_entity: schema.Entity,
+    message_entity: schema.RequestResponse,
 ) -> Type[ProxyEntity]:
     match message_entity, sender_entity:
-        case (tempyral.ApplicationRequest(), _):
+        case (schema.ApplicationRequest(), _):
             return ApplicationRequest
-        case (tempyral.WorkerPollRequest(), tempyral.WorkflowWorker()):
+        case (schema.WorkerPollRequest(), schema.WorkflowWorker()):
             return WorkflowTaskRequest
-        case (tempyral.WorkerRequest(), tempyral.WorkflowWorker()):
+        case (schema.WorkerRequest(), schema.WorkflowWorker()):
             return WorkflowTaskCompleted
-        case (tempyral.WorkerPollRequest(), tempyral.ActivityWorker()):
+        case (schema.WorkerPollRequest(), schema.ActivityWorker()):
             return ActivityTaskRequest
-        case (tempyral.WorkerRequest(), tempyral.ActivityWorker()):
+        case (schema.WorkerRequest(), schema.ActivityWorker()):
             return ActivityTaskCompleted
         case _:
             raise ValueError(

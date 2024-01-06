@@ -99,20 +99,22 @@ class WorkerRequest(Response):
     pass
 
 
-class Workflow(Entity):
+class EntityWithCode(Entity):
     code: str
     language: str
     blocked_lines: set[int]
+
+
+class Workflow(EntityWithCode):
+    pass
 
 
 class WorkflowWorker(Entity):
     workflows: list[Workflow]
 
 
-class ActivityWorker(Entity):
-    code: str
-    language: str
-    blocked_lines: set[int]
+class ActivityWorker(EntityWithCode):
+    pass
 
 
 class WorkflowData(BaseModel):
@@ -136,10 +138,8 @@ class WorkflowTaskCompleted(WorkerRequest):
     pass
 
 
-class Application(Entity):
-    code: str
-    language: str
-    blocked_lines: set[int]
+class Application(EntityWithCode):
+    pass
 
 
 class ActivityTaskCompleted(WorkerRequest):

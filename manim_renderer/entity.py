@@ -3,7 +3,7 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import Enum
-from typing import Any, Dict, Generic, Iterable, List, Self, Type, TypeVar
+from typing import Dict, Generic, Iterable, List, Self, Type, TypeVar
 
 import numpy as np
 from manim import (
@@ -22,11 +22,11 @@ from manim import (
 )
 from manim.typing import Point3D, Vector3
 
-import tempyral
 from common.utils import notnull
 from manim_renderer import style
+from schema import schema
 
-E = TypeVar("E", bound=tempyral.Entity)
+E = TypeVar("E", bound=schema.Entity)
 
 from manim_renderer.manim_shims import AnimationGroup, ApplyMethod, Transform
 
@@ -88,10 +88,10 @@ class ProxyEntity(Generic[E], VisualElement):
             self.mobj.get_edge_center(self.dock_direction) + 0.5 * self.dock_direction
         )
 
-    def get_message_start(self, _: tempyral.RequestResponse) -> Point3D:
+    def get_message_start(self, _: schema.RequestResponse) -> Point3D:
         return self.mobj.get_center()
 
-    def get_message_end(self, _: tempyral.RequestResponse) -> Point3D:
+    def get_message_end(self, _: schema.RequestResponse) -> Point3D:
         return self.dock_point()
 
     @abstractmethod
@@ -109,22 +109,22 @@ class ProxyEntity(Generic[E], VisualElement):
         self,
         receiver: "ProxyEntity",
         message: "ProxyEntity",
-        message_entity: tempyral.RequestResponse,
+        message_entity: schema.RequestResponse,
     ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending a message.
         """
         match message_entity.stage:
-            case tempyral.RequestResponseStage.Request:
+            case schema.RequestResponseStage.Request:
                 return self.send_request(receiver, message, message_entity)
-            case tempyral.RequestResponseStage.Response:
+            case schema.RequestResponseStage.Response:
                 return self.send_response(receiver, message, message_entity)
 
     def send_request(
         self,
         receiver: "ProxyEntity",
-        message: "ProxyEntity[tempyral.RequestResponse]",
-        message_entity: tempyral.RequestResponse,
+        message: "ProxyEntity[schema.RequestResponse]",
+        message_entity: schema.RequestResponse,
     ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending the request stage of a message.
@@ -159,7 +159,7 @@ class ProxyEntity(Generic[E], VisualElement):
         self,
         receiver: "ProxyEntity",
         message: "ProxyEntity",
-        message_entity: tempyral.RequestResponse,
+        message_entity: schema.RequestResponse,
     ) -> tuple[Animation, Animation, Animation | None]:
         """
         Create (but do not play) animations for sending the response stage of a message.
@@ -222,7 +222,7 @@ class ProxyEntity(Generic[E], VisualElement):
         ).arrange(RIGHT, buff=0.05, aligned_edge=DOWN)
 
 
-F = TypeVar("F", bound=tempyral.Entity)
+F = TypeVar("F", bound=schema.Entity)
 Q = TypeVar("Q", bound=ProxyEntity)
 
 
@@ -241,7 +241,7 @@ class ProxyEntityWithChildren(
     child_cls: Type[Q]
     child_align_direction: Vector3
 
-    def __init__(self, entity: Any, parent: VisualElement = root) -> None:
+    def __init__(self, entity: E, parent: VisualElement = root) -> None:
         super().__init__(entity, parent=parent)
         self.children: List[Q] = []
         for e in self.get_child_entities(entity):
@@ -282,7 +282,7 @@ class ProxyEntityRegistry(Generic[E]):
     """
 
     def __init__(self):
-        self._registry: Dict[tempyral.Entity, ProxyEntity] = {}
+        self._registry: Dict[schema.Entity, ProxyEntity] = {}
 
     def set(self, entity: E, proxy: ProxyEntity[E]) -> None:
         if entity in self._registry:
