@@ -1,6 +1,5 @@
 from collections import defaultdict
-from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, Self, Type, cast
+from typing import TYPE_CHECKING, Callable, Type, cast
 
 from common.event_bus import (
     event_bus,
@@ -58,13 +57,6 @@ class Entity:
         print(f"{self.__class__.__name__}[{self.id}] => {cls.__name__}[{obj.id}]")
         return obj
 
-    def clone(self) -> Self:
-        cloned = deepcopy(self)
-        # Computed properties to be cloned must be named with a _ prefix.
-        for k in self.__publish__ - self.__dict__.keys():
-            setattr(cloned, k, deepcopy(getattr(self, "_" + k)))
-        return cloned
-
     def __getstate__(self) -> dict:
         return {
             k: v
@@ -73,7 +65,7 @@ class Entity:
         }
 
     async def publish_change_event(self):
-        await event_bus.publish(make_state_change_event(self.clone()))
+        await event_bus.publish(make_state_change_event(self))
 
     async def publish_message_event(
         self,
@@ -82,9 +74,7 @@ class Entity:
         message: "RequestResponse | Response",
     ):
         log(f"{message.id}: {sender} -> {receiver}: {message}", "S: publish message")
-        await event_bus.publish(
-            make_message_event(sender.clone(), receiver.clone(), message.clone())
-        )
+        await event_bus.publish(make_message_event(sender, receiver, message))
 
     def tick(self, message: "Entity"):
         message.time = self.time = max(self.time, message.time) + 1
