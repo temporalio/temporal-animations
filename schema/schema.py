@@ -1,13 +1,27 @@
+import sys
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Hashable, Optional, OrderedDict
-
-from pydantic import BaseModel, computed_field
+from typing import Any, Hashable, Optional, OrderedDict, Self
 
 
-class Model(BaseModel):
-    @computed_field
-    def type(self) -> str:
-        return self.__class__.__name__
+@dataclass
+class Model:
+    type: str = field(init=False)
+
+    def __post_init__(self):
+        self.type = self.__class__.__name__
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        this_module = sys.modules[__name__]
+        field_data = {}
+        for k, v in data.items():
+            if isinstance(v, dict) and "_type" in v:
+                cls = getattr(this_module, v.pop("_type"))
+                field_data[k] = cls.from_dict(v)
+            else:
+                field_data[k] = v
+        return cls(**field_data)
 
 
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/event_type.proto#L35

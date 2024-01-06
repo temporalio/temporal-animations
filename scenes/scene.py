@@ -1,7 +1,7 @@
 import json
 import sys
 from datetime import datetime
-from typing import Iterator
+from typing import Iterator, cast
 
 from manim import DL, DOWN, LEFT, RIGHT, SMALL_BUFF, UP, Camera, Dot, Scene, Text
 
@@ -85,6 +85,5 @@ class TemporalScene(Scene):
 def read_events(file=sys.stdin) -> Iterator[schema.Event]:
     for line in file.readlines():
         data = json.loads(line)
-        cls = getattr(schema, data.pop("type"))
-
-        yield cls(**data)
+        cls = cast(schema.Event, getattr(schema, data.pop("_type")))
+        yield cls.from_dict(data)

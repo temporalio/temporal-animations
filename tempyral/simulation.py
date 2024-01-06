@@ -3,7 +3,6 @@ import sys
 import traceback
 from typing import Coroutine, Type
 
-from common.event_bus import event_bus, make_init_event
 from common.utils import debug
 from tempyral import (
     ActivityWorker,
@@ -13,6 +12,7 @@ from tempyral import (
     Workflow,
     WorkflowWorker,
 )
+from tempyral.serialize import emit_init_event
 
 
 class Simulation:
@@ -30,7 +30,7 @@ class Simulation:
             [WorkflowWorker(self.workflow_classes)],
             [ActivityWorker()],
         )
-        await event_bus.publish(make_init_event(server, apps, wworkers, aworkers))
+        emit_init_event(server, apps, wworkers, aworkers)
 
         coros: list[Coroutine] = [w.poll(server) for w in wworkers + aworkers]
         for app in apps:

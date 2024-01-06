@@ -1,8 +1,7 @@
+import json
 from enum import Enum
 from types import NoneType
 from typing import TYPE_CHECKING, Any, Iterable, Mapping
-
-from schema import schema
 
 if TYPE_CHECKING:
     import tempyral
@@ -10,7 +9,9 @@ if TYPE_CHECKING:
 
 def get_serializable_data(obj: Any) -> dict | list | int | bool | str | None:
     if hasattr(obj, "__publish__"):
-        return {k: get_serializable_data(getattr(obj, k)) for k in obj.__publish__}
+        data = {k: get_serializable_data(getattr(obj, k)) for k in obj.__publish__}
+        data["_type"] = obj.__class__.__name__
+        return data
     elif isinstance(obj, Enum):
         return obj.value
     elif isinstance(obj, Mapping):
@@ -27,41 +28,41 @@ def get_serializable_data(obj: Any) -> dict | list | int | bool | str | None:
         raise TypeError(f"Unexpected type: {type(obj)}")
 
 
-def make_init_event(
+def emit_init_event(
     server: "tempyral.Server",
     apps: list["tempyral.Application"],
     workflow_workers: list["tempyral.WorkflowWorker"],
     activity_workers: list["tempyral.ActivityWorker"],
-) -> schema.InitEvent:
-    return schema.InitEvent(
-        server=server.as_serializable(),
-        apps=[a.as_serializable() for a in apps],
-        workflow_workers=[w.as_serializable() for w in workflow_workers],
-        activity_workers=[w.as_serializable() for w in activity_workers],
+):
+    _emit(
+        dict(
+            server=get_serializable_data(server),
+            apps=[get_serializable_data(a) for a in apps],
+            workflow_workers=[get_serializable_data(w) for w in workflow_workers],
+            activity_workers=[get_serializable_data(w) for w in activity_workers],
+            _type="InitEvent",
+        )
     )
 
 
-def make_state_change_event(
-    entity: "tempyral.Entity",
-) -> schema.StateChangeEvent:
-    return schema.StateChangeEvent(entity=entity.as_serializable())
+def emit_change_event(entity: "tempyral.Entity"):
+    _emit(dict(entity=get_serializable_data(entity), _type="StateChangeEvent"))
 
 
-def make_message_event(
+def emit_message_event(
     sender: "tempyral.Entity",
     receiver: "tempyral.Entity",
-    message: "tempyral.RequestResponse",
-) -> schema.MessageEvent:
-    return schema.MessageEvent(
-        sender=sender.as_serializable(),
-        receiver=receiver.as_serializable(),
-        message=message.as_serializable(),
+    message: "tempyral.RequestResponse | tempyral.Response",
+):
+    _emit(
+        dict(
+            sender=get_serializable_data(sender),
+            receiver=get_serializable_data(receiver),
+            message=get_serializable_data(message),
+            _type="MessageEvent",
+        )
     )
 
 
-class EventBus:
-    async def publish(self, event: schema.Event):
-        print(event.model_dump_json())
-
-
-event_bus = EventBus()
+def _emit(data: dict[str, Any]):
+    print(json.dumps(data, sort_keys=True))

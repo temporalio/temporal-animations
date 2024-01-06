@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, TypeVar
 
-from schema import schema
 from tempyral.entity import Entity
 
 if TYPE_CHECKING:
@@ -20,9 +19,6 @@ class RequestResponse(Entity):
         super().__init__(time)
         self.stage = RequestResponseStage.Request
         self.token: Optional[int] = None
-
-    def as_serializable(self) -> schema.RequestResponse:
-        return cast(schema.RequestResponse, super().as_serializable())
 
     __publish__ = Entity.__publish__ | {"stage", "token"}
 

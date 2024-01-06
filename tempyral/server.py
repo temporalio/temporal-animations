@@ -6,7 +6,6 @@ from uuid import uuid4
 
 from common.logger import log
 from common.utils import drain
-from schema import schema
 from tempyral.api import (
     ApplicationRequestType,
     Command,
@@ -30,6 +29,7 @@ from tempyral.request_response import (
     WorkflowTask,
     WorkflowTaskCompleted,
 )
+from tempyral.serialize import emit_change_event
 
 DEFAULT_NAMESPACE: NamespaceId = "default"
 
@@ -101,9 +101,6 @@ class Server(Entity):
             Queue[ActivityTask],
         ] = {DEFAULT_NAMESPACE: Queue()}
 
-    def as_serializable(self) -> schema.Server:
-        return cast(schema.Server, super().as_serializable())
-
     __publish__ = Entity.__publish__ | {"shards"}
 
     def __repr__(self) -> str:
@@ -155,7 +152,7 @@ class Server(Entity):
         """
         self.tick(request)
         request.stage = RequestResponseStage.Response
-        await self.publish_change_event()
+        emit_change_event(self)
         match request.request_type:
             case ApplicationRequestType.StartWorkflow:
                 await self.start_workflow(request)
@@ -195,7 +192,7 @@ class Server(Entity):
     async def handle_worker_request(self, request: WorkerRequest):
         self.tick(request)
         request.stage = RequestResponseStage.Response
-        await self.publish_change_event()
+        emit_change_event(self)
         match request:
             case WorkflowTaskCompleted(workflow_id, commands):
                 await self.handle_commands(workflow_id, commands)
@@ -227,7 +224,7 @@ class Server(Entity):
             seen_by_sticky_worker=False,
         )
         request.response_payload = event.data.get("payload")
-        await self.publish_change_event()
+        emit_change_event(self)
 
     # The following are blocking requests; they use
     # _handle_blocking_application_request to wait for a certain
@@ -271,7 +268,7 @@ class Server(Entity):
         ), "Multiple concurrent requests of same type for same workflow ID are not supported"
         chan: Queue[HistoryEvent] = Queue(maxsize=1)
         chans[key] = chan
-        await self.publish_change_event()
+        emit_change_event(self)
 
         if event_to_be_written:
             await self.write_history_events(
@@ -288,7 +285,7 @@ class Server(Entity):
 
         event = await chan.get()
         del chans[key]
-        await self.publish_change_event()
+        emit_change_event(self)
         return event
 
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
@@ -395,7 +392,7 @@ class Server(Entity):
         ]
         self.get_workflow_data(workflow_id).history.events.extend(events)
         if publish:
-            await self.publish_change_event()
+            emit_change_event(self)
         await self.dispatch_workflow_or_activity_task(workflow_id)
         return events
 
