@@ -27,7 +27,7 @@ T = TypeVar("T", bound=ActivityTask | WorkflowTask)
 
 class DirectiveType(Enum):
     WAIT_FOR_SIGNAL = 1
-    WAIT_FOR_UPDATE = 1
+    WAIT_FOR_UPDATE = 2
 
 
 class Worker(Entity, ABC, Generic[T]):
@@ -123,7 +123,7 @@ class Workflow(Entity, WithCode, ABC):
         """
         raw, line_num = next(self.raw_directives)
 
-        log(f"{line_num}:{raw}", "W: _advance_to_next_command_or_fake_sdk_directive")
+        log(f"{line_num}:{raw}", "W: _advance_to_next_command_or_fake_sdk_directive: ")
 
         # Each command or directive causes the workflow to block at that line
         self.blocked_lines.add(line_num)
