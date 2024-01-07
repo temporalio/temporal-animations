@@ -1,0 +1,4 @@
+#!/bin/bash
+source "$(dirname "$0")/lib.sh"
+scene=${1:-$(fzf-scene)}
+python $scene | manim -qh scenes/scene.py TemporalScene
