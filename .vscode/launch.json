@@ -7,7 +7,11 @@
       "program": "${workspaceFolder}/scenes/ExecuteUpdate.py",
       "request": "launch",
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": true,
+      "variablePresentation": {
+        "function": "hide",
+        "special": "hide"
+      }
     },
     {
       "name": "Render",
@@ -19,7 +23,11 @@
       },
       "request": "launch",
       "console": "integratedTerminal",
-      "justMyCode": true
+      "justMyCode": true,
+      "variablePresentation": {
+        "function": "hide",
+        "special": "hide"
+      }
     }
   ]
 }
