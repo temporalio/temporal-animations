@@ -158,8 +158,6 @@ class Server(Entity):
         match request.request_type:
             case ApplicationRequestType.StartWorkflow:
                 await self.start_workflow(request)
-            case ApplicationRequestType.ExecuteWorkflow:
-                await self.execute_workflow(request)
             case ApplicationRequestType.GetWorkflowResult:
                 await self.get_workflow_result(request)
             case ApplicationRequestType.ExecuteUpdate:
@@ -232,12 +230,6 @@ class Server(Entity):
     # _handle_blocking_application_request to wait for a certain
     # HistoryEvent to be written that indicates that the application request has
     # been fulfilled.
-
-    async def execute_workflow(self, request: ApplicationRequest):
-        event = await self._handle_blocking_application_request(
-            request, HistoryEventType.WF_STARTED
-        )
-        request.response_payload = event.data.get("payload")
 
     async def get_workflow_result(self, request: ApplicationRequest):
         event = await self._handle_blocking_application_request(request, None)
@@ -321,7 +313,7 @@ class Server(Entity):
                         seen_by_sticky_worker=True,
                     )
                     for request_type in [
-                        ApplicationRequestType.ExecuteWorkflow,
+                        ApplicationRequestType.GetWorkflowResult,
                         ApplicationRequestType.GetWorkflowResult,
                     ]:
                         key = request_type, workflow_id

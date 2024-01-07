@@ -9,13 +9,13 @@ class ExecuteWorkflowApplication(Application):
     """
 
     go = """
-workflowRun, err := c.ExecuteWorkflow(          // tempyral: ApplicationRequestType.ExecuteWorkflow "my-workflow-id"
+workflowRun, err := c.ExecuteWorkflow(          // tempyral: ApplicationRequestType.StartWorkflow "my-workflow-id"
     ctx, workflowOptions, workflows.MyWorkflow)
 if err != nil {
     log.Fatalln("Unable to execute workflow", err)
 }
 var result string
-err = workflowRun.Get(ctx, &result)
+err = workflowRun.Get(ctx, &result)            // tempyral: ApplicationRequestType.GetWorkflowResult "my-workflow-id"
 """
 
 
