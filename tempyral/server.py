@@ -1,8 +1,8 @@
+import itertools
 from asyncio import Queue
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Dict, Hashable, List, Tuple, TypedDict, cast
-from uuid import uuid4
 
 from common.logger import log
 from common.utils import drain
@@ -94,6 +94,8 @@ class TaskQueue(TypedDict):
 
 
 class Server(Entity):
+    update_id_seq = (f"update-{i}" for i in itertools.count())
+
     def __init__(self):
         super().__init__()
         self.shards: List[Shard] = [{DEFAULT_NAMESPACE: OrderedDict()}]
@@ -245,7 +247,9 @@ class Server(Entity):
 
     async def execute_update(self, request: ApplicationRequest):
         self.get_workflow_data(request.workflow_id).pending_updates.append(
-            UpdateInfo(update_id=uuid4().hex, update_name="fake-update-name")
+            UpdateInfo(
+                update_id=next(self.update_id_seq), update_name="fake-update-name"
+            )
         )
         event = await self._handle_blocking_application_request(request, None)
         request.response_payload = event.data.get("payload")
