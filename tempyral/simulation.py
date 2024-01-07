@@ -3,7 +3,6 @@ import sys
 import traceback
 from typing import Coroutine, Type
 
-from common.utils import debug
 from tempyral.application import Application
 from tempyral.entity import Entity
 from tempyral.event import emit_init_event
@@ -38,7 +37,7 @@ class Simulation:
 async def _run_coros(coros: list[Coroutine]):
     try:
         async with asyncio.TaskGroup() as tg:
-            tasks = [tg.create_task(debug(coro)) for coro in coros]
+            tasks = [tg.create_task(coro) for coro in coros]
             # TODO: race?
             Entity.terminate_simulation = lambda _: [t.cancel() for t in tasks]
 
