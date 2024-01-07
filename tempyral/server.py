@@ -2,7 +2,7 @@ import itertools
 from asyncio import Queue
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Any, Dict, Hashable, List, Tuple, TypedDict, cast
+from typing import Any, Hashable, TypedDict, cast
 
 from common.logger import log
 from common.utils import drain
@@ -57,7 +57,7 @@ class HistoryEvent(Entity):
 class History(Entity):
     """A workflow execution history"""
 
-    def __init__(self, workflow_id: WorkflowId, events: List[HistoryEvent]) -> None:
+    def __init__(self, workflow_id: WorkflowId, events: list[HistoryEvent]) -> None:
         self.workflow_id = workflow_id
         self.events = events
         super().__init__()
@@ -79,13 +79,13 @@ class UpdateInfo(Entity):
 @dataclass
 class WorkflowData(Entity):
     history: History
-    pending_updates: List[UpdateInfo]
+    pending_updates: list[UpdateInfo]
 
     __publish__ = {"history", "pending_updates"}
 
 
 Namespace = OrderedDict[WorkflowId, WorkflowData]
-Shard = Dict[NamespaceId, Namespace]
+Shard = dict[NamespaceId, Namespace]
 
 
 class TaskQueue(TypedDict):
@@ -98,17 +98,17 @@ class Server(Entity):
 
     def __init__(self):
         super().__init__()
-        self.shards: List[Shard] = [{DEFAULT_NAMESPACE: OrderedDict()}]
-        self.task_queues: Dict[TaskQueueId, TaskQueue] = {}
-        self.pending_application_requests: Dict[
+        self.shards: list[Shard] = [{DEFAULT_NAMESPACE: OrderedDict()}]
+        self.task_queues: dict[TaskQueueId, TaskQueue] = {}
+        self.pending_application_requests: dict[
             NamespaceId,
-            OrderedDict[Tuple[ApplicationRequestType, WorkflowId], Queue[HistoryEvent]],
+            OrderedDict[tuple[ApplicationRequestType, WorkflowId], Queue[HistoryEvent]],
         ] = {DEFAULT_NAMESPACE: OrderedDict()}
-        self.workflow_task_queue: Dict[
+        self.workflow_task_queue: dict[
             NamespaceId,
             Queue[WorkflowTask],
         ] = {DEFAULT_NAMESPACE: Queue()}
-        self.activity_task_queue: Dict[
+        self.activity_task_queue: dict[
             NamespaceId,
             Queue[ActivityTask],
         ] = {DEFAULT_NAMESPACE: Queue()}
@@ -296,7 +296,7 @@ class Server(Entity):
 
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler.go#L166
-    async def handle_commands(self, workflow_id, commands: List[Command]):
+    async def handle_commands(self, workflow_id, commands: list[Command]):
         chans = self.pending_application_requests[DEFAULT_NAMESPACE]
 
         await self.write_history_events(
@@ -387,11 +387,11 @@ class Server(Entity):
     async def write_history_events(
         self,
         workflow_id: WorkflowId,
-        event_types: List[HistoryEventType],
+        event_types: list[HistoryEventType],
         seen_by_sticky_worker: bool,
         publish=True,
         **kwargs: Hashable,
-    ) -> List[HistoryEvent]:
+    ) -> list[HistoryEvent]:
         events = [
             HistoryEvent(e, seen_by_sticky_worker=seen_by_sticky_worker, **kwargs)
             for e in event_types

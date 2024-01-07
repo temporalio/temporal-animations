@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import AsyncGenerator, Generic, List, Type, TypeVar, cast
+from typing import AsyncGenerator, Generic, Type, TypeVar, cast
 
 from common.logger import log
 from tempyral.api import (
@@ -146,7 +146,7 @@ class Workflow(Entity, WithCode, ABC):
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.blocked_lines})"
 
-    async def handle_wft(self, task: WorkflowTask) -> List[Command]:
+    async def handle_wft(self, task: WorkflowTask) -> list[Command]:
         commands = []
 
         if not self.blocked_lines:
@@ -198,7 +198,7 @@ class Workflow(Entity, WithCode, ABC):
 
 
 class WorkflowWorker(Worker[WorkflowTask]):
-    def __init__(self, workflow_classes: List[Type[Workflow]]):
+    def __init__(self, workflow_classes: list[Type[Workflow]]):
         super().__init__()
         self.workflows = [cls(self) for cls in workflow_classes]
 

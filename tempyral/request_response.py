@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
 
 from tempyral.entity import Entity
 
@@ -125,7 +125,7 @@ class WorkerRequest(Response):
 class WorkflowTaskCompleted(WorkerRequest):
     __match_args__ = ("workflow_id", "commands")
 
-    def __init__(self, workflow_id: "WorkflowId", time: int, commands: List["Command"]):
+    def __init__(self, workflow_id: "WorkflowId", time: int, commands: list["Command"]):
         super().__init__(workflow_id, time)
         self.commands = commands
 
