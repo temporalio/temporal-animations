@@ -13,7 +13,7 @@ const wfHandle = await client.start(myWorkflow, {               // tempyral: App
     workflowId: 'my-workflow-id',
     taskQueue: 'my-task-queue',
 });
-const updateResult = await wfHandle.executeUpdate(myUpdate)     // tempyral: ApplicationRequestType.ExecuteUpdate "my-workflow-id"
+const updateResult = await wfHandle.executeUpdate(myUpdate, {args: [1]})     // tempyral: ApplicationRequestType.ExecuteUpdate "my-workflow-id"
 """
 
 
