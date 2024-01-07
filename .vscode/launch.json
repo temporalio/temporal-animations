@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "ExecuteUpdate",
+      "name": "Simulate",
       "type": "python",
       "program": "${workspaceFolder}/scenes/ExecuteUpdate.py",
       "request": "launch",
@@ -10,10 +10,13 @@
       "justMyCode": true
     },
     {
-      "name": "TemporalScene",
+      "name": "Render",
       "type": "python",
       "module": "manim",
       "args": ["-qh", "scenes/scene.py", "TemporalScene"],
+      "env": {
+        "TEMPORAL_ANIMATIONS_EVENTS_FILE": "scenes/events/ExecuteUpdate.jsonl"
+      },
       "request": "launch",
       "console": "integratedTerminal",
       "justMyCode": true
