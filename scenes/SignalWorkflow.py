@@ -35,7 +35,7 @@ export async function myWorkflow(): Promise<number> {
     },
   );
   await wf.condition(() => total > 0);                          // tempyral: DirectiveType.WAIT_FOR_SIGNAL
-  return total;                                                 // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION
+  return total;                                                 // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION 2
 }
 """
 

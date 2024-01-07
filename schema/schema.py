@@ -78,6 +78,7 @@ class Entity(Model):
 class RequestResponse(Entity):
     stage: RequestResponseStage
     token: Optional[int]
+    response_payload: Optional[Hashable]
 
 
 # TODO: unnecessary

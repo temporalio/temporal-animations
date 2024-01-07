@@ -41,7 +41,7 @@ def to_serializable(obj: Any) -> dict | list | int | bool | str | None:
         data["_type"] = schema_cls.__name__
         return data
     elif isinstance(obj, Enum):
-        return {"_type": obj.__class__.__name__, "value": obj.value}
+        return {"_type": obj.__class__.__name__, "value": obj.value, "name": obj.name}
     elif isinstance(obj, Mapping):
         return {k: to_serializable(v) for k, v in obj.items()}
     elif isinstance(obj, str):

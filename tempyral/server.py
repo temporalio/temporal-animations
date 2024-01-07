@@ -323,6 +323,7 @@ class Server(Entity):
                         workflow_id,
                         [HistoryEventType.WF_COMPLETED],
                         seen_by_sticky_worker=True,
+                        payload=command.payload,
                     )
                     for request_type in [
                         ApplicationRequestType.GetWorkflowResult,
@@ -352,12 +353,13 @@ class Server(Entity):
                                 seen_by_sticky_worker=True,
                             )
                         case ProtocolMessage(
-                            ProtocolMessageType.UPDATE_COMPLETED, update_id
+                            ProtocolMessageType.UPDATE_COMPLETED, update_id, payload
                         ):
                             [event] = await self.write_history_events(
                                 workflow_id,
                                 [HistoryEventType.WF_UPDATE_COMPLETED],
                                 seen_by_sticky_worker=True,
+                                payload=payload,
                             )
                             key = ApplicationRequestType.ExecuteUpdate, workflow_id
                             await chans[key].put(event)

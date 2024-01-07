@@ -31,21 +31,18 @@ class WithCode:
         [language] = languages
         return language
 
-    def parse_code(self, language: Language) -> tuple[str, list[tuple[str, int]]]:
+    def parse_code(self, language: Language) -> tuple[str, list[tuple[list[str], int]]]:
         """
-        Return code, and list of commands.
-
-        Strip out special WFT-handling directives, and convert these into the
-        corresponding Command, together with line number.
+        Strip directives; return code, and list of directives with line numbers.
         """
         lines: list[str] = []
-        directives: list[tuple[str, int]] = []
+        directives: list[tuple[list[str], int]] = []
         comment_marker = COMMENT_MARKERS[language]
         code: str = getattr(self, language)
         line_num = 1
         for line_num, line in enumerate(code.strip().splitlines(), line_num):
             code, _, directive = line.partition(f"{comment_marker} tempyral:")
             if directive:
-                directives.append((directive.strip(), line_num))
+                directives.append((directive.strip().split(), line_num))
             lines.append(code.rstrip())
         return "\n".join(lines), directives

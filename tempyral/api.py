@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 TaskQueueId = str
 
@@ -43,6 +43,7 @@ class ProtocolMessageType(Enum):
 class ProtocolMessage:
     message_type: ProtocolMessageType
     instance_id: ProtocolInstanceId
+    payload: Optional[Any] = None
 
 
 @dataclass(frozen=True)
@@ -50,3 +51,4 @@ class Command:
     command_type: CommandType
     protocol_message: Optional[ProtocolMessage] = None
     token: Optional[int] = None
+    payload: Optional[Any] = None

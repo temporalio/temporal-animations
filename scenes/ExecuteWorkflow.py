@@ -26,7 +26,7 @@ class NoOpWorkflow(Workflow):
 
     go = """
 func MyWorkflow(ctx workflow.Context) error {
-    return nil                                  // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION
+    return 1                                  // tempyral: CommandType.COMPLETE_WORKFLOW_EXECUTION 1
 }
 """
 
