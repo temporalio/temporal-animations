@@ -14,12 +14,6 @@ from schema.schema import (
 )
 
 
-@dataclass
-class UpdateInfo:
-    update_id: ProtocolInstanceId
-    update_name: str
-
-
 # https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/command_type.proto#L35
 class CommandType(Enum):
     SCHEDULE_ACTIVITY_TASK = 1

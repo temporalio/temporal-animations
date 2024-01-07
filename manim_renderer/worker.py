@@ -1,20 +1,10 @@
-from typing import Iterable, List
+from typing import List
 
-from manim import (
-    DOWN,
-    LEFT,
-    SMALL_BUFF,
-    WHITE,
-    Mobject,
-    SurroundingRectangle,
-    VDict,
-    VGroup,
-)
+from manim import DOWN, LEFT, SMALL_BUFF, Mobject, VDict
 
 from manim_renderer import style
 from manim_renderer.code import ProxyEntityWithCode
 from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren
-from manim_renderer.history import HistoryEvents
 from schema import schema
 
 
@@ -38,28 +28,6 @@ class ActivityWorker(ProxyEntityWithCode[schema.ActivityWorker]):
         return VDict({"text": text, "code": code}).arrange(
             DOWN, buff=SMALL_BUFF, aligned_edge=LEFT
         )
-
-
-class BoxedHistoryEvents(HistoryEvents):
-    @staticmethod
-    def render(events: Iterable[schema.HistoryEvent]) -> Mobject:
-        eventsm = HistoryEvents.render(events)
-        rect = SurroundingRectangle(
-            eventsm,
-            color=WHITE,
-            stroke_width=1,
-        )
-        return VGroup(rect, eventsm)
-
-
-class WorkflowTaskRequest(ProxyEntity[schema.WorkerPollRequest]):
-    def render(self, entity: schema.WorkerPollRequest) -> Mobject:
-        if entity.stage == schema.RequestResponseStage.Request:
-            return style.invisible_message()
-        else:
-            request = self.with_time(style.message("WFT"), entity)
-            eventsm = BoxedHistoryEvents.render(entity.task.events)
-            return VGroup(request, eventsm).arrange()
 
 
 class WorkflowTaskCompleted(ProxyEntity[schema.WorkflowTaskCompleted]):

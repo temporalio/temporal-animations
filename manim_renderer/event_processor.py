@@ -9,8 +9,8 @@ from manim_renderer.worker import (
     ActivityTaskCompleted,
     ActivityTaskRequest,
     WorkflowTaskCompleted,
-    WorkflowTaskRequest,
 )
+from manim_renderer.workflow_task import WorkflowTaskRequest
 from schema import schema
 
 
