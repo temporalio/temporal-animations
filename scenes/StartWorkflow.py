@@ -1,5 +1,5 @@
 from scenes.ExecuteWorkflow import NoOpWorkflow
-from tempyral import Application
+from tempyral.application import Application
 from tempyral.simulation import Simulation, run_simulation
 
 
