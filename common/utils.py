@@ -1,7 +1,7 @@
 import asyncio
 import sys
 import traceback
-from typing import Coroutine, Iterable, List, cast
+from typing import Coroutine, Iterable, cast
 
 
 def notnull[T](t: T | None) -> T:
@@ -21,7 +21,7 @@ def only[T](it: Iterable[T], msg="") -> T:
         return t
 
 
-def drain[T](source: List[T]) -> List[T]:
+def drain[T](source: list[T]) -> list[T]:
     vals = []
     while source:
         vals.append(source.pop())

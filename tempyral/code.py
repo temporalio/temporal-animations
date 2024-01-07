@@ -1,9 +1,9 @@
-from typing import Dict, List, Literal, Set, Tuple
+from typing import Literal
 
 Language = Literal["go", "python", "typescript", "java", "dotnet"]
 
 
-COMMENT_MARKERS: Dict[Language, str] = {
+COMMENT_MARKERS: dict[Language, str] = {
     "dotnet": "//",
     "go": "//",
     "java": "//",
@@ -17,11 +17,11 @@ class WithCode:
     go: str
     typescript: str
     code: str
-    blocked_lines: Set[int]
+    blocked_lines: set[int]
 
     def _get_language(self) -> Language:
         available_languages = list(COMMENT_MARKERS)
-        languages: List[Language] = [l for l in available_languages if hasattr(self, l)]
+        languages: list[Language] = [l for l in available_languages if hasattr(self, l)]
         assert (
             languages
         ), f"You must define the workflow code as a class attribute named one of {', '.join(available_languages)}"
@@ -31,15 +31,15 @@ class WithCode:
         [language] = languages
         return language
 
-    def parse_code(self, language: Language) -> Tuple[str, List[Tuple[str, int]]]:
+    def parse_code(self, language: Language) -> tuple[str, list[tuple[str, int]]]:
         """
         Return code, and list of commands.
 
         Strip out special WFT-handling directives, and convert these into the
         corresponding Command, together with line number.
         """
-        lines: List[str] = []
-        directives: List[Tuple[str, int]] = []
+        lines: list[str] = []
+        directives: list[tuple[str, int]] = []
         comment_marker = COMMENT_MARKERS[language]
         code: str = getattr(self, language)
         line_num = 1

@@ -1,5 +1,3 @@
-from typing import List
-
 from manim import DOWN, LEFT, SMALL_BUFF, Mobject, VDict
 
 from manim_renderer import style
@@ -60,5 +58,5 @@ class WorkflowWorker(
     @staticmethod
     def get_child_entities(
         entity: schema.WorkflowWorker,
-    ) -> List[schema.Workflow]:
+    ) -> list[schema.Workflow]:
         return entity.workflows

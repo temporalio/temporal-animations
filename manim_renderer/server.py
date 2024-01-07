@@ -1,5 +1,3 @@
-from typing import List
-
 from manim import LEFT, Mobject
 from manim.typing import Point3D
 
@@ -17,7 +15,7 @@ class Server(ProxyEntityWithChildren[schema.Server, schema.History, History]):
         return self.with_time(style.actor("Temporal Server"), entity)
 
     @staticmethod
-    def get_child_entities(entity: schema.Server) -> List[schema.History]:
+    def get_child_entities(entity: schema.Server) -> list[schema.History]:
         try:
             [shard] = entity.shards
         except ValueError:

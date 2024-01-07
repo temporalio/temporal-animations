@@ -3,7 +3,7 @@ Manim representations of Temporal entities.
 """
 from abc import ABC, abstractmethod, abstractstaticmethod
 from enum import Enum
-from typing import Dict, Generic, Iterable, List, Self, Type, TypeVar
+from typing import Generic, Iterable, Self, Type, TypeVar
 
 import numpy as np
 from manim import (
@@ -245,12 +245,12 @@ class ProxyEntityWithChildren(
 
     def __init__(self, entity: E, parent: VisualElement = root) -> None:
         super().__init__(entity, parent=parent)
-        self.children: List[Q] = []
+        self.children: list[Q] = []
         for e in self.get_child_entities(entity):
             self.append_child(e)
 
     @abstractstaticmethod
-    def get_child_entities(entity: E) -> List[F]:  # type: ignore (bug in Pyright?)
+    def get_child_entities(entity: E) -> list[F]:  # type: ignore (bug in Pyright?)
         ...
 
     def render_to_scene(self, entity: E):
@@ -284,7 +284,7 @@ class ProxyEntityRegistry(Generic[E]):
     """
 
     def __init__(self):
-        self._registry: Dict[int, ProxyEntity] = {}
+        self._registry: dict[int, ProxyEntity] = {}
 
     def put(self, entity: E, proxy: ProxyEntity[E]) -> None:
         key = entity.hash_key()
