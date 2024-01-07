@@ -1,0 +1,4 @@
+#!/bin/bash
+source "$(dirname "$0")/lib.sh"
+
+python ${1:-$(fzf-scene)}
