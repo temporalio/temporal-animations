@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from datetime import datetime
 from typing import Iterator, cast
@@ -82,7 +83,11 @@ class TemporalScene(Scene):
         self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
 
 
-def read_events(file=sys.stdin) -> Iterator[schema.Event]:
+def read_events() -> Iterator[schema.Event]:
+    if events_file := os.getenv("TEMPORAL_ANIMATIONS_EVENTS_FILE"):
+        file = open(events_file)
+    else:
+        file = sys.stdin
     for line in file.readlines():
         data = json.loads(line)
         yield cast(schema.Event, schema.from_serializable(data))
