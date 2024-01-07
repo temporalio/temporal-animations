@@ -9,7 +9,12 @@ from schema import schema
 
 class ApplicationRequest(ProxyEntity[schema.ApplicationRequest]):
     def render(self, entity: schema.ApplicationRequest) -> Mobject:
-        return self.with_time(style.message(entity.request_type.name), entity)
+        match entity.stage:
+            case schema.RequestResponseStage.Response if entity.response_payload:
+                label = str(entity.response_payload)
+            case _:
+                label = entity.request_type.name
+        return self.with_time(style.message(label), entity)
 
 
 class Application(ProxyEntityWithCode[schema.Application]):

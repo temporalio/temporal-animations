@@ -23,7 +23,7 @@ class Application(Entity, WithCode):
         requests: list[ApplicationRequest] = []
         for directive, line_num in raw_requests:
             try:
-                request_type, workflow_id = map(eval, directive.split())
+                request_type, workflow_id = map(eval, directive)
                 if not isinstance(request_type, ApplicationRequestType):
                     raise ValueError
                 requests.append(

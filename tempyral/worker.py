@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import AsyncGenerator, Generic, Type, TypeVar, cast
+from typing import Any, AsyncGenerator, Generic, Type, TypeVar, cast
 
 from common.logger import log
 from tempyral.api import (
@@ -93,6 +93,9 @@ fn myActivity() {
         )
 
 
+UpdateResult = Any
+
+
 class Workflow(Entity, WithCode, ABC):
     """
     A Workflow Definition, together with fake handling of the workflow by an SDK worker.
@@ -108,7 +111,7 @@ class Workflow(Entity, WithCode, ABC):
         self.raw_directives = iter(raw_directives)
         self.blocked_lines = set()
         self.blocked_lines_waiting_for_signal = set()
-        self.blocked_lines_waiting_for_update = set()
+        self.blocked_lines_waiting_for_update = dict[int, Any]()
         super().__init__()
 
     __publish__ = Entity.__publish__ | {
@@ -127,7 +130,8 @@ class Workflow(Entity, WithCode, ABC):
 
         # Each command or directive causes the workflow to block at that line
         self.blocked_lines.add(line_num)
-        match cmd := eval(raw):
+        cmd, *args = map(eval, raw)
+        match cmd:
             case DirectiveType.WAIT_FOR_SIGNAL:
                 # This line will be unblocked on acceptance of any signal
                 # TODO: support multiple signals
@@ -135,7 +139,12 @@ class Workflow(Entity, WithCode, ABC):
             case DirectiveType.WAIT_FOR_UPDATE:
                 # This line will be unblocked on acceptance of any update
                 # TODO: support multiple updates
-                self.blocked_lines_waiting_for_update.add(line_num)
+                [update_result] = args
+                assert not self.blocked_lines_waiting_for_update
+                self.blocked_lines_waiting_for_update[line_num] = update_result
+            case CommandType.COMPLETE_WORKFLOW_EXECUTION:
+                [wf_result] = args
+                return Command(cmd, None, line_num, wf_result)
             case _ if isinstance(cmd, CommandType):
                 # This line will be unblocked when a WFT is received
                 # containing an event with the line_num token.
@@ -168,19 +177,26 @@ class Workflow(Entity, WithCode, ABC):
         update_commands = []
         for u in task.pending_updates:
             # TODO: Currently, any update unblocks all waiting_for_update lines.
-            while self.blocked_lines_waiting_for_update:
-                self.blocked_lines.remove(self.blocked_lines_waiting_for_update.pop())
+            result = None
+            if self.blocked_lines_waiting_for_update:
+                [(line_num, result)] = self.blocked_lines_waiting_for_update.items()
+                self.blocked_lines.remove(line_num)
             emit_change_event(self.worker)
-            update_commands.extend(
+            update_commands.append(
                 Command(
                     CommandType.PROTOCOL_MESSAGE,
-                    ProtocolMessage(m, u.update_id),
+                    ProtocolMessage(ProtocolMessageType.UPDATE_ACCEPTED, u.update_id),
                     None,
                 )
-                for m in [
-                    ProtocolMessageType.UPDATE_ACCEPTED,
-                    ProtocolMessageType.UPDATE_COMPLETED,
-                ]
+            )
+            update_commands.append(
+                Command(
+                    CommandType.PROTOCOL_MESSAGE,
+                    ProtocolMessage(
+                        ProtocolMessageType.UPDATE_COMPLETED, u.update_id, result
+                    ),
+                    None,
+                )
             )
 
         if not self.blocked_lines:
