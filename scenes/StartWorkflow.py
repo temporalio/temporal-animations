@@ -9,7 +9,7 @@ class StartWorkflowApplication(Application):
     """
 
     typescript = """
-const wfHandle = await handle.client.start(myWorkflow, {        // tempyral: ApplicationRequestType.StartWorkflow "my-workflow-id"
+const wfHandle = await client.start(myWorkflow, {        // tempyral: ApplicationRequestType.StartWorkflow "my-workflow-id"
     workflowId: 'my-workflow-id',
     taskQueue: 'my-task-queue',
 });
