@@ -1,6 +1,6 @@
 from scenes.ExecuteWorkflow import ExecuteWorkflowApplication
-from tempyral import Workflow
 from tempyral.simulation import Simulation, run_simulation
+from tempyral.worker import Workflow
 
 
 class CallActivityWorkflow(Workflow):

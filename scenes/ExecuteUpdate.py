@@ -1,5 +1,6 @@
-from tempyral import Application, Workflow
+from tempyral.application import Application
 from tempyral.simulation import Simulation, run_simulation
+from tempyral.worker import Workflow
 
 
 class ExecuteUpdateApplication(Application):

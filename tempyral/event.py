@@ -1,17 +1,20 @@
 import json
 from typing import TYPE_CHECKING, Any
 
-from tempyral.entity import to_serializable
+from tempyral.entity import Entity, to_serializable
 
 if TYPE_CHECKING:
-    import tempyral
+    from tempyral.application import Application
+    from tempyral.request_response import RequestResponse, Response
+    from tempyral.server import Server
+    from tempyral.worker import ActivityWorker, WorkflowWorker
 
 
 def emit_init_event(
-    server: "tempyral.Server",
-    apps: list["tempyral.Application"],
-    workflow_workers: list["tempyral.WorkflowWorker"],
-    activity_workers: list["tempyral.ActivityWorker"],
+    server: "Server",
+    apps: list["Application"],
+    workflow_workers: list["WorkflowWorker"],
+    activity_workers: list["ActivityWorker"],
 ):
     _emit(
         dict(
@@ -24,14 +27,14 @@ def emit_init_event(
     )
 
 
-def emit_change_event(entity: "tempyral.Entity"):
+def emit_change_event(entity: "Entity"):
     _emit(dict(entity=to_serializable(entity), _type="StateChangeEvent"))
 
 
 def emit_message_event(
-    sender: "tempyral.Entity",
-    receiver: "tempyral.Entity",
-    message: "tempyral.RequestResponse | tempyral.Response",
+    sender: "Entity",
+    receiver: "Entity",
+    message: "RequestResponse | Response",
 ):
     _emit(
         dict(

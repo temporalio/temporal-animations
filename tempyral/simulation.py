@@ -4,15 +4,11 @@ import traceback
 from typing import Coroutine, Type
 
 from common.utils import debug
-from tempyral import (
-    ActivityWorker,
-    Application,
-    Entity,
-    Server,
-    Workflow,
-    WorkflowWorker,
-)
+from tempyral.application import Application
+from tempyral.entity import Entity
 from tempyral.event import emit_init_event
+from tempyral.server import Server
+from tempyral.worker import ActivityWorker, Workflow, WorkflowWorker
 
 
 class Simulation:
