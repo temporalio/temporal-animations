@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Any, Generic, List, Optional, TypeVar
 from tempyral.entity import Entity
 
 if TYPE_CHECKING:
-    from tempyral.api import ApplicationRequestType, Command, UpdateInfo, WorkflowId
-    from tempyral.server import HistoryEvent
+    from tempyral.api import ApplicationRequestType, Command, WorkflowId
+    from tempyral.server import HistoryEvent, UpdateInfo
 
 
 class RequestResponseStage(Enum):

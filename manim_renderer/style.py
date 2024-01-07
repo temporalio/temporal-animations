@@ -1,4 +1,4 @@
-from manim import ORANGE, Line, Mobject, Text
+from manim import BLUE_E, ORANGE, Line, Mobject, Text
 from manim.typing import Point3D
 
 FONT_MONOSPACE = "Monaco"  # Monaco, Menlo, PT Mono
@@ -11,6 +11,7 @@ FONT_SIZE_HISTORY_EVENT = 12
 FONT_SIZE_ACTOR = 20
 FONT_SIZE_MESSAGE = 16
 FONT_SIZE_CODE = 10
+COLOR_PENDING_UPDATE = BLUE_E
 COLOR_MESSAGE = ORANGE
 COLOR_SCENE_BACKGROUND = "#1D1D1D"  # GRAY_E is #222222
 STROKE_WIDTH_PENDING_REQUEST_RAY = 1
@@ -50,4 +51,14 @@ def actor(name: str, **kwargs) -> Mobject:
 def history_event(name: str, **kwargs) -> Mobject:
     return Text(
         name, font=FONT_HISTORY_EVENT, font_size=FONT_SIZE_HISTORY_EVENT, **kwargs
+    )
+
+
+def pending_update(name: str, **kwargs) -> Mobject:
+    return Text(
+        name,
+        font=FONT_HISTORY_EVENT,
+        font_size=FONT_SIZE_HISTORY_EVENT,
+        color=COLOR_PENDING_UPDATE,
+        **kwargs
     )

@@ -12,10 +12,10 @@ from tempyral.api import (
     CommandType,
     HistoryEventType,
     NamespaceId,
+    ProtocolInstanceId,
     ProtocolMessage,
     ProtocolMessageType,
     TaskQueueId,
-    UpdateInfo,
     WorkflowId,
 )
 from tempyral.entity import Entity
@@ -66,6 +66,14 @@ class History(Entity):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(workflow_id={self.workflow_id},id={self.id}: events={self.events})"
+
+
+@dataclass
+class UpdateInfo(Entity):
+    update_id: ProtocolInstanceId
+    update_name: str
+
+    __publish__ = {"update_id", "update_name"}
 
 
 @dataclass
