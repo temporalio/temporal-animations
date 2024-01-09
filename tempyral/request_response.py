@@ -18,7 +18,7 @@ class RequestResponse(Entity):
         super().__init__(time)
         self.stage = RequestResponseStage.Request
         self.token: Optional[int] = None
-        self.response_payload = None
+        self.response_payload: Any | None = None
 
     __publish__ = Entity.__publish__ | {"stage", "token", "response_payload"}
 

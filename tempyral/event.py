@@ -4,24 +4,35 @@ from typing import TYPE_CHECKING, Any
 from tempyral.entity import Entity, to_serializable
 
 if TYPE_CHECKING:
-    from tempyral.application import Application
+    from tempyral.application import AbstractApplication
     from tempyral.request_response import RequestResponse, Response
     from tempyral.server import Server
     from tempyral.worker import ActivityWorker, WorkflowWorker
 
 
+def _get_init_event_data(
+    server: "Server",
+    apps: list["AbstractApplication"],
+    workflow_workers: list["WorkflowWorker"],
+    activity_workers: list["ActivityWorker"],
+) -> dict[str, Any]:
+    return dict(
+        server=to_serializable(server),
+        apps=[to_serializable(a) for a in apps],
+        workflow_workers=[to_serializable(w) for w in workflow_workers],
+        activity_workers=[to_serializable(w) for w in activity_workers],
+    )
+
+
 def emit_init_event(
     server: "Server",
-    apps: list["Application"],
+    apps: list["AbstractApplication"],
     workflow_workers: list["WorkflowWorker"],
     activity_workers: list["ActivityWorker"],
 ):
     _emit(
         dict(
-            server=to_serializable(server),
-            apps=[to_serializable(a) for a in apps],
-            workflow_workers=[to_serializable(w) for w in workflow_workers],
-            activity_workers=[to_serializable(w) for w in activity_workers],
+            _get_init_event_data(server, apps, workflow_workers, activity_workers),
             _type="InitEvent",
         )
     )

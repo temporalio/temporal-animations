@@ -1,4 +1,5 @@
 import itertools
+from abc import ABC, abstractmethod
 from asyncio import Queue
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from tempyral.request_response import (
     ActivityTask,
     ActivityTaskCompleted,
     ApplicationRequest,
+    RequestResponse,
     RequestResponseStage,
     WorkerPollRequest,
     WorkerRequest,
@@ -93,7 +95,13 @@ class TaskQueue(TypedDict):
     activity_task_queue: Queue[ActivityTask]
 
 
-class Server(Entity):
+class AbstractServer(Entity, ABC):
+    @abstractmethod
+    async def handle_application_request(self, request: RequestResponse):
+        ...
+
+
+class Server(AbstractServer):
     update_id_seq = (f"update-{i}" for i in itertools.count())
 
     def __init__(self):
