@@ -36,10 +36,10 @@ class Simulation:
         for app in apps:
             coros.extend(app.get_coroutines(server))
 
-        await _run_coros(coros)
+        await run_coroutines(coros)
 
 
-async def _run_coros(coros: list[Coroutine]):
+async def run_coroutines(coros: list[Coroutine]):
     try:
         async with asyncio.TaskGroup() as tg:
             tasks = [tg.create_task(coro) for coro in coros]
