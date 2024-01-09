@@ -12,9 +12,16 @@ from schema import schema
 
 
 class TemporalScene(Scene):
+    app: renderer.Application
+    server: renderer.Server
+    workflow_worker: renderer.WorkflowWorker
+    activity_worker: renderer.ActivityWorker | None
+
     def construct(self):
         events = read_events()
         match event := next(events):
+            case schema.NexusInitEvent():
+                self.init_nexus(event)
             case schema.InitEvent():
                 self.init(event)
             case _:
@@ -53,6 +60,8 @@ class TemporalScene(Scene):
             aworker.set_dock_direction(RIGHT).mobj.next_to(
                 wworker.children[-1].mobj, DOWN
             ).align_to(wworker.mobj, LEFT).shift(DOWN * 0.5)
+        else:
+            aworker = None
 
         self.add(app.mobj, server.mobj, wworker.mobj, *(a.mobj for a in aworkers))
 
@@ -62,6 +71,28 @@ class TemporalScene(Scene):
         ):
             a.render_to_scene(s)  # type: ignore
 
+        self.app = app
+        self.server = server
+        self.workflow_worker = wworker
+        self.activity_worker = aworker
+
+    def init_nexus(self, event: schema.NexusInitEvent):
+        self.init(event)
+        nexus_server = renderer.NexusServer(event.nexus_server)
+        [nexus_worker] = [renderer.NexusWorker(w) for w in event.nexus_workers]
+
+        self.workflow_worker.mobj.shift(DOWN * 3)
+        for c in self.workflow_worker.children:
+            c.mobj.shift(DOWN * 3)
+
+        nexus_server.set_dock_direction(DL).mobj.next_to(self.server.mobj, UP).align_to(
+            self.server.mobj, LEFT
+        )
+        nexus_worker.set_dock_direction(RIGHT).mobj.next_to(
+            self.app.mobj, DOWN
+        ).align_to(self.app.mobj, LEFT)
+
+        self.add(nexus_server.mobj, nexus_worker.mobj)
 
     def add_timestamp(self):
         time = Text(datetime.now().strftime("%H:%M:%S"), font_size=8)

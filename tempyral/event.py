@@ -5,6 +5,7 @@ from tempyral.entity import Entity, to_serializable
 
 if TYPE_CHECKING:
     from tempyral.application import AbstractApplication
+    from tempyral.nexus import NexusServer, NexusWorker
     from tempyral.request_response import RequestResponse, Response
     from tempyral.server import Server
     from tempyral.worker import ActivityWorker, WorkflowWorker
@@ -34,6 +35,24 @@ def emit_init_event(
         dict(
             _get_init_event_data(server, apps, workflow_workers, activity_workers),
             _type="InitEvent",
+        )
+    )
+
+
+def emit_nexus_init_event(
+    server: "Server",
+    apps: list["AbstractApplication"],
+    workflow_workers: list["WorkflowWorker"],
+    activity_workers: list["ActivityWorker"],
+    nexus_server: "NexusServer | None",
+    nexus_workers: "list[NexusWorker]",
+):
+    _emit(
+        dict(
+            _get_init_event_data(server, apps, workflow_workers, activity_workers),
+            nexus_server=to_serializable(nexus_server),
+            nexus_workers=[to_serializable(w) for w in nexus_workers],
+            _type="NexusInitEvent",
         )
     )
 
