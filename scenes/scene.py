@@ -12,6 +12,11 @@ from schema import schema
 
 
 class TemporalScene(Scene):
+    app: renderer.Application
+    server: renderer.Server
+    workflow_worker: renderer.WorkflowWorker
+    activity_worker: renderer.ActivityWorker | None
+
     def construct(self):
         events = read_events()
         match event := next(events):
@@ -53,6 +58,8 @@ class TemporalScene(Scene):
             aworker.set_dock_direction(RIGHT).mobj.next_to(
                 wworker.children[-1].mobj, DOWN
             ).align_to(wworker.mobj, LEFT).shift(DOWN * 0.5)
+        else:
+            aworker = None
 
         self.add(app.mobj, server.mobj, wworker.mobj, *(a.mobj for a in aworkers))
 
@@ -61,6 +68,11 @@ class TemporalScene(Scene):
             [event.server, *event.apps, *event.workflow_workers],
         ):
             a.render_to_scene(s)  # type: ignore
+
+        self.app = app
+        self.server = server
+        self.workflow_worker = wworker
+        self.activity_worker = aworker
 
         if False:
             self.add(
@@ -83,6 +95,11 @@ class TemporalScene(Scene):
     ):
         self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
         self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
+
+
+class NexusTemporalScene(TemporalScene):
+    def init(self, event: schema.NexusInitEvent):
+        super().init(event)
 
 
 def read_events() -> Iterator[schema.Event]:

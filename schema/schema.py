@@ -221,6 +221,22 @@ class MessageEvent(Model):
     message: RequestResponse
 
 
+@dataclass
+class NexusServer(Entity):
+    pass
+
+
+@dataclass
+class NexusWorker(Entity):
+    pass
+
+
+@dataclass
+class NexusInitEvent(InitEvent):
+    nexus_server: NexusServer
+    nexus_workers: list[NexusWorker]
+
+
 type Event = StateChangeEvent | MessageEvent | InitEvent
 
 
