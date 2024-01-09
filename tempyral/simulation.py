@@ -11,8 +11,13 @@ from tempyral.worker import ActivityWorker, Workflow, WorkflowWorker
 
 
 class Simulation:
+    # A simulation specifies its own application classes
     application_classes: list[Type[Application]]
+    # A simulation specifies its own workflows; a single workflow worker is
+    # created to execute them
     workflow_classes: list[Type[Workflow]]
+    # A simulation may optionally specify an activity worker.
+    activity_worker_classes: list[Type[ActivityWorker]] = []
 
     async def do_simulation(self):
         """
@@ -23,7 +28,7 @@ class Simulation:
             Server(),
             [cls() for cls in self.application_classes],
             [WorkflowWorker(self.workflow_classes)],
-            [ActivityWorker()],
+            [cls() for cls in self.activity_worker_classes],
         )
         emit_init_event(server, apps, wworkers, aworkers)
 
