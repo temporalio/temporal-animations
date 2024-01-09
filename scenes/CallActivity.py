@@ -1,6 +1,6 @@
 from scenes.ExecuteWorkflow import ExecuteWorkflowApplication
 from tempyral.simulation import Simulation, run_simulation
-from tempyral.worker import Workflow
+from tempyral.worker import ActivityWorker, Workflow
 
 
 class CallActivityWorkflow(Workflow):
@@ -20,6 +20,7 @@ func MyWorkflow(ctx workflow.Context) (int, error) {
 class CallActivity(Simulation):
     application_classes = [ExecuteWorkflowApplication]
     workflow_classes = [CallActivityWorkflow]
+    activity_worker_classes = [ActivityWorker]
 
 
 if __name__ == "__main__":

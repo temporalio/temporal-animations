@@ -37,7 +37,7 @@ class TemporalScene(Scene):
         server = renderer.Server(event.server)
         [app] = [renderer.Application(a) for a in event.apps]
         [wworker] = [renderer.WorkflowWorker(w) for w in event.workflow_workers]
-        [aworker] = [renderer.ActivityWorker(w) for w in event.activity_workers]
+        aworkers = [renderer.ActivityWorker(w) for w in event.activity_workers]
 
         app.set_dock_direction(RIGHT).mobj.align_on_border(
             UP, buff=0.25
@@ -45,14 +45,16 @@ class TemporalScene(Scene):
         wworker.set_dock_direction(RIGHT).mobj.next_to(app.mobj, DOWN).align_to(
             app.mobj, LEFT
         ).shift(DOWN * 0.2)
-        aworker.set_dock_direction(RIGHT).mobj.next_to(
-            wworker.children[-1].mobj, DOWN
-        ).align_to(wworker.mobj, LEFT).shift(DOWN * 0.5)
         server.set_dock_direction(UP).mobj.align_on_border(RIGHT).align_to(
             wworker.mobj, UP
         ).shift(1.5 * LEFT)
+        if aworkers:
+            [aworker] = aworkers
+            aworker.set_dock_direction(RIGHT).mobj.next_to(
+                wworker.children[-1].mobj, DOWN
+            ).align_to(wworker.mobj, LEFT).shift(DOWN * 0.5)
 
-        self.add(app.mobj, server.mobj, wworker.mobj, aworker.mobj)
+        self.add(app.mobj, server.mobj, wworker.mobj, *(a.mobj for a in aworkers))
 
         for a, s in zip(
             [server, *[app], *[wworker]],
