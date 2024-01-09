@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 from tempyral.entity import Entity, to_serializable
 
 if TYPE_CHECKING:
-    from tempyral.application import Application
+    from tempyral.application import AbstractApplication
     from tempyral.request_response import RequestResponse, Response
     from tempyral.server import Server
     from tempyral.worker import ActivityWorker, WorkflowWorker
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 def emit_init_event(
     server: "Server",
-    apps: list["Application"],
+    apps: list["AbstractApplication"],
     workflow_workers: list["WorkflowWorker"],
     activity_workers: list["ActivityWorker"],
 ):

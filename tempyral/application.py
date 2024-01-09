@@ -1,14 +1,14 @@
-from typing import Coroutine, Iterable
+from typing import Coroutine, Iterable, Type
 
-from tempyral.api import ApplicationRequestType
 from tempyral.code import WithCode
 from tempyral.entity import Entity
 from tempyral.event import emit_change_event, emit_message_event
-from tempyral.request_response import ApplicationRequest
-from tempyral.server import Server
+from tempyral.request_response import ApplicationRequest, RequestResponse
+from tempyral.server import AbstractServer
 
 
-class Application(Entity, WithCode):
+class AbstractApplication(Entity, WithCode):
+    application_request_cls: Type[RequestResponse]
     __publish__ = Entity.__publish__ | {
         "code",
         "language",
@@ -23,11 +23,9 @@ class Application(Entity, WithCode):
         requests: list[ApplicationRequest] = []
         for directive, line_num in raw_requests:
             try:
-                request_type, workflow_id = map(eval, directive)
-                if not isinstance(request_type, ApplicationRequestType):
-                    raise ValueError
+                request_type, arg = map(eval, directive)
                 requests.append(
-                    ApplicationRequest(request_type, workflow_id, self.time, line_num)
+                    ApplicationRequest(request_type, arg, self.time, line_num)
                 )
             except ValueError:
                 raise ValueError(f"Unsupported application directive: {directive}")
@@ -37,9 +35,9 @@ class Application(Entity, WithCode):
     def __repr__(self) -> str:
         return f"App[{self.time}]"
 
-    def get_coroutines(self, server: Server) -> Iterable[Coroutine]:
+    def get_coroutines(self, server: AbstractServer) -> Iterable[Coroutine]:
         """
-        Return a coroutine that issues each application requests, waiting for its reponse.
+        Return a coroutine that issues each application request, waiting for its reponse.
         """
 
         async def coro():
@@ -59,3 +57,7 @@ class Application(Entity, WithCode):
             server.terminate_simulation()
 
         yield coro()
+
+
+class Application(AbstractApplication):
+    application_request_cls = ApplicationRequest

@@ -3,7 +3,7 @@ import sys
 import traceback
 from typing import Coroutine, Type
 
-from tempyral.application import Application
+from tempyral.application import AbstractApplication
 from tempyral.entity import Entity
 from tempyral.event import emit_init_event
 from tempyral.server import Server
@@ -12,7 +12,7 @@ from tempyral.worker import ActivityWorker, Workflow, WorkflowWorker
 
 class Simulation:
     # A simulation specifies its own application classes
-    application_classes: list[Type[Application]]
+    application_classes: list[Type[AbstractApplication]]
     # A simulation specifies its own workflows; a single workflow worker is
     # created to execute them
     workflow_classes: list[Type[Workflow]]
