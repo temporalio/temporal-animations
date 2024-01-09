@@ -62,27 +62,14 @@ class TemporalScene(Scene):
         ):
             a.render_to_scene(s)  # type: ignore
 
-        if False:
-            self.add(
-                *(
-                    Dot(radius=0.02).move_to(t.dock_point())
-                    for t in [app, server, wworker, aworker]
-                )
-            )
 
     def add_timestamp(self):
         time = Text(datetime.now().strftime("%H:%M:%S"), font_size=8)
         time.to_corner(DL, buff=0.1)
         self.add(time)
 
-    def add_dock_points(
-        self,
-        server: renderer.Server,
-        app: renderer.Application,
-        wworker: renderer.WorkflowWorker,
-    ):
-        self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
-        self.add(*(Dot().move_to(e.dock_point()) for e in [server, app, wworker]))
+    def add_dock_point(self, entity: renderer.ProxyEntity):
+        self.add(Dot().move_to(entity.dock_point()))
 
 
 def read_events() -> Iterator[schema.Event]:
