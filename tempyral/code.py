@@ -19,6 +19,12 @@ class WithCode:
     code: str
     blocked_lines: set[int]
 
+    __publish__ = {
+        "code",
+        "language",
+        "blocked_lines",
+    }
+
     def _get_language(self) -> Language:
         available_languages = list(COMMENT_MARKERS)
         languages: list[Language] = [l for l in available_languages if hasattr(self, l)]

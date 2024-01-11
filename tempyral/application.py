@@ -9,11 +9,7 @@ from tempyral.server import AbstractServer
 
 class AbstractApplication(Entity, WithCode):
     application_request_cls: Type[RequestResponse]
-    __publish__ = Entity.__publish__ | {
-        "code",
-        "language",
-        "blocked_lines",
-    }
+    __publish__ = Entity.__publish__ | WithCode.__publish__
 
     def __init__(self):
         super().__init__()

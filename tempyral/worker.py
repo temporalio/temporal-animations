@@ -73,11 +73,7 @@ fn myActivity() {
         self.blocked_lines = set()
         super().__init__()
 
-    __publish__ = Worker.__publish__ | {
-        "code",
-        "language",
-        "blocked_lines",
-    }
+    __publish__ = Worker.__publish__ | WithCode.__publish__
 
     def task_factory(self) -> ActivityTask:
         return ActivityTask("", [])
@@ -114,11 +110,7 @@ class Workflow(Entity, WithCode, ABC):
         self.blocked_lines_waiting_for_update = dict[int, Any]()
         super().__init__()
 
-    __publish__ = Entity.__publish__ | {
-        "code",
-        "language",
-        "blocked_lines",
-    }
+    __publish__ = Entity.__publish__ | WithCode.__publish__
 
     def _advance_to_next_command_or_fake_sdk_directive(self) -> Command | None:
         """
