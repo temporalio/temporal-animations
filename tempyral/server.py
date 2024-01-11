@@ -282,7 +282,6 @@ class Server(AbstractServer):
         ), "Multiple concurrent requests of same type for same workflow ID are not supported"
         chan: Queue[HistoryEvent] = Queue(maxsize=1)
         chans[key] = chan
-        emit_change_event(self)
 
         if event_to_be_written:
             await self.write_history_events(
@@ -299,7 +298,6 @@ class Server(AbstractServer):
 
         event = await chan.get()
         del chans[key]
-        emit_change_event(self)
         return event
 
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
