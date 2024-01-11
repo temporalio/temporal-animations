@@ -31,6 +31,7 @@ class AbstractApplication(Entity, WithCode):
                 raise ValueError(f"Unsupported application directive: {directive}")
         self.requests = requests
         self.blocked_lines = set()
+        self.active = False
 
     def __repr__(self) -> str:
         return f"App[{self.time}]"
@@ -42,6 +43,7 @@ class AbstractApplication(Entity, WithCode):
 
         async def coro():
             for request in self.requests:
+                self.update(active=True)
                 request.time = self.time
                 if request.token is not None:
                     self.blocked_lines.add(request.token)
@@ -54,6 +56,7 @@ class AbstractApplication(Entity, WithCode):
                     self.blocked_lines.remove(request.token)
                     emit_change_event(self)
                 emit_message_event(server, self, request)
+            self.update(active=False)
             server.terminate_simulation()
 
         yield coro()

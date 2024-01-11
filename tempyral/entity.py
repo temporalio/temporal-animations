@@ -28,6 +28,13 @@ class Entity:
     def tick(self, message: "Entity"):
         message.time = self.time = max(self.time, message.time) + 1
 
+    def update(self, **kwargs):
+        self.__dict__.update(kwargs)
+        # TODO: circular
+        from tempyral.event import emit_change_event
+
+        emit_change_event(self)
+
 
 def to_serializable(obj: Any) -> dict | list | int | bool | str | None:
     if isinstance(obj, Entity):

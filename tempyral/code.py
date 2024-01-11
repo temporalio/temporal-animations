@@ -23,6 +23,7 @@ class WithCode:
         "code",
         "language",
         "blocked_lines",
+        "active",
     }
 
     def _get_language(self) -> Language:

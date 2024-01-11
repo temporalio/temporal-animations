@@ -71,6 +71,7 @@ fn myActivity() {
             self.language = self._get_language()
         self.code, _ = self.parse_code(self.language)
         self.blocked_lines = set()
+        self.active = False
         super().__init__()
 
     __publish__ = Worker.__publish__ | WithCode.__publish__
@@ -84,9 +85,11 @@ fn myActivity() {
         token: int,
         server: Server,
     ):
+        self.update(active=True)
         await self.send_request(
             ActivityTaskCompleted(at.workflow_id, self.time, None, token), server
         )
+        self.update(active=False)
 
 
 UpdateResult = Any
@@ -108,6 +111,7 @@ class Workflow(Entity, WithCode, ABC):
         self.blocked_lines = set()
         self.blocked_lines_waiting_for_signal = set()
         self.blocked_lines_waiting_for_update = dict[int, Any]()
+        self.active = False
         super().__init__()
 
     __publish__ = Entity.__publish__ | WithCode.__publish__
@@ -117,6 +121,7 @@ class Workflow(Entity, WithCode, ABC):
         Lazily honor each command or directive annotation in the workflow code.
         """
         raw, line_num = next(self.raw_directives)
+        self.update(active=True)
 
         log(f"{line_num}:{raw}", "W: _advance_to_next_command_or_fake_sdk_directive: ")
 
@@ -136,6 +141,7 @@ class Workflow(Entity, WithCode, ABC):
                 self.blocked_lines_waiting_for_update[line_num] = update_result
             case CommandType.COMPLETE_WORKFLOW_EXECUTION:
                 [wf_result] = args
+                self.update(active=False)
                 return Command(cmd, None, line_num, wf_result)
             case _ if isinstance(cmd, CommandType):
                 # This line will be unblocked when a WFT is received

@@ -129,6 +129,7 @@ class EntityWithCode(Entity):
     code: str
     language: str
     blocked_lines: set[int]
+    active: bool
 
 
 @dataclass

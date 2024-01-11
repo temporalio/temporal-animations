@@ -1,10 +1,11 @@
 import json
 from typing import TYPE_CHECKING, Any
 
-from tempyral.entity import Entity, to_serializable
+from tempyral.entity import to_serializable
 
 if TYPE_CHECKING:
     from tempyral.application import AbstractApplication
+    from tempyral.entity import Entity
     from tempyral.nexus import NexusServer, NexusWorker
     from tempyral.request_response import RequestResponse, Response
     from tempyral.server import Server
