@@ -1,6 +1,6 @@
 #!/bin/bash
-
-cd scenes
-ls *.py | grep -v scene\.py | while read scene; do
-    python $scene >events/${scene%.py}.jsonl
+source "$(dirname "$0")/lib.sh"
+set -e
+list-scenes | while read scene; do
+    python scenes/$scene.py >scenes/events/$scene.jsonl
 done

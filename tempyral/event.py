@@ -78,4 +78,4 @@ def emit_message_event(
 
 
 def _emit(data: dict[str, Any]):
-    print(json.dumps(data, sort_keys=True))
+    print(json.dumps(data, sort_keys=True), flush=True)

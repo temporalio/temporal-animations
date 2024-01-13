@@ -1,7 +1,7 @@
 #!/usr/bin/env jq -f -r
 
 if ._type == "MessageEvent" then
-    "message: \(.sender._type) => \(.receiver._type): \(.message._type)(\(.message.request_type.name), \(.message.stage.name), \(.message.response_payload)) [\(.message.time)]"
+    "message: \(.sender._type)[\(.sender.time)] => \(.receiver._type)[\(.receiver.time)]: \(.message._type)(\(.message.request_type.name), \(.message.stage.name), \(.message.response_payload)) [\(.message.time)]"
 elif ._type == "StateChangeEvent" then
     "change : \(.entity._type) [\(.entity.time)]"
 else

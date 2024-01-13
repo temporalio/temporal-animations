@@ -1,0 +1,4 @@
+#!/bin/bash
+source "$(dirname "$0")/lib.sh"
+
+list-scenes | xargs -P0 -n1 -I{} $(dirname "$0")/render scenes/{}.py

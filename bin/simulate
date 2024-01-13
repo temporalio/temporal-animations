@@ -1,4 +1,4 @@
 #!/bin/bash
 source "$(dirname "$0")/lib.sh"
 
-python ${1:-$(fzf-scene)}
+python ${1:-scenes/$(list-scenes | fzf).py}

@@ -17,9 +17,9 @@
       "name": "Render",
       "type": "python",
       "module": "manim",
-      "args": ["-qh", "scenes/scene.py", "TemporalScene"],
+      "args": ["-qh", "manim_renderer/scene.py", "TemporalScene"],
       "env": {
-        "TEMPORAL_ANIMATIONS_EVENTS_FILE": "scenes/events/ExecuteUpdate.jsonl"
+        "TEMPORAL_ANIMATIONS_EVENTS_FILE": "scenes/events/CallActivity.jsonl"
       },
       "request": "launch",
       "console": "integratedTerminal",
