@@ -1,3 +1,4 @@
+import asyncio
 import itertools
 from abc import ABC, abstractmethod
 from asyncio import Queue
@@ -256,6 +257,8 @@ class Server(AbstractServer):
         """
         Handle request withought blocking; optionally write a HistoryEvent.
         """
+        # give priority to worker poll requests so that tasks are dispatched eagerly
+        await asyncio.sleep(0)
         if event_to_be_written:
             await self.write_history_events(
                 request.workflow_id,
@@ -333,6 +336,8 @@ class Server(AbstractServer):
         contains within it information needed to unblock the corresponding
         client-side awaitable.
         """
+        # give priority to worker poll requests so that tasks are dispatched eagerly
+        await asyncio.sleep(0)
 
         chans = self.pending_application_requests[DEFAULT_NAMESPACE]
         key = request.request_type, request.workflow_id
