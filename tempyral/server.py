@@ -171,30 +171,98 @@ class Server(AbstractServer):
         """
         In general, an application request is handled as follows:
 
-        1. Mutate the received RequestResponse object so that it is now marked as a Response
-        2. Create a new channel representing the request being handled
-        3. Append some history events or pending updates/queries etc
-        4. Append a WFT_SCHEDULED event if there is not one already
-        5. Block until a value is written to the channel
+        1. Mutate the received RequestResponse object so that it is now marked
+           as a Response
+        2. Append some history events or pending updates/queries etc
+        3. Append a WFT_SCHEDULED event if there is not one already
+        4. If it's a blocking request, then create a new channel representing
+           the request being handled and block until a certain history event is
+           written to the channel.
         6. Return the same RequestResponse object that was received
         """
         request.stage = RequestResponseStage.Response
         emit_change_event(self)
+        history_event_to_be_written = None
         match request.request_type:
+            # Non-blocking requests
             case ApplicationRequestType.StartWorkflow:
-                await self.start_workflow(request)
-            case ApplicationRequestType.GetWorkflowResult:
-                await self.get_workflow_result(request)
+                history_event_to_be_written = HistoryEventType.WF_STARTED
             case ApplicationRequestType.StartUpdate:
-                await self.start_update(request)
-            case ApplicationRequestType.GetUpdateResult:
-                await self.get_update_result(request)
-            case ApplicationRequestType.ExecuteUpdate:
-                await self.execute_update(request)
+                self._add_received_update_to_update_registry(request.workflow_id)
             case ApplicationRequestType.SignalWorkflow:
-                await self.signal_workflow(request)
+                history_event_to_be_written = HistoryEventType.WF_SIGNALED
+
+            # Blocking requests. See handle_commands() for how these are unblocked.
+            case ApplicationRequestType.GetWorkflowResult:
+                # Block until handle_commands() handles a
+                # COMPLETE_WORKFLOW_EXECUTION command
+                pass
+            case ApplicationRequestType.GetUpdateResult:
+                # Block until WF_UPDATE_COMPLETED. This corresponds to the
+                # PollWorkflowExecutionUpdateRequest server API
+                # https://github.com/temporalio/temporal/blob/main/service/history/api/pollupdate/api.go
+                # when it is handling a request with
+                # waitStage=UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED.
+                pass
+            case ApplicationRequestType.ExecuteUpdate:
+                # Add update to registry and block until WF_UPDATE_COMPLETED.
+                self._add_received_update_to_update_registry(request.workflow_id)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
+
+        await self._handle_application_request(request, history_event_to_be_written)
+
+    async def _handle_application_request(
+        self, request: ApplicationRequest, event_to_be_written: HistoryEventType | None
+    ):
+        """
+        In all cases, we write the history event if one was supplied, and then
+        write a WFT_SCHEDULED event if that is mandated by the current state of
+        workflow history and requested updates.
+
+        For non-blocking requests, that is all that is done.
+
+        For blocking requests, a channel is created dedicated to this
+        (request_type, workflow_id) and we block until the required HistoryEvent
+        has been written to that channel. The value pushed to the channel will
+        be a HistoryEvent that contains within it information needed to unblock
+        the corresponding application-side awaitable.
+
+        (We do not currently support multiple concurrent requests of the same
+        type for the same workflow_id).
+        """
+        if event_to_be_written:
+            await self.write_history_events(
+                request.workflow_id,
+                [event_to_be_written],
+                seen_by_sticky_worker=False,
+            )
+        if self.should_schedule_wft(request.workflow_id):
+            await self.write_history_events(
+                request.workflow_id,
+                [HistoryEventType.WFT_SCHEDULED],
+                seen_by_sticky_worker=False,
+            )
+        emit_change_event(self)
+
+        if request.request_type in {
+            # These request types block until a certain history event is written to their channel.
+            # See handle_commands() for how these are unblocked.
+            ApplicationRequestType.GetWorkflowResult,
+            ApplicationRequestType.GetUpdateResult,
+            ApplicationRequestType.ExecuteUpdate,
+        }:
+            chans = self.pending_application_requests[DEFAULT_NAMESPACE]
+            key = request.request_type, request.workflow_id
+            assert (
+                key not in chans
+            ), "Multiple concurrent requests of same type for same workflow ID are not supported"
+            chan: Queue[HistoryEvent] = Queue(maxsize=1)
+            chans[key] = chan
+
+            event = await chan.get()
+            del chans[key]
+            request.response_payload = event.data.get("payload")
 
     async def handle_worker_poll_request[
         T: WorkflowTask | ActivityTask
@@ -226,139 +294,6 @@ class Server(AbstractServer):
                 await self.handle_activity_task_completed(workflow_id, result, token)
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
-
-    # The following are non-blocking requests; we don't need to wait for a
-    # HistoryEvent to be written, beyond those we write synchronously on
-    # handling the request.
-
-    async def start_workflow(self, request: ApplicationRequest):
-        """
-        Write WF_STARTED and this dispatch a WFT. Otherwise do not block.
-        """
-        await self._handle_non_blocking_application_request(
-            request, HistoryEventType.WF_STARTED
-        )
-
-    async def start_update(self, request: ApplicationRequest):
-        """
-        Add update to registry and return response.
-        """
-        self._add_received_update_to_update_registry(request.workflow_id)
-        await self._handle_non_blocking_application_request(request, None)
-
-    async def signal_workflow(self, request: ApplicationRequest):
-        await self._handle_non_blocking_application_request(
-            request, HistoryEventType.WF_SIGNALED
-        )
-
-    async def _handle_non_blocking_application_request(
-        self, request: ApplicationRequest, event_to_be_written: HistoryEventType | None
-    ):
-        """
-        Handle request withought blocking; optionally write a HistoryEvent.
-        """
-        if event_to_be_written:
-            await self.write_history_events(
-                request.workflow_id,
-                [event_to_be_written],
-                seen_by_sticky_worker=False,
-            )
-        if self.should_schedule_wft(request.workflow_id):
-            await self.write_history_events(
-                request.workflow_id,
-                [HistoryEventType.WFT_SCHEDULED],
-                seen_by_sticky_worker=False,
-            )
-        emit_change_event(self)
-
-    # The following are blocking requests; they use
-    # _handle_blocking_application_request to wait for a certain
-    # HistoryEvent to be written that indicates that the application request has
-    # been fulfilled.
-
-    async def get_workflow_result(self, request: ApplicationRequest):
-        """
-        Handle a GetWorkflowResult request from the application.
-
-        This is a blocking request, so it is implemented by creating a channel
-        and blocking on a channel.get(). When handle_commands() handles a
-        COMPLETE_WORKFLOW_EXECUTION command, it will write a HistoryEvent to the
-        channel (containing the workflow result payload), thus releasing the
-        response.
-        """
-        event = await self._handle_blocking_application_request(request, None)
-        request.response_payload = event.data.get("payload")
-
-    async def get_update_result(self, request: ApplicationRequest):
-        """
-        Handle a GetUpdateResult request from the application.
-
-        This corresponds to the PollWorkflowExecutionUpdateRequest server API
-        https://github.com/temporalio/temporal/blob/main/service/history/api/pollupdate/api.go
-        when it is handling a request with
-        waitStage=UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED.
-
-        This is a blocking request, so it is implemented by creating a channel
-        and blocking on a channel.get().
-        """
-        event = await self._handle_blocking_application_request(request, None)
-        request.response_payload = event.data.get("payload")
-
-    async def execute_update(self, request: ApplicationRequest):
-        """
-        Handle an ExecuteUpdate request from the application.
-
-        This is a blocking request, so it is implemented by creating a channel
-        and blocking on a channel.get(). But first, we add the requested update
-        to the update registry; this will cause
-        dispatch_workflow_or_activity_task() to dispatch a WFT. The worker
-        handling that WFT will send UPDATE_ACCEPTED and UPDATE_COMPLETED
-        protocol messages, and when these are received in handle_commands(), the
-        WF_UPDATE_COMPLETED HistoryEvent will be written to the channel, thus
-        releasing the response.
-        """
-        self._add_received_update_to_update_registry(request.workflow_id)
-        event = await self._handle_blocking_application_request(request, None)
-        request.response_payload = event.data.get("payload")
-
-    async def _handle_blocking_application_request(
-        self, request: ApplicationRequest, event_to_be_written: HistoryEventType | None
-    ) -> HistoryEvent:
-        """
-        Handle request by blocking until the required HistoryEvent has been written.
-
-        When handling an application request, we create a new channel and block,
-        waiting for a value to be pushed to the channel in handle_commands().
-        The channel is specific to the (request_type, workflow_id) being
-        handled. The value pushed to the channel will be a HistoryEvent that
-        contains within it information needed to unblock the corresponding
-        client-side awaitable.
-        """
-
-        chans = self.pending_application_requests[DEFAULT_NAMESPACE]
-        key = request.request_type, request.workflow_id
-        assert (
-            key not in chans
-        ), "Multiple concurrent requests of same type for same workflow ID are not supported"
-        chan: Queue[HistoryEvent] = Queue(maxsize=1)
-        chans[key] = chan
-
-        if event_to_be_written:
-            await self.write_history_events(
-                request.workflow_id,
-                [event_to_be_written],
-                seen_by_sticky_worker=False,
-            )
-        if self.should_schedule_wft(request.workflow_id):
-            await self.write_history_events(
-                request.workflow_id,
-                [HistoryEventType.WFT_SCHEDULED],
-                seen_by_sticky_worker=False,
-            )
-
-        event = await chan.get()
-        del chans[key]
-        return event
 
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler.go#L166
