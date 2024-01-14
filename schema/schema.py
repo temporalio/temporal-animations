@@ -33,9 +33,9 @@ class HistoryEventType(Enum):
 class ApplicationRequestType(Enum):
     StartWorkflow = 1
     GetWorkflowResult = 2
-    ExecuteUpdate = 3
-    SignalWorkflow = 4
-    NexusRequest = 5
+    ExecuteUpdate = 5
+    SignalWorkflow = 6
+    NexusRequest = 7
 
 
 NamespaceId = str
