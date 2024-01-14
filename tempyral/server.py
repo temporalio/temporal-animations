@@ -184,6 +184,10 @@ class Server(AbstractServer):
                 await self.start_workflow(request)
             case ApplicationRequestType.GetWorkflowResult:
                 await self.get_workflow_result(request)
+            case ApplicationRequestType.StartUpdate:
+                await self.start_update(request)
+            case ApplicationRequestType.GetUpdateResult:
+                await self.get_update_result(request)
             case ApplicationRequestType.ExecuteUpdate:
                 await self.execute_update(request)
             case ApplicationRequestType.SignalWorkflow:
@@ -231,6 +235,10 @@ class Server(AbstractServer):
             request, HistoryEventType.WF_STARTED
         )
 
+    async def start_update(self, request: ApplicationRequest):
+        self._add_received_update_to_update_registry(request.workflow_id)
+        await self._handle_non_blocking_application_request(request, None)
+
     async def signal_workflow(self, request: ApplicationRequest):
         await self._handle_non_blocking_application_request(
             request, HistoryEventType.WF_SIGNALED
@@ -261,6 +269,21 @@ class Server(AbstractServer):
         COMPLETE_WORKFLOW_EXECUTION command, it will write a HistoryEvent to the
         channel (containing the workflow result payload), thus releasing the
         response.
+        """
+        event = await self._handle_blocking_application_request(request, None)
+        request.response_payload = event.data.get("payload")
+
+    async def get_update_result(self, request: ApplicationRequest):
+        """
+        Handle a GetUpdateResult request from the application.
+
+        This corresponds to the PollWorkflowExecutionUpdateRequest server API
+        https://github.com/temporalio/temporal/blob/main/service/history/api/pollupdate/api.go
+        when it is handling a request with
+        waitStage=UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_COMPLETED.
+
+        This is a blocking request, so it is implemented by creating a channel
+        and blocking on a channel.get().
         """
         event = await self._handle_blocking_application_request(request, None)
         request.response_payload = event.data.get("payload")
@@ -395,8 +418,13 @@ class Server(AbstractServer):
                                 seen_by_sticky_worker=True,
                                 payload=payload,
                             )
-                            key = ApplicationRequestType.ExecuteUpdate, workflow_id
-                            await chans[key].put(event)
+                            for request_type in [
+                                ApplicationRequestType.ExecuteUpdate,
+                                ApplicationRequestType.GetUpdateResult,
+                            ]:
+                                key = request_type, workflow_id
+                                if chan := chans.get(key):
+                                    await chan.put(event)
                 case _:
                     raise ValueError(
                         f"Server does not support command of type: {command.command_type}"
