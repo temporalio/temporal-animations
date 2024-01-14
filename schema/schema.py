@@ -36,8 +36,8 @@ class ApplicationRequestType(Enum):
     StartUpdate = 3
     GetUpdateResult = 4
     ExecuteUpdate = 5
-    SignalWorkflow = 6
-    NexusRequest = 7
+    SignalWorkflow = 8
+    NexusRequest = 9
 
 
 NamespaceId = str
