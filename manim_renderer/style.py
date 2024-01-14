@@ -21,7 +21,7 @@ FONT_SIZE_HISTORY_EVENT = 12
 FONT_SIZE_ACTOR = 20
 FONT_SIZE_MESSAGE = 16
 FONT_SIZE_CODE = 10
-COLOR_PENDING_UPDATE = BLUE_E
+COLOR_REQUESTED_UPDATE = BLUE_E
 COLOR_MESSAGE = ORANGE
 COLOR_ACTIVE_CODE = "#3CB043"
 COLOR_INACTIVE_CODE = LIGHTER_GRAY
@@ -72,10 +72,10 @@ def history_event(name: str, color: ManimColor) -> Mobject:
     )
 
 
-def pending_update(name: str) -> Mobject:
+def requested_update(name: str) -> Mobject:
     return Text(
         name,
         font=FONT_HISTORY_EVENT,
         font_size=FONT_SIZE_HISTORY_EVENT,
-        color=COLOR_PENDING_UPDATE,
+        color=COLOR_REQUESTED_UPDATE,
     )

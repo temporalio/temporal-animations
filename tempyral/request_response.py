@@ -60,17 +60,17 @@ class WorkflowTask(Entity):
         self,
         workflow_id: "WorkflowId",
         events: list["HistoryEvent"],
-        pending_updates: list["UpdateInfo"],
+        requested_updates: list["UpdateInfo"],
     ):
         super().__init__()
         self.workflow_id = workflow_id
         self.events = events
-        self.pending_updates = pending_updates
+        self.requested_updates = requested_updates
 
-    __publish__ = {"workflow_id", "events", "pending_updates"}
+    __publish__ = {"workflow_id", "events", "requested_updates"}
 
     def __repr__(self) -> str:
-        return f"WFT(wid={self.workflow_id}, events={self.events}, updates={self.pending_updates})"
+        return f"WFT(wid={self.workflow_id}, events={self.events}, updates={self.requested_updates})"
 
 
 class ActivityTask(Entity):

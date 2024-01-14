@@ -170,7 +170,7 @@ class Workflow(Entity, WithCode, ABC):
             emit_change_event(self.worker)
 
         update_commands = []
-        for u in task.pending_updates:
+        for u in task.requested_updates:
             # TODO: Currently, any update unblocks all waiting_for_update lines.
             result = None
             if self.blocked_lines_waiting_for_update:

@@ -81,9 +81,9 @@ class UpdateInfo(Entity):
 @dataclass
 class WorkflowData(Entity):
     history: History
-    pending_updates: list[UpdateInfo]
+    update_registry: list[UpdateInfo]
 
-    __publish__ = {"history", "pending_updates"}
+    __publish__ = {"history", "update_registry"}
 
 
 Namespace = OrderedDict[WorkflowId, WorkflowData]
@@ -157,7 +157,7 @@ class Server(AbstractServer):
             ]:
                 events_might_advance_workflow_execution = True
 
-        return events_might_advance_workflow_execution or bool(wf_data.pending_updates)
+        return events_might_advance_workflow_execution or bool(wf_data.update_registry)
 
     async def handle_application_request(self, request: ApplicationRequest):
         """
@@ -250,7 +250,7 @@ class Server(AbstractServer):
         request.response_payload = event.data.get("payload")
 
     async def execute_update(self, request: ApplicationRequest):
-        self.get_workflow_data(request.workflow_id).pending_updates.append(
+        self.get_workflow_data(request.workflow_id).update_registry.append(
             UpdateInfo(
                 update_id=next(self.update_id_seq), update_name="fake-update-name"
             )
@@ -444,9 +444,9 @@ class Server(AbstractServer):
                     seen_by_sticky_worker=True,
                 )
             )
-            pending_updates = drain(self.namespace[workflow_id].pending_updates)
+            requested_updates = drain(self.namespace[workflow_id].update_registry)
             await self.workflow_task_queue[DEFAULT_NAMESPACE].put(
-                WorkflowTask(workflow_id, events, pending_updates)
+                WorkflowTask(workflow_id, events, requested_updates)
             )
 
     @property

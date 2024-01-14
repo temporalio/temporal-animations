@@ -12,13 +12,13 @@ class BoxedHistoryEvents(HistoryEvents):
     @staticmethod
     def render(
         events: Iterable[schema.HistoryEvent],
-        pending_updates: Iterable[schema.UpdateInfo],
+        requested_updates: Iterable[schema.UpdateInfo],
     ) -> Mobject:
         eventsm = HistoryEvents.render(events)
-        if pending_updates:
-            eventsm = VGroup(eventsm, PendingUpdates.render(pending_updates)).arrange(
-                DOWN, buff=SMALL_BUFF, aligned_edge=LEFT
-            )
+        if requested_updates:
+            eventsm = VGroup(
+                eventsm, RequestedUpdates.render(requested_updates)
+            ).arrange(DOWN, buff=SMALL_BUFF, aligned_edge=LEFT)
         rect = SurroundingRectangle(
             eventsm,
             color=WHITE,
@@ -37,22 +37,22 @@ class WorkflowTaskRequest(ProxyEntity[schema.WorkerPollRequest]):
             request = self.with_time(style.message("WFT"), entity)
             task = cast(schema.WorkflowTask, entity.task)
             eventsm = BoxedHistoryEvents.render(
-                entity.task.events, task.pending_updates
+                entity.task.events, task.requested_updates
             )
             return VGroup(request, eventsm).arrange()
 
 
-class PendingUpdate(VisualElement):
+class RequestedUpdate(VisualElement):
     @staticmethod
     def render(_: schema.UpdateInfo) -> Mobject:
-        return style.pending_update(
+        return style.requested_update(
             "[update requested]",
         )
 
 
-class PendingUpdates(VisualElement):
+class RequestedUpdates(VisualElement):
     @staticmethod
     def render(updates: Iterable[schema.UpdateInfo]) -> Mobject:
-        return VGroup(*map(PendingUpdate.render, updates)).arrange(
+        return VGroup(*map(RequestedUpdate.render, updates)).arrange(
             DOWN, buff=SMALL_BUFF, aligned_edge=LEFT
         )

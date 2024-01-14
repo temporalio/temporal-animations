@@ -105,7 +105,7 @@ class History(Entity):
 class WorkflowTask(Model):
     workflow_id: WorkflowId
     events: list[HistoryEvent]
-    pending_updates: list[UpdateInfo]
+    requested_updates: list[UpdateInfo]
 
 
 @dataclass
@@ -150,7 +150,7 @@ class ActivityWorker(EntityWithCode):
 @dataclass
 class WorkflowData(Model):
     history: History
-    pending_updates: list[UpdateInfo]
+    update_registry: list[UpdateInfo]
 
 
 Namespace = OrderedDict[WorkflowId, WorkflowData]
