@@ -159,6 +159,13 @@ class Server(AbstractServer):
 
         return events_might_advance_workflow_execution or bool(wf_data.update_registry)
 
+    def _add_received_update_to_update_registry(self, workflow_id: WorkflowId):
+        self.get_workflow_data(workflow_id).update_registry.append(
+            UpdateInfo(
+                update_id=next(self.update_id_seq), update_name="fake-update-name"
+            )
+        )
+
     async def handle_application_request(self, request: ApplicationRequest):
         """
         In general, an application request is handled as follows:
@@ -271,11 +278,7 @@ class Server(AbstractServer):
         WF_UPDATE_COMPLETED HistoryEvent will be written to the channel, thus
         releasing the response.
         """
-        self.get_workflow_data(request.workflow_id).update_registry.append(
-            UpdateInfo(
-                update_id=next(self.update_id_seq), update_name="fake-update-name"
-            )
-        )
+        self._add_received_update_to_update_registry(request.workflow_id)
         event = await self._handle_blocking_application_request(request, None)
         request.response_payload = event.data.get("payload")
 
