@@ -58,8 +58,14 @@ def emit_nexus_init_event(
     )
 
 
+_last_emitted_state = {}
+
+
 def emit_change_event(entity: "Entity"):
-    _emit(dict(entity=to_serializable(entity), _type="StateChangeEvent"))
+    state = _serialize(dict(entity=to_serializable(entity), _type="StateChangeEvent"))
+    if state != _last_emitted_state.get(entity):
+        _last_emitted_state[entity] = state
+        print(state, flush=True)
 
 
 def emit_message_event(
