@@ -360,13 +360,9 @@ class Server(AbstractServer):
                         seen_by_sticky_worker=True,
                         payload=command.payload,
                     )
-                    for request_type in [
-                        ApplicationRequestType.GetWorkflowResult,
-                        ApplicationRequestType.GetWorkflowResult,
-                    ]:
-                        key = request_type, workflow_id
-                        if key in chans:
-                            await chans[key].put(event)
+                    key = ApplicationRequestType.GetWorkflowResult, workflow_id
+                    if key in chans:
+                        await chans[key].put(event)
                 case CommandType.PROTOCOL_MESSAGE:
                     assert command.protocol_message
                     match command.protocol_message:
