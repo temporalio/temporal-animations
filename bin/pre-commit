@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+simulate-all-scenes
+git diff --quiet scenes/events || {
+	git diff scenes/events
+	echo "Simulation output has changed" 1>&2
+	exit 1
+}
