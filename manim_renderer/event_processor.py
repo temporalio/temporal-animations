@@ -2,7 +2,6 @@ from typing import Iterable, Tuple, Type
 
 from manim import Animation, Scene
 
-from common.logger import log
 from manim_renderer.application import ApplicationRequest
 from manim_renderer.entity import ProxyEntity, VisualElement, proxy_entity_registry
 from manim_renderer.worker import (
@@ -18,14 +17,34 @@ def set_scene(scene: Scene):
     VisualElement.scene = scene
 
 
+def lamport_time(event: schema.Event) -> int:
+    match event:
+        case schema.StateChangeEvent():
+            return event.entity.time
+        case schema.MessageEvent():
+            return event.sender.time
+        case schema.InitEvent():
+            raise ValueError("Invalid event")
+
+
 def render_simulation_events(events: Iterable[schema.Event]):
-    curr_time = -1
     animations: list[Iterable[Animation | None]] = []
-    serial = True
-    n = 400
-    for event in events:
+
+    def flush_animations():
+        if animations:
+            sender.play_all_send_message_animations(*zip(*animations))
+            animations.clear()
+
+    serial = False
+    n = 10
+    curr_time = -1
+    for event in sorted(events, key=lamport_time):
         match event:
             case schema.StateChangeEvent():
+                if event.entity.time > curr_time:
+                    flush_animations()
+                    curr_time = event.entity.time
+
                 proxy_entity = proxy_entity_registry.get(event.entity)
                 proxy_entity.render_to_scene(event.entity)
             case schema.MessageEvent():
@@ -33,17 +52,11 @@ def render_simulation_events(events: Iterable[schema.Event]):
                     event.sender, event.receiver, event.message
                 )
 
-                log(
-                    f"{event.message.id}: {sender} -> {receiver}: {message}",
-                    "A: render  message",
-                )
+                if serial or event.message.time > curr_time:
+                    flush_animations()
+                    curr_time = event.message.time
 
                 animations.append(sender.send_message(receiver, message, event.message))
-
-                if serial or event.message.time > curr_time:
-                    sender.play_all_send_message_animations(*zip(*animations))
-                    animations.clear()
-                    curr_time = event.message.time
 
                 if not (n := n - 1):
                     break
