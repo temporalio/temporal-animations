@@ -246,10 +246,31 @@ class Server(AbstractServer):
     # been fulfilled.
 
     async def get_workflow_result(self, request: ApplicationRequest):
+        """
+        Handle a GetWorkflowResult request from the application.
+
+        This is a blocking request, so it is implemented by creating a channel
+        and blocking on a channel.get(). When handle_commands() handles a
+        COMPLETE_WORKFLOW_EXECUTION command, it will write a HistoryEvent to the
+        channel (containing the workflow result payload), thus releasing the
+        response.
+        """
         event = await self._handle_blocking_application_request(request, None)
         request.response_payload = event.data.get("payload")
 
     async def execute_update(self, request: ApplicationRequest):
+        """
+        Handle an ExecuteUpdate request from the application.
+
+        This is a blocking request, so it is implemented by creating a channel
+        and blocking on a channel.get(). But first, we add the requested update
+        to the update registry; this will cause
+        dispatch_workflow_or_activity_task() to dispatch a WFT. The worker
+        handling that WFT will send UPDATE_ACCEPTED and UPDATE_COMPLETED
+        protocol messages, and when these are received in handle_commands(), the
+        WF_UPDATE_COMPLETED HistoryEvent will be written to the channel, thus
+        releasing the response.
+        """
         self.get_workflow_data(request.workflow_id).update_registry.append(
             UpdateInfo(
                 update_id=next(self.update_id_seq), update_name="fake-update-name"
@@ -264,11 +285,12 @@ class Server(AbstractServer):
         """
         Handle request by writing history events, and return response.
 
-        When handling an application request, we create a new channel
-        (maxsize=1) and block, waiting for the response to be pushed to the
-        channel. The value pushed to the channel is a HistoryEvent that contains
-        within it information needed to unblock the corresponding client-side
-        awaitable.
+        When handling an application request, we create a new channel and block,
+        waiting for a value to be pushed to the channel in handle_commands().
+        The channel is specific to the (request_type, workflow_id) being
+        handled. The value pushed to the channel will be a HistoryEvent that
+        contains within it information needed to unblock the corresponding
+        client-side awaitable.
         """
 
         chans = self.pending_application_requests[DEFAULT_NAMESPACE]
@@ -299,6 +321,17 @@ class Server(AbstractServer):
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler_callbacks.go#L386
     # https://github.com/temporalio/temporal/blob/569a306daa2aef8e221712ae19d72219db4a4712/service/history/workflow_task_handler.go#L166
     async def handle_commands(self, workflow_id, commands: list[Command]):
+        """
+        Handle Commands sent from a WorkflowWorker.
+
+        Handling a command always results in writing new event(s) to history. In
+        the case of the SCHEDULE_ACTIVITY_TASK command the consequence is that
+        dispatch_workflow_or_activity_task() will dispatch an ActivityTask. But
+        in the case of commands such as COMPLETE_WORKFLOW_EXECUTION, and the
+        UPDATE_COMPLETED protocol message, we also look for a channel
+        representing a request that is blocked waiting for the new history
+        event, and unblock the request if one exists.
+        """
         chans = self.pending_application_requests[DEFAULT_NAMESPACE]
 
         await self.write_history_events(
