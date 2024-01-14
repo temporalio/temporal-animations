@@ -487,6 +487,9 @@ class Server(AbstractServer):
         return events
 
     async def dispatch_workflow_or_activity_task(self, workflow_id: WorkflowId):
+        # Eager task dispatch: give priority to any pending worker tasks
+        await asyncio.sleep(0)
+
         events = iter(self.namespace[workflow_id].history.events)
         event = next((e for e in events if not e.seen_by_worker), None)
         if event is None:
