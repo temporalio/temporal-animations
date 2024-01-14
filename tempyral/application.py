@@ -1,3 +1,4 @@
+import asyncio
 from typing import Coroutine, Iterable, Type
 
 from tempyral.code import WithCode
@@ -53,6 +54,10 @@ class AbstractApplication(Entity, WithCode):
                     self.blocked_lines.remove(request.token)
                     emit_change_event(self)
                 emit_message_event(server, self, request)
+
+                # Eager task dispatch: give priority to worker coroutine
+                await asyncio.sleep(0)
+
             self.update(active=False)
             server.terminate_simulation()
 
