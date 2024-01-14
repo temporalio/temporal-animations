@@ -232,12 +232,11 @@ class Server(AbstractServer):
     async def _handle_non_blocking_application_request(
         self, request: ApplicationRequest, event_to_be_written: HistoryEventType
     ):
-        [event] = await self.write_history_events(
+        await self.write_history_events(
             request.workflow_id,
             [event_to_be_written],
             seen_by_sticky_worker=False,
         )
-        request.response_payload = event.data.get("payload")
         emit_change_event(self)
 
     # The following are blocking requests; they use
