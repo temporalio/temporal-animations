@@ -81,5 +81,9 @@ def emit_message_event(
     emit_change_event(receiver)
 
 
+def _serialize(data: dict[str, Any]) -> str:
+    return json.dumps(data, sort_keys=True)
+
+
 def _emit(data: dict[str, Any]):
-    print(json.dumps(data, sort_keys=True), flush=True)
+    print(_serialize(data), flush=True)
