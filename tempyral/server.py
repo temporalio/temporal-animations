@@ -242,8 +242,6 @@ class Server(AbstractServer):
         """
         Add update to registry and return response.
         """
-        # FIXME: The WFT will be scheduled when the update result is requested.
-        # It seems that it should be scheduled now.
         self._add_received_update_to_update_registry(request.workflow_id)
         await self._handle_non_blocking_application_request(request, None)
 
@@ -262,6 +260,12 @@ class Server(AbstractServer):
             await self.write_history_events(
                 request.workflow_id,
                 [event_to_be_written],
+                seen_by_sticky_worker=False,
+            )
+        if self.should_schedule_wft(request.workflow_id):
+            await self.write_history_events(
+                request.workflow_id,
+                [HistoryEventType.WFT_SCHEDULED],
                 seen_by_sticky_worker=False,
             )
         emit_change_event(self)
