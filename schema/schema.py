@@ -1,7 +1,7 @@
 import sys
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Hashable, Optional, OrderedDict
+from typing import Any, Hashable, OrderedDict
 
 
 @dataclass
@@ -78,8 +78,8 @@ class Entity(Model):
 @dataclass
 class RequestResponse(Entity):
     stage: RequestResponseStage
-    token: Optional[int]
-    response_payload: Optional[Hashable]
+    token: int | None
+    response_payload: Hashable | None
 
 
 # TODO: unnecessary

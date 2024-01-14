@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from tempyral.entity import Entity
 
@@ -17,7 +17,7 @@ class RequestResponse(Entity):
     def __init__(self, time=0):
         super().__init__(time)
         self.stage = RequestResponseStage.Request
-        self.token: Optional[int] = None
+        self.token: int | None = None
         self.response_payload: Any | None = None
 
     __publish__ = Entity.__publish__ | {"stage", "token", "response_payload"}
@@ -40,7 +40,7 @@ class ApplicationRequest(RequestResponse):
         request_type: "ApplicationRequestType",
         workflow_id: "WorkflowId",
         time: int,
-        token: Optional[int],
+        token: int | None,
         response_payload: Any = None,
     ):
         super().__init__(time)
