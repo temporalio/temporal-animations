@@ -36,7 +36,6 @@ def render_simulation_events(events: Iterable[schema.Event]):
             animations.clear()
 
     serial = False
-    n = 10
     curr_time = -1
     for event in sorted(events, key=lamport_time):
         match event:
@@ -48,8 +47,8 @@ def render_simulation_events(events: Iterable[schema.Event]):
                 proxy_entity = proxy_entity_registry.get(event.entity)
                 proxy_entity.render_to_scene(event.entity)
             case schema.MessageEvent():
-                sender, receiver, message = _get_proxy_entities(
-                    event.sender, event.receiver, event.message
+                (sender, message, receiver) = _get_proxy_entities(
+                    event.sender, event.message, event.receiver
                 )
 
                 if serial or event.message.time > curr_time:
@@ -58,15 +57,12 @@ def render_simulation_events(events: Iterable[schema.Event]):
 
                 animations.append(sender.send_message(receiver, message, event.message))
 
-                if not (n := n - 1):
-                    break
-
 
 def _get_proxy_entities(
     sender_entity: schema.Entity,
-    receiver_entity: schema.Entity,
     message_entity: schema.RequestResponse,
-) -> Tuple[ProxyEntity, ProxyEntity, ProxyEntity[schema.RequestResponse]]:
+    receiver_entity: schema.Entity,
+) -> Tuple[ProxyEntity, ProxyEntity[schema.RequestResponse], ProxyEntity]:
     """
     Obtain renderer proxies for the simulation entities. The two
     actors will be in the registry already (all actors are created
@@ -86,7 +82,7 @@ def _get_proxy_entities(
         msg = msg_cls(entity=message_entity)
         msg.mobj.move_to(sender.get_message_start(message_entity))
         proxy_entity_registry.put(message_entity, msg)
-    return sender, receiver, msg
+    return sender, msg, receiver
 
 
 def _get_message_cls_for(
