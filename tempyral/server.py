@@ -230,13 +230,14 @@ class Server(AbstractServer):
         )
 
     async def _handle_non_blocking_application_request(
-        self, request: ApplicationRequest, event_to_be_written: HistoryEventType
+        self, request: ApplicationRequest, event_to_be_written: HistoryEventType | None
     ):
-        await self.write_history_events(
-            request.workflow_id,
-            [event_to_be_written],
-            seen_by_sticky_worker=False,
-        )
+        if event_to_be_written:
+            [event] = await self.write_history_events(
+                request.workflow_id,
+                [event_to_be_written],
+                seen_by_sticky_worker=False,
+            )
         emit_change_event(self)
 
     # The following are blocking requests; they use
