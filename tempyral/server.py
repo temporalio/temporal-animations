@@ -139,7 +139,7 @@ class Server(AbstractServer):
         of the following are true:
 
         - There are unseen history events that could advance workflow history
-        - There are pending updates
+        - There are requested updates
         """
         wf_data = self.get_workflow_data(workflow_id)
 
@@ -231,11 +231,19 @@ class Server(AbstractServer):
     # handling the request.
 
     async def start_workflow(self, request: ApplicationRequest):
+        """
+        Write WF_STARTED and this dispatch a WFT. Otherwise do not block.
+        """
         await self._handle_non_blocking_application_request(
             request, HistoryEventType.WF_STARTED
         )
 
     async def start_update(self, request: ApplicationRequest):
+        """
+        Add update to registry and return response.
+        """
+        # FIXME: The WFT will be scheduled when the update result is requested.
+        # It seems that it should be scheduled now.
         self._add_received_update_to_update_registry(request.workflow_id)
         await self._handle_non_blocking_application_request(request, None)
 
@@ -247,8 +255,11 @@ class Server(AbstractServer):
     async def _handle_non_blocking_application_request(
         self, request: ApplicationRequest, event_to_be_written: HistoryEventType | None
     ):
+        """
+        Handle request withought blocking; optionally write a HistoryEvent.
+        """
         if event_to_be_written:
-            [event] = await self.write_history_events(
+            await self.write_history_events(
                 request.workflow_id,
                 [event_to_be_written],
                 seen_by_sticky_worker=False,
@@ -309,7 +320,7 @@ class Server(AbstractServer):
         self, request: ApplicationRequest, event_to_be_written: HistoryEventType | None
     ) -> HistoryEvent:
         """
-        Handle request by writing history events, and return response.
+        Handle request by blocking until the required HistoryEvent has been written.
 
         When handling an application request, we create a new channel and block,
         waiting for a value to be pushed to the channel in handle_commands().
