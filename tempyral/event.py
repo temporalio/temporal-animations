@@ -67,6 +67,8 @@ def emit_message_event(
     receiver: "Entity",
     message: "RequestResponse | Response",
 ):
+    sender.time = message.time = sender.time + 1
+    emit_change_event(sender)
     _emit(
         dict(
             sender=to_serializable(sender),
@@ -75,6 +77,8 @@ def emit_message_event(
             _type="MessageEvent",
         )
     )
+    receiver.time = max(receiver.time, message.time) + 1
+    emit_change_event(receiver)
 
 
 def _emit(data: dict[str, Any]):

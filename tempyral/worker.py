@@ -39,7 +39,6 @@ class Worker(Entity, ABC, Generic[T]):
             task = response.task
             log(f"got task: {task} {task.__dict__}", "W:")
             emit_message_event(server, self, response)
-            self.tick(request)
             # TODO: token nullability
             await self.handle_task(task, response.token or 0, server)
 
@@ -54,8 +53,6 @@ class Worker(Entity, ABC, Generic[T]):
     async def send_request(self, request: WorkerRequest, server: Server):
         emit_message_event(self, server, request)
         await server.handle_worker_request(request)
-        request.time = server.time
-        self.tick(request)
         emit_change_event(self)
 
 

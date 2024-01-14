@@ -170,7 +170,6 @@ class Server(AbstractServer):
         5. Block until a value is written to the channel
         6. Return the same RequestResponse object that was received
         """
-        self.tick(request)
         request.stage = RequestResponseStage.Response
         emit_change_event(self)
         match request.request_type:
@@ -188,7 +187,6 @@ class Server(AbstractServer):
     async def handle_worker_poll_request[
         T: WorkflowTask | ActivityTask
     ](self, request: WorkerPollRequest[T]) -> WorkerPollRequest[T]:
-        self.tick(request)
         request.stage = RequestResponseStage.Response
         # TODO:
         queue = cast(
@@ -201,14 +199,12 @@ class Server(AbstractServer):
         )
 
         task = await queue.get()
-        request.time = self.time
         request.task = task
         # TODO: Do not copy tokens to request
         request.token = cast(int, next(e.data.get("token", 0) for e in task.events))
         return request
 
     async def handle_worker_request(self, request: WorkerRequest):
-        self.tick(request)
         request.stage = RequestResponseStage.Response
         emit_change_event(self)
         match request:

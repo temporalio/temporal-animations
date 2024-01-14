@@ -44,14 +44,11 @@ class AbstractApplication(Entity, WithCode):
         async def coro():
             for request in self.requests:
                 self.update(active=True)
-                request.time = self.time
                 if request.token is not None:
                     self.blocked_lines.add(request.token)
                     emit_change_event(self)
                 emit_message_event(self, server, request)
                 await server.handle_application_request(request)
-                request.time = server.time
-                self.tick(request)
                 if request.token is not None:
                     self.blocked_lines.remove(request.token)
                     emit_change_event(self)
