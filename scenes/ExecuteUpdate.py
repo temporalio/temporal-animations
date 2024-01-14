@@ -13,7 +13,7 @@ const wfHandle = await client.start(myWorkflow, {               // tempyral: App
     workflowId: 'my-workflow-id',
     taskQueue: 'my-task-queue',
 });
-const updateResult = await wfHandle.executeUpdate(myUpdate, {args: [1]})     // tempyral: ApplicationRequestType.ExecuteUpdate "my-workflow-id"
+const updateResult = await wfHandle.executeUpdate(myIncrementer, {args: [1]})     // tempyral: ApplicationRequestType.ExecuteUpdate "my-workflow-id"
 """
 
 
@@ -23,12 +23,12 @@ class UpdateHandlerWorkflow(Workflow):
     """
 
     typescript = """
-const myUpdate = wf.defineUpdate<number, [number]>('myUpdate');
+const myIncrementer = wf.defineUpdate<number, [number]>('myIncrementer');
 
 export async function myWorkflow(): Promise<number> {
   let total = 1;
   wf.setHandler(
-    myUpdate,
+    myIncrementer,
     async (arg: number) => {
       total += arg;
       return total;

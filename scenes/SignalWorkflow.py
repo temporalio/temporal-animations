@@ -13,7 +13,7 @@ const wfHandle = await client.start(myWorkflow, {               // tempyral: App
     workflowId: 'my-workflow-id',
     taskQueue: 'my-task-queue',
 });
-await wfHandle.signal(mySignal, 1)                                 // tempyral: ApplicationRequestType.SignalWorkflow "my-workflow-id"
+await wfHandle.signal(myIncrementer, 1)                         // tempyral: ApplicationRequestType.SignalWorkflow "my-workflow-id"
 await wfHandle.result()                                         // tempyral: ApplicationRequestType.GetWorkflowResult "my-workflow-id"
 """
 
@@ -24,12 +24,12 @@ class SignalHandlerWorkflow(Workflow):
     """
 
     typescript = """
-const mySignal = wf.defineSignal<[number]>('mySignal');
+const myIncrementer = wf.defineSignal<[number]>('myIncrementer');
 
 export async function myWorkflow(): Promise<number> {
   let total = 0;
   wf.setHandler(
-    mySignal,
+    myIncrementer,
     async (arg: number) => {
       total += arg;
     },
