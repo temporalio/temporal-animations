@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Temporal Videos</title>
+    <title>Temporal Animations</title>
     <style>
       body {
         background-color: #1d1d1d;
@@ -12,9 +12,17 @@
         margin: 0;
         padding: 0;
       }
+      h1 {
+        text-align: center;
+        padding: 50px;
+      }
+      body > p {
+        text-align: left;
+        padding-left: 60px;
+        padding-right: 60px;
+      }
       table {
         margin: 50px;
-        margin-top: 200px;
         width: 80%;
         border-collapse: collapse;
       }
@@ -24,6 +32,14 @@
         text-align: left;
         vertical-align: top;
         padding-bottom: 100px;
+        max-width: 300px;
+      }
+      a {
+        color: #2097d2;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
       }
       .video-cell {
         padding-left: 30px;
@@ -36,10 +52,18 @@
     </style>
   </head>
   <body>
+    <h1>Temporal Operations</h1>
+    <p>
+      These animations are created automatically from simulations of Temporal.
+      Please see
+      <a href="https://github.com/temporalio/temporal-animations"
+        >https://github.com/temporalio/temporal-animations</a
+      >.
+    </p>
     <table>
       <tr>
         <td>
-          <h2>Execute Workflow</h2>
+          <h2 id="execute-workflow">ExecuteWorkflow</h2>
         </td>
         <td class="video-cell">
           <video controls>
@@ -49,7 +73,7 @@
       </tr>
       <tr>
         <td>
-          <h2>Call Activity</h2>
+          <h2 id="call-activity">Call Activity</h2>
         </td>
         <td class="video-cell">
           <video controls>
@@ -59,7 +83,7 @@
       </tr>
       <tr>
         <td>
-          <h2>Signal</h2>
+          <h2 id="signal">Signal</h2>
         </td>
         <td class="video-cell">
           <video controls>
@@ -69,7 +93,7 @@
       </tr>
       <tr>
         <td>
-          <h2>Signal vs SignalWithStart</h2>
+          <h2 id="signal-with-start">Signal vs SignalWithStart</h2>
         </td>
         <td class="video-cell">
           <video controls>
@@ -82,7 +106,7 @@
       </tr>
       <tr>
         <td>
-          <h2>Start Update</h2>
+          <h2 id="start-update">Start Update</h2>
         </td>
         <td class="video-cell">
           <video controls>
@@ -92,7 +116,7 @@
       </tr>
       <tr>
         <td>
-          <h2>Execute Update</h2>
+          <h2 id="execute-update">Execute Update</h2>
         </td>
         <td class="video-cell">
           <video controls>
@@ -102,7 +126,9 @@
       </tr>
       <tr>
         <td>
-          <h2>Execute Update vs StartWorkflowAndExecuteUpdate</h2>
+          <h2 id="start-workflow-and-execute-update">
+            Execute Update vs StartWorkflowAndExecuteUpdate
+          </h2>
         </td>
         <td class="video-cell">
           <video controls>
