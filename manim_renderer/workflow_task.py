@@ -24,6 +24,7 @@ class BoxedHistoryEvents(HistoryEvents):
             color=style.COLOR_HISTORY_EVENT_GROUP_RECT,
             stroke_width=style.STROKE_WIDTH_HISTORY_EVENT_GROUP_RECT,
             fill_color=style.COLOR_SCENE_BACKGROUND,
+            fill_opacity=1,
         )
         return VGroup(rect, eventsm)
 
