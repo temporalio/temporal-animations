@@ -191,6 +191,11 @@ class Server(AbstractServer):
                 self._add_received_update_to_update_registry(request.workflow_id)
             case ApplicationRequestType.SignalWorkflow:
                 history_events_to_be_written = [HistoryEventType.WF_SIGNALED]
+            case ApplicationRequestType.SignalWithStartWorkflow:
+                history_events_to_be_written = [
+                    HistoryEventType.WF_STARTED,
+                    HistoryEventType.WF_SIGNALED,
+                ]
 
             # Blocking requests. See handle_commands() for how these are unblocked.
             case ApplicationRequestType.StartWorkflowAndExecuteUpdate:

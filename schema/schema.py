@@ -37,6 +37,7 @@ class ApplicationRequestType(Enum):
     GetUpdateResult = 4
     ExecuteUpdate = 5
     StartWorkflowAndExecuteUpdate = 6
+    SignalWithStartWorkflow = 7
     SignalWorkflow = 8
     NexusRequest = 9
 
