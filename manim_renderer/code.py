@@ -2,6 +2,7 @@ from typing import Generic, TypeVar
 
 from manim import DOWN, LEFT, PINK, Arrow, VDict, VGroup, VMobject
 
+from manim_renderer import style
 from manim_renderer.entity import ProxyEntity
 from manim_renderer.manim_shims import Code
 from schema import schema
@@ -16,6 +17,7 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
         code = Code(
             code=entity.code,
             language=entity.language,
+            style=style.CODE_SYNTAX_THEME,
             insert_line_no=False,
             background_stroke_width=1,
             background_stroke_color=str(
