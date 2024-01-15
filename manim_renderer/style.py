@@ -5,6 +5,7 @@ from manim import (
     Line,
     ManimColor,
     Mobject,
+    Point,
     SurroundingRectangle,
     Text,
     VGroup,
@@ -25,7 +26,9 @@ COLOR_REQUESTED_UPDATE = BLUE_E
 COLOR_MESSAGE = ORANGE
 COLOR_ACTIVE_CODE = "#3CB043"
 COLOR_INACTIVE_CODE = LIGHTER_GRAY
-COLOR_SCENE_BACKGROUND = "#1D1D1D"  # GRAY_E is #222222
+COLOR_SCENE_BACKGROUND = "#1D1D1D"
+COLOR_HISTORY_EVENT_GROUP_RECT = LIGHTER_GRAY
+STROKE_WIDTH_HISTORY_EVENT_GROUP_RECT = 1
 STROKE_WIDTH_PENDING_REQUEST_RAY = 1
 STROKE_OPACITY_PENDING_REQUEST_RAY = 0.7
 BUFF_PENDING_REQUEST = 0.5
@@ -60,6 +63,10 @@ def pending_request_ray(start: Point3D, end: Point3D) -> Mobject:
 
 def invisible_message() -> Mobject:
     return Text(".").set_opacity(0)
+
+
+def invisible_point() -> Mobject:
+    return Point().set_stroke_width(0)
 
 
 def actor(name: str) -> Mobject:

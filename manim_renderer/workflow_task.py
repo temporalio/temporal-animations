@@ -1,6 +1,6 @@
 from typing import Iterable, cast
 
-from manim import DOWN, LEFT, SMALL_BUFF, WHITE, Mobject, SurroundingRectangle, VGroup
+from manim import DOWN, LEFT, SMALL_BUFF, Mobject, SurroundingRectangle, VGroup
 
 from manim_renderer import style
 from manim_renderer.entity import ProxyEntity, VisualElement
@@ -21,9 +21,8 @@ class BoxedHistoryEvents(HistoryEvents):
             ).arrange(DOWN, buff=SMALL_BUFF, aligned_edge=LEFT)
         rect = SurroundingRectangle(
             eventsm,
-            color=WHITE,
-            stroke_width=1,
-            fill_opacity=1,
+            color=style.COLOR_HISTORY_EVENT_GROUP_RECT,
+            stroke_width=style.STROKE_WIDTH_HISTORY_EVENT_GROUP_RECT,
             fill_color=style.COLOR_SCENE_BACKGROUND,
         )
         return VGroup(rect, eventsm)

@@ -243,7 +243,7 @@ class ProxyEntityWithChildren(
     child_cls: Type[Q]
     child_align_direction: Vector3
 
-    def __init__(self, entity: E, parent: VisualElement = root) -> None:
+    def __init__(self, entity: E, parent: VisualElement = root):
         super().__init__(entity, parent=parent)
         self.children: list[Q] = []
         for e in self.get_child_entities(entity):

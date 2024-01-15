@@ -1,10 +1,10 @@
 from typing import Iterable
 
-from manim import BLACK, DOWN
+from manim import DOWN
 from manim import GREEN_D as GREEN
 from manim import LEFT
 from manim import RED_D as RED
-from manim import SMALL_BUFF, Mobject, Point, VGroup
+from manim import SMALL_BUFF, Mobject, VGroup
 
 from manim_renderer import style
 from manim_renderer.entity import ProxyEntity, ProxyEntityWithChildren, VisualElement
@@ -36,9 +36,7 @@ class History(
 
     @staticmethod
     def render(_: schema.History) -> Mobject:
-        m = Point(color=BLACK)
-        m.set_stroke_width(0)
-        return m
+        return style.invisible_point()
 
     @staticmethod
     def get_child_entities(entity: schema.History) -> list[schema.HistoryEvent]:

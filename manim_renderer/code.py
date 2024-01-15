@@ -4,12 +4,6 @@ from manim import DOWN, LEFT, PINK, Arrow, VDict, VGroup, VMobject
 
 from manim_renderer.entity import ProxyEntity
 from manim_renderer.manim_shims import Code
-from manim_renderer.style import (
-    COLOR_ACTIVE_CODE,
-    COLOR_INACTIVE_CODE,
-    FONT_CODE,
-    FONT_SIZE_CODE,
-)
 from schema import schema
 
 E = TypeVar("E", bound=schema.EntityWithCode)
@@ -25,10 +19,10 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
             insert_line_no=False,
             background_stroke_width=1,
             background_stroke_color=str(
-                COLOR_ACTIVE_CODE if entity.active else COLOR_INACTIVE_CODE
+                style.COLOR_ACTIVE_CODE if entity.active else style.COLOR_INACTIVE_CODE
             ),
-            font_size=FONT_SIZE_CODE,
-            font=FONT_CODE,
+            font_size=style.FONT_SIZE_CODE,
+            font=style.FONT_CODE,
             line_spacing=0.5,
         ).to_edge(LEFT, buff=0.1)
         lines = code[self.CODE_LINES_INDEX]
