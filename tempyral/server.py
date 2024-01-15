@@ -193,6 +193,10 @@ class Server(AbstractServer):
                 history_event_to_be_written = HistoryEventType.WF_SIGNALED
 
             # Blocking requests. See handle_commands() for how these are unblocked.
+            case ApplicationRequestType.StartWorkflowAndExecuteUpdate:
+                # Add update to registry, start workflow and block until WF_UPDATE_COMPLETED.
+                self._add_received_update_to_update_registry(request.workflow_id)
+                history_event_to_be_written = HistoryEventType.WF_STARTED
             case ApplicationRequestType.GetWorkflowResult:
                 # Block until handle_commands() handles a
                 # COMPLETE_WORKFLOW_EXECUTION command
@@ -251,6 +255,7 @@ class Server(AbstractServer):
             ApplicationRequestType.GetWorkflowResult,
             ApplicationRequestType.GetUpdateResult,
             ApplicationRequestType.ExecuteUpdate,
+            ApplicationRequestType.StartWorkflowAndExecuteUpdate,
         }:
             chans = self.pending_application_requests[DEFAULT_NAMESPACE]
             key = request.request_type, request.workflow_id
@@ -372,6 +377,7 @@ class Server(AbstractServer):
                             for request_type in [
                                 ApplicationRequestType.ExecuteUpdate,
                                 ApplicationRequestType.GetUpdateResult,
+                                ApplicationRequestType.StartWorkflowAndExecuteUpdate,
                             ]:
                                 key = request_type, workflow_id
                                 if chan := chans.get(key):
