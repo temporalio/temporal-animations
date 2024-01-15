@@ -242,11 +242,15 @@ class Server(AbstractServer):
         """
         if events_to_be_written:
             await self.write_history_events(
-                request.workflow_id, [(e, False) for e in events_to_be_written]
+                request.workflow_id,
+                events_to_be_written,
+                seen_by_sticky_worker=False,
             )
         if self.should_schedule_wft(request.workflow_id):
             await self.write_history_events(
-                request.workflow_id, [(HistoryEventType.WFT_SCHEDULED, False)]
+                request.workflow_id,
+                [HistoryEventType.WFT_SCHEDULED],
+                seen_by_sticky_worker=False,
             )
         emit_change_event(self)
 
@@ -318,7 +322,9 @@ class Server(AbstractServer):
         chans = self.pending_application_requests[DEFAULT_NAMESPACE]
 
         await self.write_history_events(
-            workflow_id, [(HistoryEventType.WFT_COMPLETED, True)]
+            workflow_id,
+            [HistoryEventType.WFT_COMPLETED],
+            seen_by_sticky_worker=True,
         )
 
         for command in commands:
@@ -326,7 +332,8 @@ class Server(AbstractServer):
                 case CommandType.SCHEDULE_ACTIVITY_TASK:
                     await self.write_history_events(
                         workflow_id,
-                        [(HistoryEventType.ACTIVITY_TASK_SCHEDULED, False)],
+                        [HistoryEventType.ACTIVITY_TASK_SCHEDULED],
+                        seen_by_sticky_worker=False,
                         token=command.token,
                     )
                 case CommandType.COMPLETE_WORKFLOW_EXECUTION:
@@ -336,7 +343,8 @@ class Server(AbstractServer):
                     )
                     [event] = await self.write_history_events(
                         workflow_id,
-                        [(HistoryEventType.WF_COMPLETED, True)],
+                        [HistoryEventType.WF_COMPLETED],
+                        seen_by_sticky_worker=True,
                         payload=command.payload,
                     )
                     key = ApplicationRequestType.GetWorkflowResult, workflow_id
@@ -351,21 +359,24 @@ class Server(AbstractServer):
                         ):
                             await self.write_history_events(
                                 workflow_id,
-                                [(HistoryEventType.WF_UPDATE_ACCEPTED, True)],
+                                [HistoryEventType.WF_UPDATE_ACCEPTED],
+                                seen_by_sticky_worker=True,
                             )
                         case ProtocolMessage(
                             ProtocolMessageType.UPDATE_REJECTED, update_id
                         ):
                             await self.write_history_events(
                                 workflow_id,
-                                [(HistoryEventType.WF_UPDATE_REJECTED, True)],
+                                [HistoryEventType.WF_UPDATE_REJECTED],
+                                seen_by_sticky_worker=True,
                             )
                         case ProtocolMessage(
                             ProtocolMessageType.UPDATE_COMPLETED, update_id, payload
                         ):
                             [event] = await self.write_history_events(
                                 workflow_id,
-                                [(HistoryEventType.WF_UPDATE_COMPLETED, True)],
+                                [HistoryEventType.WF_UPDATE_COMPLETED],
+                                seen_by_sticky_worker=True,
                                 payload=payload,
                             )
                             for request_type in [
@@ -386,26 +397,30 @@ class Server(AbstractServer):
     ):
         await self.write_history_events(
             workflow_id,
-            [(HistoryEventType.ACTIVITY_TASK_COMPLETED, False)],
+            [HistoryEventType.ACTIVITY_TASK_COMPLETED],
+            seen_by_sticky_worker=False,
             publish=False,
             result=result,
             token=token,
         )
         if self.should_schedule_wft(workflow_id):
             await self.write_history_events(
-                workflow_id, [(HistoryEventType.WFT_SCHEDULED, False)]
+                workflow_id,
+                [HistoryEventType.WFT_SCHEDULED],
+                seen_by_sticky_worker=False,
             )
 
     async def write_history_events(
         self,
         workflow_id: WorkflowId,
-        event_types: list[tuple[HistoryEventType, bool]],
+        event_types: list[HistoryEventType],
+        seen_by_sticky_worker: bool,
         publish=True,
         **kwargs: Hashable,
     ) -> list[HistoryEvent]:
         events = [
-            HistoryEvent(e, seen_by_sticky_worker=seen, **kwargs)
-            for e, seen in event_types
+            HistoryEvent(e, seen_by_sticky_worker=seen_by_sticky_worker, **kwargs)
+            for e in event_types
         ]
         self.get_workflow_data(workflow_id).history.events.extend(events)
         if publish:
@@ -436,7 +451,9 @@ class Server(AbstractServer):
             [scheduled_event] = events
             events.extend(
                 await self.write_history_events(
-                    workflow_id, [(HistoryEventType.ACTIVITY_TASK_STARTED, True)]
+                    workflow_id,
+                    [HistoryEventType.ACTIVITY_TASK_STARTED],
+                    seen_by_sticky_worker=True,
                 )
             )
             await self.activity_task_queue[DEFAULT_NAMESPACE].put(
@@ -447,7 +464,9 @@ class Server(AbstractServer):
                 e.seen_by_worker = True
             events.extend(
                 await self.write_history_events(
-                    workflow_id, [(HistoryEventType.WFT_STARTED, True)]
+                    workflow_id,
+                    [HistoryEventType.WFT_STARTED],
+                    seen_by_sticky_worker=True,
                 )
             )
             requested_updates = drain(self.namespace[workflow_id].update_registry)
