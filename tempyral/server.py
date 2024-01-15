@@ -6,7 +6,6 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Hashable, TypedDict, cast
 
-from common.logger import log
 from common.utils import drain
 from tempyral.api import (
     ApplicationRequestType,
@@ -321,12 +320,6 @@ class Server(AbstractServer):
         """
         chans = self.pending_application_requests[DEFAULT_NAMESPACE]
 
-        await self.write_history_events(
-            workflow_id,
-            [HistoryEventType.WFT_COMPLETED],
-            seen_by_sticky_worker=True,
-        )
-
         for command in commands:
             match command.command_type:
                 case CommandType.SCHEDULE_ACTIVITY_TASK:
@@ -336,20 +329,6 @@ class Server(AbstractServer):
                         seen_by_sticky_worker=False,
                         token=command.token,
                     )
-                case CommandType.COMPLETE_WORKFLOW_EXECUTION:
-                    log(
-                        "",
-                        "S: Handling RespondWorkflowTaskCompleted([COMPLETE_WORKFLOW_EXECUTION])",
-                    )
-                    [event] = await self.write_history_events(
-                        workflow_id,
-                        [HistoryEventType.WF_COMPLETED],
-                        seen_by_sticky_worker=True,
-                        payload=command.payload,
-                    )
-                    key = ApplicationRequestType.GetWorkflowResult, workflow_id
-                    if key in chans:
-                        await chans[key].put(event)
                 case CommandType.PROTOCOL_MESSAGE:
                     assert command.protocol_message
                     match command.protocol_message:
@@ -387,10 +366,31 @@ class Server(AbstractServer):
                                 key = request_type, workflow_id
                                 if chan := chans.get(key):
                                     await chan.put(event)
+                case CommandType.COMPLETE_WORKFLOW_EXECUTION:
+                    # Handle it below, after closing the WFT
+                    pass
                 case _:
                     raise ValueError(
                         f"Server does not support command of type: {command.command_type}"
                     )
+
+        await self.write_history_events(
+            workflow_id,
+            [HistoryEventType.WFT_COMPLETED],
+            seen_by_sticky_worker=True,
+        )
+
+        for command in commands:
+            if command.command_type == CommandType.COMPLETE_WORKFLOW_EXECUTION:
+                [event] = await self.write_history_events(
+                    workflow_id,
+                    [HistoryEventType.WF_COMPLETED],
+                    seen_by_sticky_worker=True,
+                    payload=command.payload,
+                )
+                key = ApplicationRequestType.GetWorkflowResult, workflow_id
+                if key in chans:
+                    await chans[key].put(event)
 
     async def handle_activity_task_completed(
         self, workflow_id: WorkflowId, result: Any, token: int
