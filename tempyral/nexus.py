@@ -44,7 +44,13 @@ class NexusSimulation(Simulation):
             [cls() for cls in self.nexus_worker_classes],
         )
         emit_nexus_init_event(
-            server, apps, wworkers, aworkers, nexus_server, nexus_workers
+            server,
+            apps,
+            wworkers,
+            aworkers,
+            nexus_server,
+            nexus_workers,
+            self.__class__.__name__,
         )
 
         coros: list[Coroutine] = [w.poll(server) for w in wworkers + aworkers]

@@ -4,9 +4,23 @@ import sys
 from datetime import datetime
 from typing import Iterator, cast
 
-from manim import DL, DOWN, LEFT, RIGHT, SMALL_BUFF, UP, Camera, Dot, Scene, Text
+from manim import (
+    DL,
+    DOWN,
+    LEFT,
+    RIGHT,
+    SMALL_BUFF,
+    UP,
+    UR,
+    Camera,
+    Dot,
+    MarkupText,
+    Scene,
+    Text,
+)
 
 import manim_renderer as renderer
+from manim_renderer import style
 from manim_renderer.style import COLOR_SCENE_BACKGROUND
 from schema import schema
 
@@ -37,6 +51,13 @@ class TemporalScene(Scene):
         Initialize the manim scene.
         """
         renderer.set_scene(self)
+        self.add(
+            MarkupText(
+                f'<span underline="single">{event.title}</span>',
+                font=style.FONT_ACTOR,
+                font_size=style.FONT_SIZE_TITLE,
+            ).align_on_border(UR)
+        )
         assert isinstance(self.camera, Camera)
         self.camera.background_color = COLOR_SCENE_BACKGROUND
         self.add_timestamp()

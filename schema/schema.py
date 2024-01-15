@@ -202,6 +202,7 @@ class InitEvent(Model):
     apps: list[Application]
     workflow_workers: list[WorkflowWorker]
     activity_workers: list[ActivityWorker]
+    title: str
 
 
 @dataclass

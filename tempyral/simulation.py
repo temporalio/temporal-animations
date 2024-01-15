@@ -19,6 +19,8 @@ class Simulation:
     # A simulation may optionally specify an activity worker.
     activity_worker_classes: list[Type[ActivityWorker]] = []
 
+    title: str = ""
+
     async def do_simulation(self):
         """
         Instantiate simulation entities, emit initial event, and run coroutines
@@ -30,7 +32,9 @@ class Simulation:
             [WorkflowWorker(self.workflow_classes)],
             [cls() for cls in self.activity_worker_classes],
         )
-        emit_init_event(server, apps, wworkers, aworkers)
+        emit_init_event(
+            server, apps, wworkers, aworkers, self.title or self.__class__.__name__
+        )
 
         coros: list[Coroutine] = [w.poll(server) for w in wworkers + aworkers]
         for app in apps:

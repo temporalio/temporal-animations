@@ -17,12 +17,14 @@ def _get_init_event_data(
     apps: list["AbstractApplication"],
     workflow_workers: list["WorkflowWorker"],
     activity_workers: list["ActivityWorker"],
+    title: str,
 ) -> dict[str, Any]:
     return dict(
         server=to_serializable(server),
         apps=[to_serializable(a) for a in apps],
         workflow_workers=[to_serializable(w) for w in workflow_workers],
         activity_workers=[to_serializable(w) for w in activity_workers],
+        title=title,
     )
 
 
@@ -31,10 +33,13 @@ def emit_init_event(
     apps: list["AbstractApplication"],
     workflow_workers: list["WorkflowWorker"],
     activity_workers: list["ActivityWorker"],
+    title: str,
 ):
     _emit(
         dict(
-            _get_init_event_data(server, apps, workflow_workers, activity_workers),
+            _get_init_event_data(
+                server, apps, workflow_workers, activity_workers, title
+            ),
             _type="InitEvent",
         )
     )
@@ -47,10 +52,13 @@ def emit_nexus_init_event(
     activity_workers: list["ActivityWorker"],
     nexus_server: "NexusServer | None",
     nexus_workers: "list[NexusWorker]",
+    title: str,
 ):
     _emit(
         dict(
-            _get_init_event_data(server, apps, workflow_workers, activity_workers),
+            _get_init_event_data(
+                server, apps, workflow_workers, activity_workers, title
+            ),
             nexus_server=to_serializable(nexus_server),
             nexus_workers=[to_serializable(w) for w in nexus_workers],
             _type="NexusInitEvent",
