@@ -57,6 +57,8 @@ def render_simulation_events(events: Iterable[schema.Event]):
 
                 animations.append(sender.send_message(receiver, message, event.message))
 
+    flush_animations()
+
 
 def _get_proxy_entities(
     sender_entity: schema.Entity,
