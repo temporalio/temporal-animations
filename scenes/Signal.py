@@ -3,7 +3,7 @@ from tempyral.simulation import Simulation, run_simulation
 from tempyral.worker import Workflow
 
 
-class SignalWorkflowApplication(Application):
+class SignalApplication(Application):
     """
     An application that starts a workflow and then sends it a signal
     """
@@ -40,10 +40,10 @@ export async function myWorkflow(): Promise<number> {
 """
 
 
-class SignalWorkflow(Simulation):
-    application_classes = [SignalWorkflowApplication]
+class Signal(Simulation):
+    application_classes = [SignalApplication]
     workflow_classes = [SignalHandlerWorkflow]
 
 
 if __name__ == "__main__":
-    run_simulation(SignalWorkflow())
+    run_simulation(Signal())
