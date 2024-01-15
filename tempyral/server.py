@@ -182,21 +182,21 @@ class Server(AbstractServer):
         """
         request.stage = RequestResponseStage.Response
         emit_change_event(self)
-        history_event_to_be_written = None
+        history_events_to_be_written = []
         match request.request_type:
             # Non-blocking requests
             case ApplicationRequestType.StartWorkflow:
-                history_event_to_be_written = HistoryEventType.WF_STARTED
+                history_events_to_be_written = [HistoryEventType.WF_STARTED]
             case ApplicationRequestType.StartUpdate:
                 self._add_received_update_to_update_registry(request.workflow_id)
             case ApplicationRequestType.SignalWorkflow:
-                history_event_to_be_written = HistoryEventType.WF_SIGNALED
+                history_events_to_be_written = [HistoryEventType.WF_SIGNALED]
 
             # Blocking requests. See handle_commands() for how these are unblocked.
             case ApplicationRequestType.StartWorkflowAndExecuteUpdate:
                 # Add update to registry, start workflow and block until WF_UPDATE_COMPLETED.
                 self._add_received_update_to_update_registry(request.workflow_id)
-                history_event_to_be_written = HistoryEventType.WF_STARTED
+                history_events_to_be_written = [HistoryEventType.WF_STARTED]
             case ApplicationRequestType.GetWorkflowResult:
                 # Block until handle_commands() handles a
                 # COMPLETE_WORKFLOW_EXECUTION command
@@ -214,10 +214,10 @@ class Server(AbstractServer):
             case _:
                 raise ValueError(f"Server does not support request of type: {request}")
 
-        await self._handle_application_request(request, history_event_to_be_written)
+        await self._handle_application_request(request, history_events_to_be_written)
 
     async def _handle_application_request(
-        self, request: ApplicationRequest, event_to_be_written: HistoryEventType | None
+        self, request: ApplicationRequest, events_to_be_written: list[HistoryEventType]
     ):
         """
         In all cases, we write the history event if one was supplied, and then
@@ -235,10 +235,10 @@ class Server(AbstractServer):
         (We do not currently support multiple concurrent requests of the same
         type for the same workflow_id).
         """
-        if event_to_be_written:
+        if events_to_be_written:
             await self.write_history_events(
                 request.workflow_id,
-                [event_to_be_written],
+                events_to_be_written,
                 seen_by_sticky_worker=False,
             )
         if self.should_schedule_wft(request.workflow_id):
