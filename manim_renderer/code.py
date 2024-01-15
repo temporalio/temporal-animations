@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar
 
-from manim import DOWN, LEFT, PINK, Arrow, VDict, VGroup, VMobject
+from manim import DOWN, LEFT, Arrow, VDict, VGroup, VMobject
 
 from manim_renderer import style
 from manim_renderer.entity import ProxyEntity
@@ -19,10 +19,11 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
             language=entity.language,
             style=style.CODE_SYNTAX_THEME,
             insert_line_no=False,
-            background_stroke_width=1,
+            background_stroke_width=2 if entity.active else 1,
             background_stroke_color=str(
                 style.COLOR_ACTIVE_CODE if entity.active else style.COLOR_INACTIVE_CODE
             ),
+            corner_radius=style.RECT_CORNER_RADIUS,
             font_size=style.FONT_SIZE_CODE,
             font=style.FONT_CODE,
             line_spacing=0.5,
@@ -41,5 +42,5 @@ class ProxyEntityWithCode(ProxyEntity, Generic[E]):
             )
         )
         for line_num in entity.blocked_lines:
-            arrows[line_num - 1].set_color(PINK).set_opacity(1)
+            arrows[line_num - 1].set_color(style.COLOR_CODE_LINE_ARROW).set_opacity(1)
         return VDict({"code": code, "arrows": arrows})

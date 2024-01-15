@@ -68,6 +68,7 @@ class History(
                 color=style.COLOR_HISTORY_EVENT_GROUP_RECT,
                 stroke_width=style.STROKE_WIDTH_HISTORY_EVENT_GROUP_RECT,
                 buff=0.05,
+                corner_radius=0,
             )
             for wft in wfts
         ]
