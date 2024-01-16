@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Temporal Animations</title>
+    <style>
+      body {
+        background-color: #1d1d1d;
+        color: #dddddd;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      h1 {
+        text-align: center;
+        padding: 50px;
+      }
+      body > p {
+        text-align: left;
+        padding-left: 60px;
+        padding-right: 60px;
+      }
+      table {
+        margin: 50px;
+        width: 80%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 15px;
+        text-align: left;
+        vertical-align: top;
+        padding-bottom: 100px;
+        max-width: 300px;
+      }
+      .video-cell {
+        padding-left: 30px;
+        max-width: 600px;
+      }
+      video {
+        max-width: 100%;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>An Animated Guide to Temporal</h1>
+
+    <p>
+      The Temporal SDKs provide a variety of primitives for starting and
+      interacting with workflows. In this guide we're going to see exactly what
+      they do and how they compare to each other.
+    </p>
+    <p>
+      Temporal provides Durable Execution. Among other things, this means that
+      your code can sleep for minutes or months waiting for conditions to become
+      true, resume with application state exactly as it was before, and survive
+      deployments and crashes of the machines involved.
+    </p>
+    <p>
+      Fundamentally, Temporal does this by executing workflows on behalf of your
+      application, with durable persistence of workflow history as it unfolds. A
+      workflow is just a function or method that you write in a language of your
+      choice; the workflow code is executed by a Workflow Worker that you run.
+      Your application, and your Workflow Worker, both communicate with the
+      Temporal Server in order to start the workflow and interacting with it
+      while it's running.
+    </p>
+    <p>
+      Our starting point is a pair of commands that your application uses to
+      start a workflow, and then to obtain the workflow result.
+    </p>
+    <table>
+      <tr>
+        <td>
+          <h2>StartWorkflow and GetWorkflowResult</h2>
+          <p>
+            At the beginning of the video we see the application starting a
+            workflow; at the same time, the Workflow Worker starts polling for
+            tasks (orange line). The StartWorkflow request causes some events to
+            be durably persisted in workflow history. These represent work for
+            the Workflow Worker to do (it must start executing the workflow
+            code) and so a Workflow Task (WFT) is dispatched to the
+            WorkflowWorker.
+          </p>
+          <p>
+            Meanwhile, the application has sent the second GetWorkflowResult RPC
+            requesting the workflow result. This will block until it is ready
+            (or timeout). When the Worker responds to the WFT, further events
+            are written to workflow history, including the workflow return
+            value. The GetWorkflowResult request is then unblocked and returns
+            the response to the application.
+          </p>
+          <p>
+            From your application's point of view this required two RPCs. Here,
+            we used the Go SDK, which makes this explicit. In other SDKs, the
+            two RPCs are issued sequentially by a single command named
+            ExecuteWorkflow. See StartWorkflowAndExecuteUpdate below for a way
+            to start a workflow and receive a result in a single RPC.
+          </p>
+        </td>
+        <td class="video-cell">
+          <video controls>
+            <source src="scenes/videos/ExecuteWorkflow.mp4" type="video/mp4" />
+          </video>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <h2>Call Activity</h2>
+
+          <p>
+            To do anything of interest, a Workflow must execute an Activity.
+          </p>
+          <p>
+            In this video we see an Activity Worker in addition to your Workflow
+            Worker. The video starts off as before: the application sends a
+            StartWorkflow request, the workers are polling for tasks, and the
+            StartWorkflowRequest causes some events to be written to history
+            that trigger dispatch of the first WFT. And as before, the
+            application submits a request for the workflow result as soon as it
+            gets the StartWorkflow response. But this time, the
+            GetWorkflowResult request is going to be blocked server-side for a
+            bit longer before the workflow result is available.
+          </p>
+          <p>
+            On receipt of its WFT, the Workflow Worker starts executing the
+            workflow code and encounters an ExecuteActivity call. This causes
+            workflow execution to pause at that point (In the SDK language
+            runtime this pause is implemented as a blocked
+            Promise/Future/Coroutine -- assuming the worker doesn't crash and
+            doesn't evict that workflow from its cache! But if either of those
+            things do occur the semantics are unchanged, since the workflow will
+            replay from the beginning on another worker, reaching exactly the
+            same program state as before.)
+          </p>
+          <p>
+            Since the Workflow Worker cannot make further progress for now, it
+            sends back a WFT Completed message, containing a command indicating
+            that the Activity must be scheduled for execution. The Activity Task
+            is dispatched to the Activity Worker, and when it sends the Activity
+            result, further history events are written, resulting in the
+            dispatch of a second WFT to the Workflow Worker. Eventually, the
+            result of the activity is incorporated into the worlflow return
+            value, and the GetWorkflowResult request is unblocked to return to
+            the user.
+          </p>
+        </td>
+        <td class="video-cell">
+          <video controls>
+            <source src="scenes/videos/CallActivity.mp4" type="video/mp4" />
+          </video>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <h2>Signal</h2>
+          <p>
+            The previous sections involved starting a workflow and waiting for
+            it to complete. But in addition to acting as "durable functions"
+            like this, an application can also influence a Temporal workflow
+            while it is executing. We now look at one way to do this: sending a
+            Signal to the workflow.
+          </p>
+        </td>
+        <td class="video-cell">
+          <video controls>
+            <source src="scenes/videos/Signal.mp4" type="video/mp4" />
+          </video>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <h2>Signal vs SignalWithStart</h2>
+        </td>
+        <td class="video-cell">
+          <video controls>
+            <source
+              src="scenes/videos/HeadToHeadSignalWithStart.mp4"
+              type="video/mp4"
+            />
+          </video>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <h2>Start Update</h2>
+        </td>
+        <td class="video-cell">
+          <video controls>
+            <source src="scenes/videos/StartUpdate.mp4" type="video/mp4" />
+          </video>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <h2>Execute Update</h2>
+        </td>
+        <td class="video-cell">
+          <video controls>
+            <source src="scenes/videos/ExecuteUpdate.mp4" type="video/mp4" />
+          </video>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <h2>Execute Update vs StartWorkflowAndExecuteUpdate</h2>
+        </td>
+        <td class="video-cell">
+          <video controls>
+            <source
+              src="scenes/videos/HeadToHeadStartWorkflowAndExecuteUpdate.mp4"
+              type="video/mp4"
+            />
+          </video>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
