@@ -2,12 +2,12 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Iterator, Optional
 
-from manim import RIGHT, Mobject, Scene, VGroup
+import esv
+import esv.explanation
+from manim import Mobject, VGroup
 
 from scenes.worker.constants import CONTAINER_HEIGHT, CONTAINER_WIDTH
-from scenes.worker.explanation import Explanation
 from scenes.worker.history import HistoryEvent, HistoryEventId, HistoryEventType
-from scenes.worker.lib import Entity
 from scenes.worker.utils import ContainerRectangle, labeled_rectangle
 from schema import schema
 
@@ -18,7 +18,7 @@ MACHINE_RADIUS = 0.3
 
 
 @dataclass
-class StateMachine(Entity):
+class StateMachine(esv.Entity):
     workflow_machines: "WorkflowStateMachines"
 
     def render(self) -> Mobject:
@@ -31,7 +31,7 @@ class StateMachine(Entity):
 @dataclass
 class Command:
     command_type: schema.CommandType
-    coroutine_id: int
+    coroutine_id: str
     machine: Optional[StateMachine] = None
 
 
@@ -41,7 +41,9 @@ class WorkflowTaskStateMachine(StateMachine):
         workflow_machines: "WorkflowStateMachines",
         commands_that_will_be_generated_in_this_wft: list[Command],
     ):
-        super().__init__(workflow_machines=workflow_machines)
+        super().__init__(
+            name="WorkflowTaskStateMachine", workflow_machines=workflow_machines
+        )
         self.commands_that_will_be_generated_in_this_wft = (
             commands_that_will_be_generated_in_this_wft
         )
@@ -87,7 +89,7 @@ class TimerStateMachine(StateMachine):
 
 
 @dataclass
-class WorkflowStateMachines(Entity):
+class WorkflowStateMachines(esv.Entity):
     scheduler: "Scheduler"
     # User workflow code is represented by a stream of batches of commands generated in each WFT.
     user_workflow_code: Iterator[list[Command]]
@@ -97,7 +99,6 @@ class WorkflowStateMachines(Entity):
     state_machines: dict[HistoryEventId, StateMachine] = field(default_factory=dict)
 
     def handle_event(self, event: HistoryEvent):
-
         # TODO: self.is_replaying
 
         if event.event_type == HistoryEventType.WF_STARTED:
@@ -114,16 +115,17 @@ class WorkflowStateMachines(Entity):
                 event,
                 machine,
             )
-            self.animations.append(
-                lambda: Explanation(
-                    target=machine,
-                    latex="""
-                WORKFLOW_TASK_SCHEDULED is the first event in a sequence of workflow task
-                events. When the state machines encounter this event, they create a new instance
-                of WorkflowTaskStateMachine. 
+            explanation = esv.explanation.Explanation(
+                name="",
+                target=machine,
+                latex=r"""
+                WORKFLOW\_TASK\_SCHEDULED is the first event in a sequence of
+                workflow task events. When the state machines encounter this
+                event, they create a new instance of WorkflowTaskStateMachine. 
                 """,
-                ).animate()
             )
+            for anim in explanation.animate():
+                self.scene.play(anim)
 
         elif event.event_type == HistoryEventType.WFT_STARTED:
             # Look up WorkflowTaskStateMachine instance and handle the event.
@@ -146,7 +148,9 @@ class WorkflowStateMachines(Entity):
             # later transitioning to complete, will complete the promise.
 
             # TODO: should be created by command and set promise-completing callback
-            self.add_machine(event, TimerStateMachine(workflow_machines=self))
+            self.add_machine(
+                event, TimerStateMachine("TimerStateMachine", workflow_machines=self)
+            )
 
         elif event.event_type == HistoryEventType.TIMER_FIRED:
             # Look up TimerStateMachine instance and handle the event by calling the promise completion
@@ -163,7 +167,12 @@ class WorkflowStateMachines(Entity):
             # such that the promise is completed when the activity is completed.
 
             # TODO: should be created by command and set promise-completing callback
-            self.add_machine(event, ActivityTaskStateMachine(workflow_machines=self))
+            self.add_machine(
+                event,
+                ActivityTaskStateMachine(
+                    "ActivityTaskStateMachine", workflow_machines=self
+                ),
+            )
 
         elif event.event_type == HistoryEventType.ACTIVITY_TASK_STARTED:
             self.state_machines[event.initiating_event_id].handle(event)

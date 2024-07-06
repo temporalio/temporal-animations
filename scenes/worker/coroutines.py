@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 
+import esv
 from manim import Mobject, VGroup
 
 from scenes.worker.constants import CONTAINER_HEIGHT, CONTAINER_WIDTH
-from scenes.worker.lib import Entity
 from scenes.worker.utils import ContainerRectangle, labeled_rectangle
 
 COROUTINE_WIDTH = 0.3
@@ -12,22 +12,20 @@ BUF = 0.1
 
 
 @dataclass
-class Coroutine(Entity):
-    id: int
-
+class Coroutine(esv.Entity):
     def render(self):
         return labeled_rectangle(
-            f"Coroutine {self.id}" if self.id > 0 else "Main Workflow\nCoroutine"
+            f"Coroutine {self.name}" if self.name != "0" else "Main Workflow\nCoroutine"
         )
 
 
 @dataclass
-class Coroutines(Entity):
-    coroutines: dict[int, Coroutine] = field(default_factory=dict)
+class Coroutines(esv.Entity):
+    coroutines: dict[str, Coroutine] = field(default_factory=dict)
 
-    def add_coroutine(self, id: int):
+    def add_coroutine(self, id: str):
         assert id not in self.coroutines
-        self.coroutines[id] = Coroutine(id=id)
+        self.coroutines[id] = Coroutine(name=id)
 
     def render(self) -> Mobject:
         container = ContainerRectangle(width=CONTAINER_WIDTH, height=CONTAINER_HEIGHT)

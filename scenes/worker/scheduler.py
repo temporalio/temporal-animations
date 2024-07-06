@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
+import esv
 from manim import FadeIn, Line, Mobject
 
 from scenes.worker.coroutines import Coroutines
-from scenes.worker.lib import Entity
 from scenes.worker.state_machines import (
     ActivityTaskStateMachine,
     Command,
@@ -15,7 +15,7 @@ from schema import schema
 
 
 @dataclass
-class Scheduler(Entity):
+class Scheduler(esv.Entity):
     coroutines: Coroutines
 
     def run_all_coroutines_until_blocked(
@@ -38,10 +38,12 @@ class Scheduler(Entity):
             match command.command_type:
                 case schema.CommandType.SCHEDULE_ACTIVITY_TASK:
                     command.machine = ActivityTaskStateMachine(
-                        workflow_machines=machines
+                        "ActivityTaskStateMachine", workflow_machines=machines
                     )
                 case schema.CommandType.START_TIMER:
-                    command.machine = TimerStateMachine(workflow_machines=machines)
+                    command.machine = TimerStateMachine(
+                        "TimerStateMachine", workflow_machines=machines
+                    )
                 case _:
                     raise ValueError(command.command_type)
             machines.commands_generated_by_user_workflow_code.append(command)
@@ -60,8 +62,8 @@ class Scheduler(Entity):
                     )
                 )
 
-            coroutine.animations.append(create_smbp_anim)
-            self.animations.append(create_smbp_anim)
+            # coroutine.animations.append(create_smbp_anim)
+            # self.animations.append(create_smbp_anim)
 
     def render(self) -> Mobject:
         return labeled_rectangle("Scheduler")

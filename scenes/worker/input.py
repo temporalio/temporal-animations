@@ -1,13 +1,8 @@
-from typing import Iterable, Iterator, Optional
 from functools import partial
+from typing import Iterable
 
-from scenes.worker.history import (
-    History,
-    HistoryEvent,
-    HistoryEventType,
-)
+from scenes.worker.history import History, HistoryEvent, HistoryEventType
 from scenes.worker.state_machines import Command
-
 
 history_event = partial(HistoryEvent, seen_by_worker=False, data={}, time=0, _type="")
 
@@ -52,7 +47,7 @@ def infer_commands(events: Iterable[HistoryEvent]) -> list[list[Command]]:
                 wft_commands = []
                 coroutine_id = 0
         elif command_type := event.event_type.matching_command_type():
-            wft_commands.append(Command(command_type, coroutine_id))
+            wft_commands.append(Command(command_type, str(coroutine_id)))
             coroutine_id += 1
     commands.append(wft_commands)
     return commands

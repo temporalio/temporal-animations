@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10,<3.13"
 manim = "^0.18.0"
+esv = {path = "/Users/dan/src/esv", develop = true}
 
 
 [build-system]
