@@ -21,6 +21,7 @@ from scenes.worker.commands import CommandType
 
 if TYPE_CHECKING:
     from scenes.worker import input
+    from scenes.worker.worker_scene import WorkerScene
 
 
 HistoryEventId = int
@@ -70,6 +71,10 @@ class HistoryEvent(esv.Entity):
     seen_by_worker: bool
     initiating_event_id: HistoryEventId = -1
 
+    @property
+    def _name(self) -> str:
+        return f"{self.id} {self.event_type.name}"
+
     def render(self) -> VMobject:
         return Text(
             self.event_type.name,
@@ -78,23 +83,32 @@ class HistoryEvent(esv.Entity):
             color=GREEN if self.seen_by_worker else RED,
         )
 
-    def handle(self, event: esv.Event) -> bool:
-        return False
+    def handle(self, event: "input.Event") -> bool:
+        if event.history_event != self:
+            return False
+        scene: WorkerScene = self.scene  # type: ignore # TODO
+        self.move_to(scene.state_machines)
+        self.seen_by_worker = True
+        return True
 
     def __str__(self) -> str:
-        return self.event_type.name
+        return self._name
 
 
 @dataclass
 class History(esv.Entity):
     events: Iterable[HistoryEvent]
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        for e in self.events:
+            self.children[e._name] = e
+
     def handle(self, event: "input.Event") -> bool:
-        event.history_event.seen_by_worker = True
-        return True
+        return False
 
     def render(self) -> VMobject:
-        events = VGroup(*map(HistoryEvent.render, self.events)).arrange(
+        events = VGroup(*(e.mobj for e in self.events)).arrange(
             DOWN, buff=SMALL_BUFF, aligned_edge=LEFT
         )
         rect = SurroundingRectangle(
