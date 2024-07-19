@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 
-import esv
 from manim import FadeIn, Line, Mobject
 
+import esv
+from scenes.worker.commands import CommandType
 from scenes.worker.coroutines import Coroutines
 from scenes.worker.state_machines import (
     ActivityTaskStateMachine,
@@ -11,7 +12,6 @@ from scenes.worker.state_machines import (
     WorkflowStateMachines,
 )
 from scenes.worker.utils import labeled_rectangle
-from schema import schema
 
 
 @dataclass
@@ -39,11 +39,11 @@ class Scheduler(esv.Entity):
         """
         for command in commands_that_will_be_generated_in_this_wft:
             match command.command_type:
-                case schema.CommandType.SCHEDULE_ACTIVITY_TASK:
+                case CommandType.SCHEDULE_ACTIVITY_TASK:
                     command.machine = ActivityTaskStateMachine(
                         "ActivityTaskStateMachine", workflow_machines=machines
                     )
-                case schema.CommandType.START_TIMER:
+                case CommandType.START_TIMER:
                     command.machine = TimerStateMachine(
                         "TimerStateMachine", workflow_machines=machines
                     )

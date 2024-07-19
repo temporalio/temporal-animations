@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterable
+from enum import Enum
+from typing import TYPE_CHECKING, Iterable, Optional
 
 from manim import (
     DOWN,
@@ -15,8 +16,8 @@ from manim import (
 )
 
 import esv
-from manim_renderer import style
-from schema import schema
+from scenes.worker import style
+from scenes.worker.commands import CommandType
 
 if TYPE_CHECKING:
     from scenes.worker import input
@@ -25,7 +26,41 @@ if TYPE_CHECKING:
 HistoryEventId = int
 
 
-HistoryEventType = schema.HistoryEventType
+# https://github.com/temporalio/api/blob/master/temporal/api/enums/v1/event_type.proto#L35
+class HistoryEventType(Enum):
+    WF_STARTED = 1
+    WF_COMPLETED = 2
+    WF_FAILED = 3
+    WFT_SCHEDULED = 5
+    WFT_STARTED = 6
+    WFT_COMPLETED = 7
+    WFT_FAILED = 9
+    ACTIVITY_TASK_SCHEDULED = 10
+    ACTIVITY_TASK_STARTED = 11
+    ACTIVITY_TASK_COMPLETED = 12
+    ACTIVITY_TASK_FAILED = 13
+    TIMER_STARTED = 17
+    TIMER_FIRED = 18
+    WF_SIGNALED = 26
+    WF_UPDATE_ACCEPTED = 41
+    WF_UPDATE_REJECTED = 42
+    WF_UPDATE_COMPLETED = 43
+
+    def matching_command_type(self) -> Optional[CommandType]:
+        return _event_type_to_command_type.get(self)
+
+    def is_command_event(self) -> bool:
+        return self.matching_command_type() is not None
+
+    def matches_command_type(self, command_type: CommandType):
+        return self.matching_command_type() == command_type
+
+
+_event_type_to_command_type = {
+    HistoryEventType.ACTIVITY_TASK_SCHEDULED: CommandType.SCHEDULE_ACTIVITY_TASK,
+    HistoryEventType.TIMER_STARTED: CommandType.START_TIMER,
+    HistoryEventType.WF_COMPLETED: CommandType.COMPLETE_WORKFLOW_EXECUTION,
+}
 
 
 @dataclass

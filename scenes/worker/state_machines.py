@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING, Iterator, Optional
 from manim import VGroup, VMobject
 
 import esv
+from scenes.worker.commands import CommandType
 from scenes.worker.constants import CONTAINER_HEIGHT, CONTAINER_WIDTH
 from scenes.worker.history import HistoryEvent, HistoryEventId, HistoryEventType
 from scenes.worker.utils import ContainerRectangle, labeled_rectangle
-from schema import schema
 
 if TYPE_CHECKING:
     from scenes.worker import input
@@ -35,7 +35,7 @@ class StateMachine(esv.Entity):
 
 @dataclass
 class Command:
-    command_type: schema.CommandType
+    command_type: CommandType
     coroutine_id: str
     machine: Optional[StateMachine] = None
 

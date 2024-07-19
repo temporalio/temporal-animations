@@ -1,8 +1,0 @@
-#!/bin/bash
-set -e
-source "$(dirname "$0")/lib.sh"
-scene_path=${1:-scenes/$(list-scenes | fzf).py}
-scene=$(sed -E 's,^scenes/(.+)\.py$,\1,' <<<$scene_path)
-media_dir=scenes/media/$scene
-python $scene_path | manim -qh -o $scene --media_dir $media_dir manim_renderer/temporal_scene.py TemporalScene
-mv $media_dir/videos/scene/1080p60/$scene.mp4 scenes/videos/

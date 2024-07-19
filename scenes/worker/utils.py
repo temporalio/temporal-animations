@@ -6,7 +6,7 @@ from manim import (
     VMobject,
 )
 
-from manim_renderer import style
+from scenes.worker import style
 
 
 class ContainerRectangle(Rectangle):

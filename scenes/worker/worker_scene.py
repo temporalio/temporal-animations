@@ -2,16 +2,15 @@ from itertools import chain
 from typing import Iterable
 
 from manim import LEFT, Camera, Create, VGroup, VMobject
-
-import esv
-from manim_renderer import style
-from scenes.worker import input
+from scenes.worker import input, style
 from scenes.worker.constants import CONTAINER_HEIGHT, CONTAINER_WIDTH
 from scenes.worker.coroutines import Coroutines
 from scenes.worker.history import History
 from scenes.worker.scheduler import Scheduler
 from scenes.worker.state_machines import WorkflowStateMachines
 from scenes.worker.utils import label_text
+
+import esv
 
 
 class WorkerScene(esv.Scene):
