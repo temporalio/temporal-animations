@@ -1,10 +1,11 @@
 from manim import (
-    Mobject,
     Rectangle,
     SurroundingRectangle,
     Text,
     VGroup,
+    VMobject,
 )
+
 from manim_renderer import style
 
 
@@ -19,7 +20,7 @@ class ContainerRectangle(Rectangle):
         )
 
 
-def labeled_rectangle(label: str, **kwargs) -> Mobject:
+def labeled_rectangle(label: str, **kwargs) -> VMobject:
     text = label_text(label, **kwargs)
     rect = SurroundingRectangle(
         text,

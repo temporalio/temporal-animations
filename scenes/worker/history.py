@@ -2,9 +2,9 @@ from collections import deque
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Iterable
 
-import esv
 from manim import DR, RIGHT, VDict, VMobject
 
+import esv
 from manim_renderer.workflow_task import BoxedHistoryEvents
 from schema import schema
 

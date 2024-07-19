@@ -2,7 +2,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Iterator, Optional
 
-from manim import Mobject, VGroup
+from manim import VGroup, VMobject
 
 import esv
 from scenes.worker.constants import CONTAINER_HEIGHT, CONTAINER_WIDTH
@@ -26,7 +26,7 @@ class StateMachine(esv.Entity):
         # do not handle raw events as they are passed down the tree.
         return False
 
-    def render(self) -> Mobject:
+    def render(self) -> VMobject:
         label = self.__class__.__name__.replace("StateMachine", "\nStateMachine")
         return labeled_rectangle(label)
 

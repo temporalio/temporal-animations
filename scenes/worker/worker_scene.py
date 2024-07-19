@@ -16,8 +16,7 @@ from scenes.worker.utils import label_text
 
 class WorkerScene(esv.Scene):
     def events(self) -> Iterable[input.Event]:
-        while self.history.unapplied_events:
-            yield input.Event(self.history.unapplied_events.popleft())
+        return (input.Event(h) for h in self.history.events)
 
     def init(self) -> None:
         assert isinstance(self.camera, Camera)
@@ -52,8 +51,8 @@ class WorkerScene(esv.Scene):
         )
         self.play(Create(grid))
 
-        self.history = history = History(name="History", events=input.history_events)
-        self.add(history.mobj)
+        self.history = History(name="History", events=input.history_events)
+        self.add(self.history.mobj)
         self.entities: dict[str, esv.Entity] = {
             "history": self.history,
             "coroutines": self.coroutines,
