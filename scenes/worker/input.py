@@ -3,7 +3,6 @@ from functools import partial
 from typing import Iterable
 
 import esv
-
 from scenes.worker.history import HistoryEvent, HistoryEventType
 from scenes.worker.state_machines import Command
 
@@ -16,9 +15,7 @@ class Event(esv.Event):
         return f"{self.__class__.__name__} {self.history_event}"
 
 
-make_history_event = partial(
-    HistoryEvent, seen_by_worker=False, data={}, time=0, _type=""
-)
+make_history_event = partial(HistoryEvent, seen_by_worker=False, name="__name__")
 
 
 history_events = [
@@ -32,20 +29,6 @@ history_events = [
     ),
     make_history_event(id=5, event_type=HistoryEventType.ACTIVITY_TASK_SCHEDULED),
     make_history_event(id=6, event_type=HistoryEventType.TIMER_STARTED),
-    # history_event(
-    #     id=7,
-    #     event_type=HistoryEventType.ACTIVITY_TASK_STARTED,
-    #     initiating_event_id=5,
-    # ),
-    # history_event(
-    #     id=8,
-    #     event_type=HistoryEventType.ACTIVITY_TASK_COMPLETED,
-    #     initiating_event_id=5,
-    # ),
-    # history_event(id=9, event_type=HistoryEventType.WFT_SCHEDULED),
-    # history_event(
-    #     id=10, event_type=HistoryEventType.WFT_STARTED, initiating_event_id=9
-    # ),
 ]
 
 

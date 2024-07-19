@@ -231,7 +231,7 @@ class WorkflowStateMachines(esv.Entity):
         self.add_child(machine)
         return machine
 
-    def render(self) -> Mobject:
+    def render(self) -> VMobject:
         container = ContainerRectangle(width=CONTAINER_WIDTH, height=CONTAINER_HEIGHT)
         state_machines = VGroup(
             *(c.mobj for _, c in sorted(self.state_machines.items()))

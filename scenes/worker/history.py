@@ -1,11 +1,21 @@
-from collections import deque
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Iterable
 
-from manim import DR, RIGHT, VDict, VMobject
+from manim import (
+    DOWN,
+    DR,
+    GREEN,
+    LEFT,
+    RED,
+    SMALL_BUFF,
+    SurroundingRectangle,
+    Text,
+    VGroup,
+    VMobject,
+)
 
 import esv
-from manim_renderer.workflow_task import BoxedHistoryEvents
+from manim_renderer import style
 from schema import schema
 
 if TYPE_CHECKING:
@@ -19,8 +29,22 @@ HistoryEventType = schema.HistoryEventType
 
 
 @dataclass
-class HistoryEvent(schema.HistoryEvent):
+class HistoryEvent(esv.Entity):
+    id: int
+    event_type: HistoryEventType
+    seen_by_worker: bool
     initiating_event_id: HistoryEventId = -1
+
+    def render(self) -> VMobject:
+        return Text(
+            self.event_type.name,
+            font=style.FONT_HISTORY_EVENT,
+            font_size=style.FONT_SIZE_HISTORY_EVENT,
+            color=GREEN if self.seen_by_worker else RED,
+        )
+
+    def handle(self, event: esv.Event) -> bool:
+        return False
 
     def __str__(self) -> str:
         return self.event_type.name
@@ -30,27 +54,20 @@ class HistoryEvent(schema.HistoryEvent):
 class History(esv.Entity):
     events: Iterable[HistoryEvent]
 
-    def __post_init__(self):
-        self.unapplied_events = deque(self.events)
-        self.applied_events = deque([])
-        super().__post_init__()
-
     def handle(self, event: "input.Event") -> bool:
         event.history_event.seen_by_worker = True
-        self.applied_events.append(event.history_event)
         return True
 
     def render(self) -> VMobject:
-        return VDict(
-            {"unapplied": self._render_unapplied(), "applied": self._render_applied()}
+        events = VGroup(*map(HistoryEvent.render, self.events)).arrange(
+            DOWN, buff=SMALL_BUFF, aligned_edge=LEFT
         )
-
-    def _render_unapplied(self) -> VMobject:
-        return self._render_events(self.unapplied_events).align_on_border(DR)
-
-    def _render_applied(self) -> VMobject:
-        return self._render_events(self.applied_events).align_on_border(RIGHT)
-
-    @staticmethod
-    def _render_events(events: Iterable[HistoryEvent]) -> VMobject:
-        return BoxedHistoryEvents.render(events, [])
+        rect = SurroundingRectangle(
+            events,
+            color=style.COLOR_HISTORY_EVENT_GROUP_RECT,
+            stroke_width=style.STROKE_WIDTH_HISTORY_EVENT_GROUP_RECT,
+            fill_color=style.COLOR_SCENE_BACKGROUND,
+            fill_opacity=1,
+            corner_radius=style.RECT_CORNER_RADIUS,
+        )
+        return VGroup(rect, events).align_on_border(DR)
