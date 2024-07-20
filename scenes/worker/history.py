@@ -86,10 +86,38 @@ class HistoryEvent(esv.Entity):
     def handle(self, event: "input.Event") -> bool:
         if event.history_event != self:
             return False
+        self.explain()
         scene: WorkerScene = self.scene  # type: ignore # TODO
         self.move_to(scene.state_machines)
         self.seen_by_worker = True
         return True
+
+    def explain(self):
+        match self.event_type:
+            case HistoryEventType.WFT_SCHEDULED:
+                super().explain(
+                    r"""
+                    WORKFLOW\_TASK\_SCHEDULED is the first event in a sequence of
+                    workflow task events. When the state machines encounter this
+                    event, they create a new instance of WorkflowTaskStateMachine. 
+                    """
+                )
+            case HistoryEventType.WFT_STARTED:
+                super().explain(
+                    r"""
+                    WORKFLOW\_TASK\_STARTED is handled by the instance of
+                    WorkflowTaskStateMachine that was created previously. It runs
+                    all coroutines until blocked. This is the first time we're
+                    executing user code, so you'll see the main workflow coroutine
+                    come into existence, along with a child coroutine that it
+                    creates.
+                    """
+                )
+            case HistoryEventType.TIMER_STARTED:
+                super().explain(
+                    r"""We're seeing TIMER\_STARTED because in a previous workflow task, some user code
+                    made a call to `sleep(duration)`."""
+                )
 
     def __str__(self) -> str:
         return self._name

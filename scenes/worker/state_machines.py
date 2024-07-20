@@ -123,14 +123,6 @@ class WorkflowStateMachines(esv.Entity):
                 event,
                 WorkflowTaskStateMachine(self, next(self.user_workflow_code)),
             )
-            self.explain(
-                r"""
-                WORKFLOW\_TASK\_SCHEDULED is the first event in a sequence of
-                workflow task events. When the state machines encounter this
-                event, they create a new instance of WorkflowTaskStateMachine. 
-                """,
-                target=machine,
-            )
 
         elif event.event_type == HistoryEventType.WFT_STARTED:
             # Look up WorkflowTaskStateMachine instance and handle the event.
@@ -138,17 +130,6 @@ class WorkflowStateMachines(esv.Entity):
             # WFT_STARTED event in history (i.e. no WFT_COMPLETED for it yet).
             machine = self.state_machines[event.initiating_event_id]
             machine.handle_history_event(event)
-            self.explain(
-                r"""
-                WORKFLOW\_TASK\_STARTED is handled by the instance of
-                WorkflowTaskStateMachine that was created previously. It runs
-                all coroutines until blocked. This is the first time we're
-                executing user code, so you'll see the main workflow coroutine
-                come into existence, along with a child coroutine that it
-                creates.
-                """,
-                target=machine,
-            )
 
         elif event.event_type == HistoryEventType.WFT_COMPLETED:
             # Look up WorkflowTaskStateMachine instance and handle the event.
@@ -167,11 +148,6 @@ class WorkflowStateMachines(esv.Entity):
             # TODO: should be created by command and set promise-completing callback
             machine = self.add_machine(
                 event, TimerStateMachine("TimerStateMachine", workflow_machines=self)
-            )
-            self.explain(
-                r"""We're seeing TIMER\_STARTED because in a previous workflow task, some user code
-            made a call to `sleep(duration)`.""",
-                target=machine,
             )
 
         elif event.event_type == HistoryEventType.TIMER_FIRED:
