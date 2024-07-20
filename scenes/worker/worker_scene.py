@@ -1,7 +1,7 @@
 from itertools import chain
 from typing import Iterable
 
-from manim import LEFT, Camera, Create, VGroup, VMobject
+from manim import Camera, Create, VGroup
 
 import esv
 from scenes.worker import input, style
@@ -10,7 +10,6 @@ from scenes.worker.coroutines import Coroutines
 from scenes.worker.history import History
 from scenes.worker.scheduler import Scheduler
 from scenes.worker.state_machines import WorkflowStateMachines
-from scenes.worker.utils import label_text
 
 
 class WorkerScene(esv.Scene):
@@ -33,19 +32,14 @@ class WorkerScene(esv.Scene):
         # the row label.
         h, w = CONTAINER_HEIGHT, CONTAINER_WIDTH
         rows = [
-            (VMobject(), self.scheduler.mobj),
-            (label_text("Coroutines"), self.coroutines.mobj),
-            (label_text("State machines"), self.state_machines.mobj),
+            (self.scheduler.mobj,),
+            (self.coroutines.mobj,),
+            (self.state_machines.mobj,),
         ]
-        grid = (
-            VGroup(*chain.from_iterable(rows))
-            .arrange_in_grid(
-                cols=2,
-                col_widths=[None, w],
-                row_heights=[0.5, h, h],
-                buff=0.5,
-            )
-            .align_on_border(LEFT)
+        grid = VGroup(*chain.from_iterable(rows)).arrange_in_grid(
+            col_widths=[w],
+            row_heights=[0.5, h, h],
+            buff=0.5,
         )
         self.play(Create(grid))
 
