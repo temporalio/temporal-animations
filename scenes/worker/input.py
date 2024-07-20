@@ -15,7 +15,7 @@ class Event(esv.Event):
         return f"{self.__class__.__name__} {self.history_event}"
 
 
-make_history_event = partial(HistoryEvent, seen_by_worker=False, name="__name__")
+make_history_event = partial(HistoryEvent, name="__name__")
 
 
 history_events = [

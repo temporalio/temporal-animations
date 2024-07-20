@@ -68,7 +68,7 @@ _event_type_to_command_type = {
 class HistoryEvent(esv.Entity):
     id: int
     event_type: HistoryEventType
-    seen_by_worker: bool
+    seen_by_worker: bool = False
     initiating_event_id: HistoryEventId = -1
 
     @property
