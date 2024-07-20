@@ -3,8 +3,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Iterable, Optional
 
 from manim import (
+    DL,
     DOWN,
-    DR,
     GREEN,
     LEFT,
     RED,
@@ -147,4 +147,4 @@ class History(esv.Entity):
             fill_opacity=1,
             corner_radius=style.RECT_CORNER_RADIUS,
         )
-        return VGroup(rect, events).align_on_border(DR)
+        return VGroup(rect, events).align_on_border(DL)
