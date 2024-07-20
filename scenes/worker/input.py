@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import partial
 from typing import Iterable
 
 import esv
@@ -15,20 +14,15 @@ class Event(esv.Event):
         return f"{self.__class__.__name__} {self.history_event}"
 
 
-make_history_event = partial(HistoryEvent, name="__name__")
-
-
 history_events = [
-    make_history_event(id=1, event_type=HistoryEventType.WF_STARTED),
-    make_history_event(id=2, event_type=HistoryEventType.WFT_SCHEDULED),
-    make_history_event(
-        id=3, event_type=HistoryEventType.WFT_STARTED, initiating_event_id=2
-    ),
-    make_history_event(
+    HistoryEvent(id=1, event_type=HistoryEventType.WF_STARTED),
+    HistoryEvent(id=2, event_type=HistoryEventType.WFT_SCHEDULED),
+    HistoryEvent(id=3, event_type=HistoryEventType.WFT_STARTED, initiating_event_id=2),
+    HistoryEvent(
         id=4, event_type=HistoryEventType.WFT_COMPLETED, initiating_event_id=2
     ),
-    make_history_event(id=5, event_type=HistoryEventType.ACTIVITY_TASK_SCHEDULED),
-    make_history_event(id=6, event_type=HistoryEventType.TIMER_STARTED),
+    HistoryEvent(id=5, event_type=HistoryEventType.ACTIVITY_TASK_SCHEDULED),
+    HistoryEvent(id=6, event_type=HistoryEventType.TIMER_STARTED),
 ]
 
 
@@ -46,7 +40,7 @@ def infer_commands(events: Iterable[HistoryEvent]) -> list[list[Command]]:
                 wft_commands = []
                 coroutine_id = 0
         elif command_type := event.event_type.matching_command_type():
-            wft_commands.append(Command(command_type, str(coroutine_id)))
+            wft_commands.append(Command(command_type, coroutine_id))
             coroutine_id += 1
     commands.append(wft_commands)
     return commands

@@ -2,6 +2,8 @@ from itertools import chain
 from typing import Iterable
 
 from manim import LEFT, Camera, Create, VGroup, VMobject
+
+import esv
 from scenes.worker import input, style
 from scenes.worker.constants import CONTAINER_HEIGHT, CONTAINER_WIDTH
 from scenes.worker.coroutines import Coroutines
@@ -9,8 +11,6 @@ from scenes.worker.history import History
 from scenes.worker.scheduler import Scheduler
 from scenes.worker.state_machines import WorkflowStateMachines
 from scenes.worker.utils import label_text
-
-import esv
 
 
 class WorkerScene(esv.Scene):
@@ -21,10 +21,9 @@ class WorkerScene(esv.Scene):
         assert isinstance(self.camera, Camera)
         self.camera.background_color = style.COLOR_SCENE_BACKGROUND
 
-        self.coroutines = Coroutines("coroutines")
-        self.scheduler = Scheduler("scheduler", coroutines=self.coroutines)
+        self.coroutines = Coroutines()
+        self.scheduler = Scheduler(coroutines=self.coroutines)
         self.state_machines = WorkflowStateMachines(
-            "WorkflowStateMachines",
             scheduler=self.scheduler,
             user_workflow_code=iter(input.commands),
         )
@@ -50,7 +49,7 @@ class WorkerScene(esv.Scene):
         )
         self.play(Create(grid))
 
-        self.history = History(name="History", events=input.history_events)
+        self.history = History(events=input.history_events)
         self.add(self.history.mobj)
         self.entities: dict[str, esv.Entity] = {
             "history": self.history,

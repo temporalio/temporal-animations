@@ -41,12 +41,10 @@ class Scheduler(esv.Entity):
             match command.command_type:
                 case CommandType.SCHEDULE_ACTIVITY_TASK:
                     command.machine = ActivityTaskStateMachine(
-                        "ActivityTaskStateMachine", workflow_machines=machines
+                        workflow_machines=machines
                     )
                 case CommandType.START_TIMER:
-                    command.machine = TimerStateMachine(
-                        "TimerStateMachine", workflow_machines=machines
-                    )
+                    command.machine = TimerStateMachine(workflow_machines=machines)
                 case _:
                     raise ValueError(command.command_type)
             machines.commands_generated_by_user_workflow_code.append(command)

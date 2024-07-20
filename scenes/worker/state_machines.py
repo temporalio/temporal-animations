@@ -36,7 +36,7 @@ class StateMachine(esv.Entity):
 @dataclass
 class Command:
     command_type: CommandType
-    coroutine_id: str
+    coroutine_id: int
     machine: Optional[StateMachine] = None
 
 
@@ -46,9 +46,7 @@ class WorkflowTaskStateMachine(StateMachine):
         workflow_machines: "WorkflowStateMachines",
         commands_that_will_be_generated_in_this_wft: list[Command],
     ):
-        super().__init__(
-            name="WorkflowTaskStateMachine", workflow_machines=workflow_machines
-        )
+        super().__init__(workflow_machines=workflow_machines)
         self.commands_that_will_be_generated_in_this_wft = (
             commands_that_will_be_generated_in_this_wft
         )
@@ -146,9 +144,7 @@ class WorkflowStateMachines(esv.Entity):
             # later transitioning to complete, will complete the promise.
 
             # TODO: should be created by command and set promise-completing callback
-            machine = self.add_machine(
-                event, TimerStateMachine("TimerStateMachine", workflow_machines=self)
-            )
+            machine = self.add_machine(event, TimerStateMachine(workflow_machines=self))
 
         elif event.event_type == HistoryEventType.TIMER_FIRED:
             # Look up TimerStateMachine instance and handle the event by calling the promise completion
@@ -167,9 +163,7 @@ class WorkflowStateMachines(esv.Entity):
             # TODO: should be created by command and set promise-completing callback
             self.add_machine(
                 event,
-                ActivityTaskStateMachine(
-                    "ActivityTaskStateMachine", workflow_machines=self
-                ),
+                ActivityTaskStateMachine(workflow_machines=self),
             )
 
         elif event.event_type == HistoryEventType.ACTIVITY_TASK_STARTED:
