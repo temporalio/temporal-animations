@@ -34,6 +34,7 @@ class Coroutines(esv.Entity):
     def add_coroutine(self, id: int):
         assert id not in self.coroutines
         self.coroutines[id] = Coroutine(id=id)
+        self.add_child(self.coroutines[id])
 
     def render(self) -> Mobject:
         container = ContainerRectangle(width=CONTAINER_WIDTH, height=CONTAINER_HEIGHT)

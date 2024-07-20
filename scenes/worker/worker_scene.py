@@ -46,9 +46,7 @@ class WorkerScene(esv.Scene):
         self.play(Create(grid))
 
         self.history = History(events=input.history_events)
-        self.commands = Commands(
-            commands=deque([Command(command_type=CommandType.FAKE, coroutine_id=0)])
-        )
+        self.commands = Commands(commands=deque())
 
         self.add(self.history.mobj)
         self.add(self.commands.mobj)

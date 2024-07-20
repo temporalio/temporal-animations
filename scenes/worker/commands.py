@@ -35,6 +35,10 @@ class Command(esv.Entity):
     coroutine_id: int
     machine: Optional["StateMachine"] = None
 
+    @property
+    def name(self) -> str:
+        return self.command_type.name
+
     def render(self) -> VMobject:
         return Text(
             self.command_type.name,

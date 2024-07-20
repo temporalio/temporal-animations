@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
 
-from manim import FadeIn, Line, Mobject
+from manim import DOWN, UL, UP, FadeIn, Line, Mobject, Wait
 
 import esv
-from scenes.worker.commands import Command, CommandType
+from scenes.worker.commands import Command, Commands, CommandType
 from scenes.worker.coroutines import Coroutines
 from scenes.worker.state_machines import (
     ActivityTaskStateMachine,
@@ -12,11 +13,13 @@ from scenes.worker.state_machines import (
 )
 from scenes.worker.utils import labeled_rectangle
 
+if TYPE_CHECKING:
+    from scenes.worker.worker_scene import WorkerScene
+
 
 @dataclass
 class Scheduler(esv.Entity):
     coroutines: Coroutines
-
     def handle(self, event: esv.Event) -> bool:
         return True
 
@@ -48,10 +51,21 @@ class Scheduler(esv.Entity):
                     raise ValueError(command.command_type)
             machines.commands_generated_by_user_workflow_code.append(command)
 
-            if command.coroutine_id not in self.coroutines.coroutines:
-                self.coroutines.add_coroutine(command.coroutine_id)
+            scene: "WorkerScene" = self.scene  # type: ignore
 
-            coroutine = self.coroutines.coroutines[command.coroutine_id]
+            if command.coroutine_id not in scene.coroutines.coroutines:
+                scene.coroutines.add_coroutine(command.coroutine_id)
+
+            coroutine = scene.coroutines.coroutines[command.coroutine_id]
+            # command.mobj.move_to(coroutine.mobj.get_boundary_point(UP))
+            coroutine.add_child(command)
+            self.scene.add(command.mobj)
+            commands = cast(Commands, self.scene.entities["commands"])
+            command.move_to(commands)
+            self.scene.play(Wait(1))
+            # commands.commands.append(command)
+
+            print(f"🟠 added animations to {command}: {command.animations}")
 
             def create_smbp_anim():
                 assert command.machine
