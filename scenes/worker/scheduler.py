@@ -3,11 +3,10 @@ from dataclasses import dataclass
 from manim import FadeIn, Line, Mobject
 
 import esv
-from scenes.worker.commands import CommandType
+from scenes.worker.commands import Command, CommandType
 from scenes.worker.coroutines import Coroutines
 from scenes.worker.state_machines import (
     ActivityTaskStateMachine,
-    Command,
     TimerStateMachine,
     WorkflowStateMachines,
 )
@@ -23,7 +22,7 @@ class Scheduler(esv.Entity):
 
     def run_all_coroutines_until_blocked(
         self,
-        commands_that_will_be_generated_in_this_wft: list[Command],
+        commands_that_will_be_generated_in_this_wft: list["Command"],
         machines: WorkflowStateMachines,
     ):
         """

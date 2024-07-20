@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import Iterable
 
 import esv
+from scenes.worker.commands import Command
 from scenes.worker.history import HistoryEvent, HistoryEventType
-from scenes.worker.state_machines import Command
 
 
 @dataclass
@@ -26,9 +26,9 @@ history_events = [
 ]
 
 
-def infer_commands(events: Iterable[HistoryEvent]) -> list[list[Command]]:
+def infer_commands(events: Iterable[HistoryEvent]) -> list[list["Command"]]:
     commands = []
-    wft_commands: list[Command] = []
+    wft_commands: list["Command"] = []
     # TODO: We want to use 0 to mean main wf coroutine. But if another coroutine gets scheduled
     # before the main wf coroutine, then we're going to end up incorrectly assigning the coroutine
     # IDs here. Maybe we should not be inferring the commands from history.

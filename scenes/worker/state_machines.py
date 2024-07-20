@@ -1,17 +1,17 @@
 from collections import deque
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterator, Optional
+from typing import TYPE_CHECKING, Iterator
 
 from manim import VGroup, VMobject
 
 import esv
-from scenes.worker.commands import CommandType
 from scenes.worker.constants import CONTAINER_HEIGHT, CONTAINER_WIDTH
 from scenes.worker.history import HistoryEvent, HistoryEventId, HistoryEventType
 from scenes.worker.utils import ContainerRectangle, labeled_rectangle
 
 if TYPE_CHECKING:
     from scenes.worker import input
+    from scenes.worker.commands import Command
     from scenes.worker.scheduler import Scheduler
 
 MACHINE_RADIUS = 0.3
@@ -33,18 +33,11 @@ class StateMachine(esv.Entity):
     def handle_history_event(self, event: HistoryEvent): ...
 
 
-@dataclass
-class Command:
-    command_type: CommandType
-    coroutine_id: int
-    machine: Optional[StateMachine] = None
-
-
 class WorkflowTaskStateMachine(StateMachine):
     def __init__(
         self,
         workflow_machines: "WorkflowStateMachines",
-        commands_that_will_be_generated_in_this_wft: list[Command],
+        commands_that_will_be_generated_in_this_wft: list["Command"],
     ):
         super().__init__(workflow_machines=workflow_machines)
         self.commands_that_will_be_generated_in_this_wft = (
@@ -95,8 +88,8 @@ class TimerStateMachine(StateMachine):
 class WorkflowStateMachines(esv.Entity):
     scheduler: "Scheduler"
     # User workflow code is represented by a stream of batches of commands generated in each WFT.
-    user_workflow_code: Iterator[list[Command]]
-    commands_generated_by_user_workflow_code: deque[Command] = field(
+    user_workflow_code: Iterator[list["Command"]]
+    commands_generated_by_user_workflow_code: deque["Command"] = field(
         default_factory=deque
     )
     state_machines: dict[HistoryEventId, StateMachine] = field(default_factory=dict)

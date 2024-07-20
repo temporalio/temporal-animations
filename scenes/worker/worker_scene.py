@@ -1,3 +1,4 @@
+from collections import deque
 from itertools import chain
 from typing import Iterable
 
@@ -5,6 +6,7 @@ from manim import Camera, Create, VGroup
 
 import esv
 from scenes.worker import input, style
+from scenes.worker.commands import Command, Commands, CommandType
 from scenes.worker.constants import CONTAINER_HEIGHT, CONTAINER_WIDTH
 from scenes.worker.coroutines import Coroutines
 from scenes.worker.history import History
@@ -44,9 +46,15 @@ class WorkerScene(esv.Scene):
         self.play(Create(grid))
 
         self.history = History(events=input.history_events)
+        self.commands = Commands(
+            commands=deque([Command(command_type=CommandType.FAKE, coroutine_id=0)])
+        )
+
         self.add(self.history.mobj)
+        self.add(self.commands.mobj)
         self.entities: dict[str, esv.Entity] = {
             "history": self.history,
+            "commands": self.commands,
             "coroutines": self.coroutines,
             "scheduler": self.scheduler,
             "state_machines": self.state_machines,
